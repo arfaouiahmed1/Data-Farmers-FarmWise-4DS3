@@ -1,0 +1,291 @@
+.wrapper {
+  /* Removed wrapper padding, handled by AppShell */
+}
+
+/* Styles for shared section title - adjusted margins */
+.sectionTitle {
+  font-family: var(--mantine-font-family-headings); /* Ensure heading font */
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-dark-1));
+  font-weight: 800;
+  line-height: 1.1;
+  font-size: rem(36px);
+  margin-bottom: var(--mantine-spacing-xl); /* Increase bottom margin */
+  margin-top: 0; /* Remove top margin, handled by sectionWrapper */
+
+  /* Use standard em values for breakpoints */
+  @media (max-width: 62em) { /* md */
+    font-size: rem(32px);
+  }
+
+  @media (max-width: 48em) { /* sm */
+    font-size: rem(28px);
+  }
+}
+
+/* Wrapper for standard page sections */
+.sectionWrapper {
+    padding-top: calc(var(--mantine-spacing-xl) * 2);
+    padding-bottom: calc(var(--mantine-spacing-xl) * 2);
+}
+
+/* Hero Section Styles */
+.hero {
+    position: relative;
+    height: calc(100vh - rem(60px)); /* Full viewport height minus header */
+    overflow: hidden; /* Prevent potential overflow from absolute carousel */
+    border-radius: var(--mantine-radius-lg); /* Apply theme large radius */
+  }
+
+.heroCarousel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+  
+  .heroInner {
+    position: relative;
+    z-index: 3;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start; /* Align text to the left */
+    padding-top: calc(var(--mantine-spacing-xl) * 3);
+    padding-bottom: calc(var(--mantine-spacing-xl) * 3);
+
+    @media (max-width: 48em) { /* sm */
+        align-items: center; /* Center text on small screens */
+        text-align: center;
+      }
+  }
+  
+  .heroTitle {
+    color: var(--mantine-color-white);
+    font-family: var(--mantine-font-family-headings);
+    font-weight: 800;
+    font-size: rem(52px);
+    line-height: 1.1;
+    margin-bottom: var(--mantine-spacing-md);
+  
+    @media (max-width: 62em) { /* md */
+      font-size: rem(44px);
+    }
+    @media (max-width: 48em) { /* sm */
+        font-size: rem(36px);
+      }
+  }
+  
+  .heroDescription {
+    color: var(--mantine-color-gray-4); /* Lighter text on dark background */
+    max-width: rem(600px);
+    font-size: var(--mantine-font-size-xl);
+
+    @media (max-width: 48em) { /* sm */
+        font-size: var(--mantine-font-size-lg);
+        max-width: 100%;
+      }
+  }
+  
+  .heroControl {
+    margin-top: calc(var(--mantine-spacing-xl) * 1.5);
+  }
+
+/* Feature Card Adjustments */
+.featureCard {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  height: 100%; /* Ensure cards try to take full height of grid row */
+  display: flex; /* Added */
+  flex-direction: column; /* Added */
+}
+
+.featureCard:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--mantine-shadow-lg);
+}
+
+.featureTitle {
+  margin-bottom: var(--mantine-spacing-sm);
+}
+
+/* Add this new class */
+.featureCardList {
+  /* flex-grow: 1; */ /* Allow the list to grow and push content down - REMOVED */
+}
+
+/* Pricing Card Adjustments */
+.pricingCard {
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+  transition: transform 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: var(--mantine-shadow-lg);
+  }
+
+  & > button {
+    margin-top: auto;
+  }
+}
+
+/* How It Works Stepper Styles */
+/* Add specific Stepper styles here if needed */
+
+/* Testimonials */
+/* Add specific Blockquote styles here if needed */
+
+/* CTA Section Styles */
+.ctaSection {
+    background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+    padding-top: calc(var(--mantine-spacing-xl) * 3);
+    padding-bottom: calc(var(--mantine-spacing-xl) * 3);
+}
+
+.ctaInner {
+    /* Styles for content within CTA if needed */
+}
+
+/* Remove old specific styles if they conflict */
+.inner {
+  /* Keep if needed for specific non-section layouts, otherwise remove */
+}
+.title {
+  /* Keep if needed for specific non-section layouts, otherwise remove */
+}
+.description {
+ /* Keep if needed for specific non-section layouts, otherwise remove */
+}
+
+/* Remove potentially unused styles */
+/* .wrapper > section { ... } */ 
+/* .wrapper > :last-child { ... } */ 
+
+/* Weather Widget Styles */
+.weatherWidget {
+  min-width: rem(250px);
+  background-color: light-dark(
+    rgba(255, 255, 255, 0.85),
+    rgba(26, 27, 30, 0.85)
+  );
+  backdrop-filter: blur(8px);
+  border: 1px solid light-dark(
+    rgba(0, 0, 0, 0.1),
+    rgba(255, 255, 255, 0.1)
+  );
+  
+  @media (max-width: 48em) { /* sm */
+    display: none; /* Hide weather widget on small screens */
+  }
+}
+
+/* Analytics Dashboard Styles */
+.analyticsCard {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  height: 100%;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--mantine-shadow-lg);
+  }
+}
+
+.chartContainer {
+  position: relative;
+  height: 100%;
+  min-height: rem(280px);
+}
+
+/* Data card hover animations */
+.dataCard {
+  transition: all 0.3s ease;
+  height: 100%;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+/* Progress bar animations */
+.animatedProgress {
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(
+      90deg, 
+      rgba(255,255,255,0) 0%, 
+      rgba(255,255,255,0.3) 50%, 
+      rgba(255,255,255,0) 100%
+    );
+    animation: progressShine 2s infinite;
+  }
+}
+
+@keyframes progressShine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Pulsing icon animation for active recommendation */
+.pulsingIcon {
+  animation: pulseIcon 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseIcon {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Selector button styles */
+.selectorButton {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.selectorButton:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Active button bottom indicator */
+.selectorButton[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 3px;
+  background-color: var(--mantine-color-farmGreen-5);
+  border-radius: 2px;
+}
+
+/* Active selector icon styles */
+.activeSelector {
+  box-shadow: 0 0 0 2px var(--mantine-color-farmGreen-3);
+  position: relative;
+}
+
+.activeSelector::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 2px;
+  background-color: var(--mantine-color-farmGreen-5);
+  border-radius: 1px;
+}
