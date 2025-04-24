@@ -1,0 +1,31 @@
+.pageTitle {
+  color: var(--mantine-color-farmGreen-filled);
+}
+
+.mapCard {
+  overflow: hidden; /* Ensure map corners respect border radius */
+}
+
+.mapContainer {
+  height: 600px; /* Required: Define a height for the map */
+  width: 100%;
+  /* Ensure map corners are rounded if inside mapPaper */
+  border-radius: var(--mantine-radius-md);
+  z-index: 1; /* Ensure map controls are clickable */
+}
+
+.mapPaper {
+  /* Ensure Paper component allows map to fill */
+  padding: 0 !important; /* Override Mantine padding if needed */
+  overflow: hidden; /* Prevent map overflow */
+}
+
+/* Optional: Style for popups if needed */
+.leaflet-popup-content-wrapper {
+  border-radius: 4px;
+}
+
+.leaflet-popup-content {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}

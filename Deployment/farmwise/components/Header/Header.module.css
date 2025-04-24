@@ -1,0 +1,48 @@
+.header {
+    height: rem(60px);
+    padding-left: var(--mantine-spacing-md); /* Add padding */
+    padding-right: var(--mantine-spacing-md); /* Add padding */
+    border-bottom: rem(1px) solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+    /* Make base background transparent */
+    background-color: transparent;
+    /* Ensure header stays on top */
+    position: sticky; 
+    top: 0;
+    z-index: 100; /* High z-index */
+    transition: background-color 0.3s ease, border-color 0.3s ease; /* Add transition */
+  }
+  
+  .inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%; /* Make inner take full height of header */
+  }
+  
+  .link {
+    display: block;
+    line-height: 1;
+    padding: rem(8px) rem(12px);
+    border-radius: var(--mantine-radius-lg);
+    text-decoration: none;
+    color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0));
+    font-size: var(--mantine-font-size-sm);
+    font-weight: 500;
+  
+    @mixin hover {
+      background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+    }
+  } 
+
+.logoLink {
+  display: flex; /* Ensure the link aligns items correctly if needed */
+  align-items: center; /* Vertically center the logo within the link */
+  text-decoration: none; /* Remove underline from logo link */
+}
+
+/* Style for blurred header on scroll */
+.headerBlurred {
+    background-color: rgba(var(--mantine-color-body-rgb), 0.85); /* Use theme body color with alpha */
+    backdrop-filter: blur(10px);
+    border-color: transparent; /* Make border transparent when blurred */
+} 
