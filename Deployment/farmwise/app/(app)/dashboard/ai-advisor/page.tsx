@@ -11,7 +11,7 @@ export default function AiAdvisorPage() {
     <Container>
         <Alert title="AI Advisor Access" color="blue" icon={<IconInfoCircle/>}>
             The AI Advisor chat is now accessed via the floating button in the bottom-right corner.
-        </Alert>
+         </Alert>
       {/* Or return null; */}
     </Container>
   );

@@ -1,21 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Container, Title, Text, Paper, SimpleGrid, Card, Group, Badge, Tabs, Table, Button, Alert, Stack, List } from '@mantine/core';
-import { IconDroplet, IconPlant, IconUsers, IconTractor, IconCalendarEvent, IconPackage, IconAlertTriangle } from '@tabler/icons-react';
-import { format } from 'date-fns'; // Use date-fns if installed, otherwise use native Date formatting
-
-// Example Data: Planned Tasks and Resource Allocation
-interface AllocationEntry {
-  id: number;
-  task: string;
-  startDate: Date;
-  endDate: Date;
-  resourceType: 'equipment' | 'labor' | 'material';
-  resourceName: string; // e.g., 'Tractor John Deere 7R', 'Field Crew Alpha', 'Seed Pack Corn XY'
-  field?: string; // Optional: Field associated with the task
-  notes?: string;
-}
+import React, { useState, useMemo } from 'react';
+import { Container, Title, Text, Paper, SimpleGrid, Card, Group, Badge, Tabs, Table, Button, Alert, Stack, List, Modal, ActionIcon } from '@mantine/core';
+import { IconDroplet, IconPlant, IconUsers, IconTractor, IconCalendarEvent, IconPackage, IconAlertTriangle, IconPencil, IconTrash } from '@tabler/icons-react';
+import { format } from 'date-fns';
+import { AllocationForm } from '@/components/planning/AllocationForm';
+import type { AllocationEntry } from '@/types/planning';
 
 const now = new Date();
 const startOfWeek = (date: Date) => {
@@ -30,11 +20,11 @@ const addDays = (date: Date, days: number) => {
    return dt;
 }
 
-const plannedAllocations: AllocationEntry[] = [
+const initialAllocations: AllocationEntry[] = [
   // Equipment
   { id: 1, task: 'Plowing Field A', startDate: startOfWeek(now), endDate: addDays(startOfWeek(now), 2), resourceType: 'equipment', resourceName: 'Tractor JD 7R', field: 'Field A' },
   { id: 2, task: 'Planting Field B', startDate: addDays(startOfWeek(now), 3), endDate: addDays(startOfWeek(now), 5), resourceType: 'equipment', resourceName: 'Planter Kinze 3600', field: 'Field B' },
-  { id: 3, task: 'Spraying Field A', startDate: addDays(startOfWeek(now), 3), endDate: addDays(startOfWeek(now), 3), resourceType: 'equipment', resourceName: 'Sprayer Hagie STS12', field: 'Field A' }, // Potential conflict with Planter on day 4?
+  { id: 3, task: 'Spraying Field A', startDate: addDays(startOfWeek(now), 3), endDate: addDays(startOfWeek(now), 3), resourceType: 'equipment', resourceName: 'Sprayer Hagie STS12', field: 'Field A' },
   { id: 4, task: 'Harvest Prep', startDate: addDays(startOfWeek(now), 6), endDate: addDays(startOfWeek(now), 6), resourceType: 'equipment', resourceName: 'Combine Case IH 9250', field: 'Field C' },
   // Labor
   { id: 5, task: 'Plowing Field A', startDate: startOfWeek(now), endDate: addDays(startOfWeek(now), 2), resourceType: 'labor', resourceName: 'Crew Alpha' },
@@ -45,48 +35,93 @@ const plannedAllocations: AllocationEntry[] = [
   { id: 9, task: 'Spraying Field A', startDate: addDays(startOfWeek(now), 3), endDate: addDays(startOfWeek(now), 3), resourceType: 'material', resourceName: 'Herbicide Gly (20L)', field: 'Field A' },
 ];
 
-// Simple conflict check (naive example based on resource name and overlapping dates)
-const findConflicts = (allocations: AllocationEntry[], type: 'equipment' | 'labor' | 'material') => {
-  const conflicts: { [key: string]: AllocationEntry[] } = {};
-  const typeAllocations = allocations.filter(a => a.resourceType === type);
+const findConflicts = (allocations: AllocationEntry[]) => {
+  const conflictsByType: { [type in AllocationEntry['resourceType']]: { [key: string]: AllocationEntry[] } } = {
+      equipment: {}, labor: {}, material: {}
+  };
 
-  for (let i = 0; i < typeAllocations.length; i++) {
-    for (let j = i + 1; j < typeAllocations.length; j++) {
-      const a1 = typeAllocations[i];
-      const a2 = typeAllocations[j];
+  const groupedByName: { [type in AllocationEntry['resourceType']]: { [name: string]: AllocationEntry[] } } = {
+      equipment: {}, labor: {}, material: {}
+  };
 
-      // Check if same resource and dates overlap
-      if (a1.resourceName === a2.resourceName &&
-          a1.startDate <= a2.endDate &&
-          a1.endDate >= a2.startDate) {
+  allocations.forEach(a => {
+      if (!groupedByName[a.resourceType]) groupedByName[a.resourceType] = {};
+      if (!groupedByName[a.resourceType][a.resourceName]) groupedByName[a.resourceType][a.resourceName] = [];
+      groupedByName[a.resourceType][a.resourceName].push(a);
+  });
 
-        const conflictKey = `${a1.resourceName}-${a1.startDate.toISOString()}-${a2.startDate.toISOString()}`;
-        if (!conflicts[conflictKey]) {
-          conflicts[conflictKey] = [a1, a2];
-        } else {
-           // Add potentially other conflicting items if logic allows for >2 overlaps
-           if (!conflicts[conflictKey].find(item => item.id === a1.id)) conflicts[conflictKey].push(a1);
-           if (!conflicts[conflictKey].find(item => item.id === a2.id)) conflicts[conflictKey].push(a2);
-        }
+  for (const type in groupedByName) {
+      const typeKey = type as AllocationEntry['resourceType'];
+      for (const name in groupedByName[typeKey]) {
+          const nameAllocations = groupedByName[typeKey][name];
+          for (let i = 0; i < nameAllocations.length; i++) {
+              for (let j = i + 1; j < nameAllocations.length; j++) {
+                  const a1 = nameAllocations[i];
+                  const a2 = nameAllocations[j];
+                  if (a1.startDate <= a2.endDate && a1.endDate >= a2.startDate) {
+                      const conflictKey = `${name}-${a1.startDate.toISOString()}-${a2.startDate.toISOString()}`;
+                      if (!conflictsByType[typeKey][conflictKey]) {
+                           conflictsByType[typeKey][conflictKey] = [];
+                      }
+                      if (!conflictsByType[typeKey][conflictKey].find(item => item.id === a1.id)) conflictsByType[typeKey][conflictKey].push(a1);
+                      if (!conflictsByType[typeKey][conflictKey].find(item => item.id === a2.id)) conflictsByType[typeKey][conflictKey].push(a2);
+                  }
+              }
+          }
       }
-    }
   }
-  return conflicts;
+  return conflictsByType;
 };
 
 export default function ResourcePlanningPage() {
+  const [allocations, setAllocations] = useState<AllocationEntry[]>(initialAllocations);
   const [activeTab, setActiveTab] = useState<string | null>('equipment');
+  const [formModalOpened, setFormModalOpened] = useState(false);
+  const [currentAllocation, setCurrentAllocation] = useState<Partial<AllocationEntry> | null>(null);
+  const [modalTitle, setModalTitle] = useState('Schedule New Task');
 
-  const equipmentConflicts = findConflicts(plannedAllocations, 'equipment');
-  const laborConflicts = findConflicts(plannedAllocations, 'labor');
+  const conflicts = useMemo(() => findConflicts(allocations), [allocations]);
+
+  const handleAddTaskClick = () => {
+    setCurrentAllocation(null);
+    setModalTitle('Schedule New Task');
+    setFormModalOpened(true);
+  };
+
+  const handleEditClick = (allocation: AllocationEntry) => {
+    setCurrentAllocation(allocation);
+    setModalTitle('Edit Task Allocation');
+    setFormModalOpened(true);
+  };
+
+  const handleDeleteClick = (allocationId: number | string) => {
+    if (window.confirm('Are you sure you want to delete this allocation?')) {
+      setAllocations(prev => prev.filter(a => a.id !== allocationId));
+      console.log(`Deleted allocation ID: ${allocationId}`);
+    }
+  };
+
+  const handleSaveAllocation = (allocationData: AllocationEntry) => {
+    setAllocations(prev => {
+      if (currentAllocation && currentAllocation.id) {
+        console.log('Updating allocation:', allocationData);
+        return prev.map(a => (a.id === allocationData.id ? allocationData : a));
+      } else {
+        console.log('Adding allocation:', allocationData);
+        return [...prev, allocationData];
+      }
+    });
+    setFormModalOpened(false);
+    setCurrentAllocation(null);
+    console.log('API call for save/update');
+  };
 
   const renderAllocationTable = (type: 'equipment' | 'labor' | 'material') => {
-    const data = plannedAllocations.filter(a => a.resourceType === type);
-    const conflicts = type === 'equipment' ? equipmentConflicts : type === 'labor' ? laborConflicts : {};
+    const data = allocations.filter(a => a.resourceType === type);
+    const typeConflicts = conflicts[type];
 
-    // Check if a row is part of any conflict
     const isRowConflicting = (row: AllocationEntry) => {
-       return Object.values(conflicts).some(conflictList => conflictList.some(item => item.id === row.id));
+       return Object.values(typeConflicts).some(conflictList => conflictList.some(item => item.id === row.id));
     }
 
     const rows = data.map((row) => (
@@ -95,19 +130,28 @@ export default function ResourcePlanningPage() {
         <Table.Td>{format(row.startDate, 'MMM d')} - {format(row.endDate, 'MMM d')}</Table.Td>
         <Table.Td>{row.resourceName}</Table.Td>
         <Table.Td>{row.field || 'N/A'}</Table.Td>
-        <Table.Td>{/* Actions like Edit/Delete? */}</Table.Td>
+        <Table.Td>
+           <Group gap="xs" wrap="nowrap">
+              <ActionIcon variant="subtle" color="blue" onClick={() => handleEditClick(row)} title="Edit">
+                   <IconPencil size={16} />
+               </ActionIcon>
+               <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteClick(row.id)} title="Delete">
+                   <IconTrash size={16} />
+               </ActionIcon>
+           </Group>
+        </Table.Td>
       </Table.Tr>
     ));
 
     return (
       <Stack>
-         {Object.keys(conflicts).length > 0 && (
+         {Object.keys(typeConflicts).length > 0 && (
            <Alert title="Potential Scheduling Conflicts Detected" color="red" icon={<IconAlertTriangle />} variant="light" mt="md">
               <Text size="sm">The following resources appear to be scheduled for overlapping times:</Text>
               <List size="xs" mt="xs">
-                {Object.entries(conflicts).map(([key, items]) => (
+                {Object.entries(typeConflicts).map(([key, items]) => (
                   <List.Item key={key}>
-                     <strong>{items[0].resourceName}:</strong> Tasks "{items.map(i => i.task).join('" & "')}" have overlapping dates.
+                     <strong>{items[0]?.resourceName || 'Unknown Resource'}:</strong> Tasks "{items.map(i => i.task).join('" & "')}" have overlapping dates.
                    </List.Item>
                 ))}
                </List>
@@ -123,9 +167,9 @@ export default function ResourcePlanningPage() {
                 <Table.Th>Actions</Table.Th>
                 </Table.Tr>
             </Table.Thead>
-            <Table.Tbody>{rows}</Table.Tbody>
+            <Table.Tbody>{rows.length > 0 ? rows : <Table.Tr><Table.Td colSpan={5}><Text c="dimmed" ta="center">No allocations scheduled.</Text></Table.Td></Table.Tr>}</Table.Tbody>
             </Table>
-          <Button mt="md" style={{ alignSelf: 'flex-start' }}>Schedule New Task</Button>
+          <Button mt="md" style={{ alignSelf: 'flex-start' }} onClick={handleAddTaskClick}>Schedule New Task</Button>
        </Stack>
     );
   };
@@ -164,7 +208,7 @@ export default function ResourcePlanningPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="materials" pt="lg">
-      <Paper shadow="xs" p="md">
+          <Paper shadow="xs" p="md">
              <Title order={4} mb="md">Material Allocation Plan</Title>
              <Text size="sm" c="dimmed" mb="md">Track planned usage of seeds, fertilizers, pesticides, etc., for specific tasks.</Text>
              {renderAllocationTable('material')}
@@ -172,15 +216,14 @@ export default function ResourcePlanningPage() {
         </Tabs.Panel>
       </Tabs>
 
-      {/* Original Status Section (Could be kept or integrated elsewhere) */}
-      {/*
-      <Title order={3} mt="xl" mb="md">Current Resource Status</Title>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} >
-          {resourceStatus.map((resource) => (
-              // ... Original Card rendering ...
-          ))}
-        </SimpleGrid>
-      */}
+      <AllocationForm
+        opened={formModalOpened}
+        onClose={() => setFormModalOpened(false)}
+        onSubmit={handleSaveAllocation}
+        initialValues={currentAllocation}
+        title={modalTitle}
+        defaultType={activeTab as AllocationEntry['resourceType'] | undefined}
+      />
 
     </Container>
   );

@@ -1,14 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Container, Title, Text, Paper, Button, Modal, Group, Stack } from '@mantine/core';
+import {
+    Container, Title, Text, Paper, Button, Modal,
+    Group, Stack, Box, ActionIcon, Divider // Import ActionIcon if needed, using Button with icons for now
+} from '@mantine/core';
 import { Calendar, dateFnsLocalizer, EventProps } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US';
-import 'react-big-calendar/lib/css/react-big-calendar.css'; // Import CSS
+import { format } from 'date-fns/format';
+import { parse } from 'date-fns/parse';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { getDay } from 'date-fns/getDay';
+import { enUS } from 'date-fns/locale/en-US';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import '@/styles/custom-calendar.css'; // Import custom styles
+import { IconPlus, IconPencil, IconTrash } from '@tabler/icons-react'; // Import icons
+import type { FarmEvent } from '@/types/planning';
+import { EventForm } from '@/components/planning/EventForm';
+import { CustomCalendarToolbar } from '@/components/planning/CustomCalendarToolbar';
 
 // Setup the localizer by providing the required functions
 const locales = {
@@ -24,13 +32,13 @@ const localizer = dateFnsLocalizer({
 
 // Mock Event Data (Replace with actual data source)
 const now = new Date();
-const mockEvents = [
+const initialMockEvents: FarmEvent[] = [
   {
     id: 1,
     title: 'Plant Corn - Field A',
     start: new Date(now.getFullYear(), now.getMonth(), 2),
     end: new Date(now.getFullYear(), now.getMonth(), 4),
-    resource: 'Planting Team', // Example custom field
+    resource: 'Planting Team',
     type: 'planting',
   },
   {
@@ -53,53 +61,80 @@ const mockEvents = [
    {
     id: 4,
     title: 'Harvest Soybeans - Field C',
-    start: new Date(now.getFullYear(), now.getMonth() + 1, 5), // Next month example
+    start: new Date(now.getFullYear(), now.getMonth() + 1, 5),
     end: new Date(now.getFullYear(), now.getMonth() + 1, 10),
     type: 'harvesting',
   },
 ];
 
-// Define interface for our event structure
-interface FarmEvent {
-  id: number;
-  title: string;
-  start: Date;
-  end: Date;
-  allDay?: boolean;
-  resource?: string;
-  type?: string;
-}
-
 export default function CropCalendarPage() {
-  const [events, setEvents] = useState<FarmEvent[]>(mockEvents);
+  const [events, setEvents] = useState<FarmEvent[]>(initialMockEvents);
   const [selectedEvent, setSelectedEvent] = useState<FarmEvent | null>(null);
-  const [modalOpened, setModalOpened] = useState(false);
+  const [detailsModalOpened, setDetailsModalOpened] = useState(false);
+  const [formModalOpened, setFormModalOpened] = useState(false);
+  const [currentEvent, setCurrentEvent] = useState<Partial<FarmEvent> | null>(null);
+  const [modalTitle, setModalTitle] = useState('Add New Event');
 
   const handleSelectEvent = (event: FarmEvent) => {
     setSelectedEvent(event);
-    setModalOpened(true);
+    setDetailsModalOpened(true);
   };
 
-  const handleAddEvent = () => {
-    // TODO: Implement logic to open a form/modal for adding new events
-    alert('Add New Event functionality to be implemented.');
+  const handleAddEventClick = () => {
+    setCurrentEvent(null);
+    setModalTitle('Add New Event');
+    setDetailsModalOpened(false);
+    setFormModalOpened(true);
   };
 
-  // Optional: Custom styling for events
+  const handleEditEventClick = (event: FarmEvent) => {
+    setCurrentEvent(event);
+    setModalTitle('Edit Event');
+    setDetailsModalOpened(false);
+    setFormModalOpened(true);
+  };
+
+  const handleDeleteEvent = (eventId: number | string) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      setEvents(events.filter(event => event.id !== eventId));
+      setDetailsModalOpened(false);
+      setSelectedEvent(null);
+      console.log(`Deleted event with ID: ${eventId}`);
+    }
+  };
+
+  const handleSaveEvent = (eventData: FarmEvent) => {
+    if (currentEvent && currentEvent.id) {
+      setEvents(events.map(event => (event.id === eventData.id ? eventData : event)));
+      console.log('Updated event:', eventData);
+    } else {
+      setEvents([...events, { ...eventData }]);
+      console.log('Added new event:', eventData);
+    }
+    setFormModalOpened(false);
+    setCurrentEvent(null);
+  };
+
+  // Refine event styling
   const eventStyleGetter = (event: FarmEvent, start: Date, end: Date, isSelected: boolean) => {
     let backgroundColor = '#3174ad'; // Default blue
-    if (event.type === 'planting') backgroundColor = '#2f9e44'; // Green
-    if (event.type === 'harvesting') backgroundColor = '#e67700'; // Orange
-    if (event.type === 'fertilization') backgroundColor = '#7048e8'; // Violet
-    if (event.type === 'scouting') backgroundColor = '#fcc419'; // Yellow
+    let borderColor = '#195a91'; // Darker blue
+
+    if (event.type === 'planting') { backgroundColor = '#40c057'; borderColor = '#2f9e44'; } // Green
+    if (event.type === 'harvesting') { backgroundColor = '#fd7e14'; borderColor = '#e67700'; } // Orange
+    if (event.type === 'fertilization') { backgroundColor = '#7950f2'; borderColor = '#7048e8'; } // Violet
+    if (event.type === 'scouting') { backgroundColor = '#fab005'; borderColor = '#f59f00'; } // Yellow
+    // Add more types and colors if needed
 
     const style = {
-        backgroundColor,
-        borderRadius: '5px',
-        opacity: 0.8,
+        backgroundColor: isSelected ? borderColor : backgroundColor,
+        borderRadius: '4px', // Slightly smaller radius
+        opacity: 0.9, // Slightly less opaque
         color: 'white',
-        border: '0px',
-        display: 'block'
+        border: `1px solid ${borderColor}`,
+        display: 'block',
+        padding: '2px 4px', // Add small padding
+        fontSize: '0.8rem', // Slightly smaller font
     };
     return {
         style: style
@@ -107,30 +142,31 @@ export default function CropCalendarPage() {
   };
 
   return (
-    <Container size="xl">
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Crop Calendar</Title>
-        <Button onClick={handleAddEvent}>Add Event</Button>
+    <Container size="xl" py="lg">
+      <Group justify="space-between" align="center" mb="xl">
+        <Title order={3}>Crop Calendar</Title>
+        <Button onClick={handleAddEventClick} leftSection={<IconPlus size={16} />}>Add Event</Button>
       </Group>
 
-      <Paper shadow="xs" p="md" style={{ height: '70vh' }}>
-        {/* Adjust height as needed */}
-        <Calendar<FarmEvent> // Specify event type
+      <Paper shadow="sm" p="md" withBorder>
+        <Calendar<FarmEvent>
           localizer={localizer}
           events={events}
           startAccessor="start"
           endAccessor="end"
-          style={{ height: '100%' }}
+          style={{ height: '70vh' }}
           onSelectEvent={handleSelectEvent}
-          eventPropGetter={eventStyleGetter} // Apply custom styles
-          views={['month', 'week', 'day', 'agenda']} // Configure available views
+          eventPropGetter={eventStyleGetter}
+          views={['month', 'week', 'day', 'agenda']}
+          components={{
+              toolbar: CustomCalendarToolbar
+          }}
         />
       </Paper>
 
-      {/* Modal to display event details */}
       <Modal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
+        opened={detailsModalOpened}
+        onClose={() => setDetailsModalOpened(false)}
         title={selectedEvent?.title || 'Event Details'}
       >
         {selectedEvent && (
@@ -139,7 +175,6 @@ export default function CropCalendarPage() {
             <Text><strong>Ends:</strong> {format(selectedEvent.end, 'Pp')}</Text>
             {selectedEvent.resource && <Text><strong>Resource:</strong> {selectedEvent.resource}</Text>}
             {selectedEvent.type && <Text><strong>Type:</strong> {selectedEvent.type}</Text>}
-            {/* Add more event details here */}
           </Stack>
         )}
       </Modal>

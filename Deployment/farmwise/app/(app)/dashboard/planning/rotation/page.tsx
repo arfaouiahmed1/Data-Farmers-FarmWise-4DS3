@@ -1,152 +1,225 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Container, Title, Text, Paper, Table, Button, Group, Select, SimpleGrid, Stack, Badge, Alert, Divider, Box } from '@mantine/core';
-import { IconInfoCircle, IconPlant2, IconArrowRight, IconAlertTriangle } from '@tabler/icons-react';
+import React, { useMemo, useState } from 'react';
+import { Container, Title, Text, Paper, Table, Button, Group, Select, SimpleGrid, Stack, Badge, Alert, Divider, Box, Modal, ActionIcon } from '@mantine/core';
+import { IconInfoCircle, IconPlant2, IconArrowRight, IconAlertTriangle, IconPencil, IconTrash, IconEye } from '@tabler/icons-react';
+import { RotationEntryForm } from '@/components/planning/RotationEntryForm';
+import type { RotationEntry } from '@/types/planning';
 
-// Example Data (Grouped by field implicitly)
-interface RotationEntry {
-  id: number;
-  field: string;
-  year: number;
-  season: string;
-  crop: string;
-  status: string;
-  family: string;
-}
-
-const rotationData: RotationEntry[] = [
+const initialRotationData: RotationEntry[] = [
   { id: 1, field: 'Field A', year: 2024, season: 'Spring', crop: 'Tomatoes', status: 'Harvested', family: 'Nightshade' },
   { id: 2, field: 'Field A', year: 2024, season: 'Summer', crop: 'Corn', status: 'Growing', family: 'Grass' },
-  { id: 3, field: 'Field A', year: 2024, season: 'Fall', crop: 'Cover Crop (Rye)', status: 'Planned', family: 'Grass' }, // Example warning: Corn -> Rye (both grass)
+  { id: 3, field: 'Field A', year: 2024, season: 'Fall', crop: 'Cover Crop (Rye)', status: 'Planned', family: 'Grass' },
   { id: 4, field: 'Field B', year: 2024, season: 'Spring', crop: 'Lettuce', status: 'Harvested', family: 'Aster' },
   { id: 5, field: 'Field B', year: 2024, season: 'Summer', crop: 'Soybeans', status: 'Growing', family: 'Legume' },
   { id: 6, field: 'Field B', year: 2024, season: 'Fall', crop: 'Fallow', status: 'Planned', family: 'None' },
   { id: 7, field: 'Field C', year: 2024, season: 'Spring/Summer', crop: 'Wheat', status: 'Harvested', family: 'Grass' },
-  { id: 8, field: 'Field C', year: 2024, season: 'Fall', crop: 'Cover Crop (Clover)', status: 'Planned', family: 'Legume' }, // Example good: Wheat -> Clover
-  { id: 9, field: 'Field A', year: 2025, season: 'Spring', crop: 'Peppers', status: 'Planned', family: 'Nightshade' }, // Example warning: Tomatoes (2024) -> Peppers (2025)
+  { id: 8, field: 'Field C', year: 2024, season: 'Fall', crop: 'Cover Crop (Clover)', status: 'Planned', family: 'Legume' },
+  { id: 9, field: 'Field A', year: 2025, season: 'Spring', crop: 'Peppers', status: 'Planned', family: 'Nightshade' },
 ];
 
-// Helper to group data by field
 const groupRotationByField = (data: RotationEntry[]) => {
   return data.reduce((acc: { [field: string]: RotationEntry[] }, item: RotationEntry) => {
     if (!acc[item.field]) {
       acc[item.field] = [];
     }
     acc[item.field].push(item);
-    // Sort entries within a field by year then season (simple sort for now)
     acc[item.field].sort((a: RotationEntry, b: RotationEntry) => {
       if (a.year !== b.year) return a.year - b.year;
-      // Basic season sort - needs improvement for complex seasons like 'Spring/Summer'
-      const seasonOrder: { [key: string]: number } = { 'Spring': 1, 'Spring/Summer': 2, 'Summer': 3, 'Fall': 4 };
+      const seasonOrder: { [key: string]: number } = { 'Spring': 1, 'Spring/Summer': 2, 'Summer': 3, 'Fall': 4, 'Winter': 5, 'Full Year': 6 };
       return (seasonOrder[a.season] || 99) - (seasonOrder[b.season] || 99);
     });
     return acc;
   }, {});
 };
 
-// Function to check for basic rotation warnings (example logic)
-const checkRotationIssues = (fieldRotations: RotationEntry[]) => {
-  const issues: string[] = [];
-  for (let i = 1; i < fieldRotations.length; i++) {
-    const prev = fieldRotations[i - 1];
-    const current = fieldRotations[i];
-    // Warning: Same crop family in consecutive seasons/years (basic check)
-    if (prev.family !== 'None' && prev.family === current.family && prev.family !== 'Cover Crop') { // Ignore cover crops for this simple check
-       issues.push(`Potential issue: Planting ${current.crop} (${current.family}) after ${prev.crop} (${prev.family}) in ${current.year}.`);
+const checkRotationIssues = (allRotationsByField: { [field: string]: RotationEntry[] }) => {
+  const issues: { [field: string]: string[] } = {};
+  for (const field in allRotationsByField) {
+    const fieldRotations = allRotationsByField[field];
+    issues[field] = [];
+    for (let i = 1; i < fieldRotations.length; i++) {
+      const prev = fieldRotations[i - 1];
+      const current = fieldRotations[i];
+      if (prev.family && prev.family !== 'None' && prev.family === current.family && prev.family !== 'Cover Crop') {
+        issues[field].push(`Potential issue in ${field}: Planting ${current.crop} (${current.family}) after ${prev.crop} (${prev.family}) - ${prev.year}/${prev.season} -> ${current.year}/${current.season}.`);
+      }
+      if (current.year === prev.year + 1 && prev.family && prev.family !== 'None' && prev.family === current.family && prev.family !== 'Cover Crop') {
+        issues[field].push(`Potential issue in ${field} (Year Change): Planting ${current.crop} (${current.family}, ${current.year}) after ${prev.crop} (${prev.family}, ${prev.year}).`);
+      }
     }
-     // Can add more complex checks here (e.g., nutrient depletion, pest cycles)
   }
   return issues;
 };
 
 export default function RotationSchedulePage() {
-  // TODO: Add state for filters (year, field)
-  const [selectedYear, setSelectedYear] = React.useState('2024'); // Example filter state
+  const [rotationEntries, setRotationEntries] = useState<RotationEntry[]>(initialRotationData);
+  const [selectedYear, setSelectedYear] = useState<string | null>(new Date().getFullYear().toString());
+  const [detailsModalOpened, setDetailsModalOpened] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<RotationEntry | null>(null);
+  const [formModalOpened, setFormModalOpened] = useState(false);
+  const [currentEntry, setCurrentEntry] = useState<Partial<RotationEntry> | null>(null);
+  const [modalTitle, setModalTitle] = useState('Add Rotation Entry');
 
-  const groupedData = useMemo(() => groupRotationByField(rotationData), []);
+  const groupedData = useMemo(() => groupRotationByField(rotationEntries), [rotationEntries]);
+  const rotationIssues = useMemo(() => checkRotationIssues(groupedData), [groupedData]);
 
-  const handleAddEntry = () => {
-    alert('Add Rotation Entry functionality needs implementation.');
+  const availableYears = useMemo(() => {
+    const years = new Set(rotationEntries.map(e => e.year.toString()));
+    return Array.from(years).sort().reverse();
+  }, [rotationEntries]);
+
+  const filteredFields = useMemo(() => {
+    return Object.keys(groupedData).filter(field =>
+      !selectedYear || groupedData[field].some((entry: RotationEntry) => entry.year.toString() === selectedYear)
+    );
+  }, [groupedData, selectedYear]);
+
+  const handleSelectEntry = (entry: RotationEntry) => {
+    setSelectedEntry(entry);
+    setDetailsModalOpened(true);
   };
 
-  const filteredFields = Object.keys(groupedData).filter(field =>
-    groupedData[field].some((entry: RotationEntry) => entry.year.toString() === selectedYear)
-  );
+  const handleAddEntryClick = () => {
+    setCurrentEntry(null);
+    setModalTitle('Add Rotation Entry');
+    setDetailsModalOpened(false);
+    setFormModalOpened(true);
+  };
+
+  const handleEditEntryClick = (entry: RotationEntry) => {
+    setCurrentEntry(entry);
+    setModalTitle('Edit Rotation Entry');
+    setDetailsModalOpened(false);
+    setFormModalOpened(true);
+  };
+
+  const handleDeleteEntry = (entryId: number | string) => {
+    if (window.confirm('Are you sure you want to delete this rotation entry?')) {
+      setRotationEntries(prevEntries => prevEntries.filter(entry => entry.id !== entryId));
+      setDetailsModalOpened(false);
+      setSelectedEntry(null);
+      console.log(`Deleted rotation entry with ID: ${entryId}`);
+    }
+  };
+
+  const handleSaveEntry = (entryData: RotationEntry) => {
+    setRotationEntries(prevEntries => {
+      if (currentEntry && currentEntry.id) {
+        console.log('Updating rotation entry:', entryData);
+        return prevEntries.map(entry => (entry.id === entryData.id ? entryData : entry));
+      } else {
+        console.log('Adding new rotation entry:', entryData);
+        return [...prevEntries, entryData];
+      }
+    });
+    setFormModalOpened(false);
+    setCurrentEntry(null);
+    console.log('Adding API call here for actual save/update');
+  };
 
   return (
     <Container size="xl">
       <Group justify="space-between" align="flex-start" mb="lg">
         <Title order={2}>Crop Rotation Plan</Title>
-         <Group>
-           <Select
-              label="Year"
-              placeholder="Filter by year"
-              data={['2024', '2025']} // Populate dynamically later
-              value={selectedYear}
-              onChange={(value) => setSelectedYear(value || '2024')}
-              clearable
-            />
-           <Button onClick={handleAddEntry} mt="xl">Add Rotation Entry</Button>
-         </Group>
-       </Group>
+        <Group>
+          <Select
+            label="Filter by Year"
+            placeholder="All Years"
+            data={availableYears}
+            value={selectedYear}
+            onChange={setSelectedYear}
+            clearable
+          />
+          <Button onClick={handleAddEntryClick} mt="xl">Add Rotation Entry</Button>
+        </Group>
+      </Group>
 
       <Alert icon={<IconInfoCircle size="1rem" />} title="Rotation Planning" color="blue" variant="light" mb="lg">
-         Effective crop rotation helps manage soil fertility, control pests and diseases, and improve long-term soil health.
-         Review the planned sequences below.
-       </Alert>
+        Effective crop rotation helps manage soil fertility, control pests and diseases, and improve long-term soil health.
+        Click on an entry for details or to edit/delete.
+      </Alert>
 
       <Paper shadow="xs" p="md">
-         <Stack gap="xl">
-           {filteredFields.length > 0 ? filteredFields.map((field) => {
-            const fieldRotations = groupedData[field].filter((entry: RotationEntry) => entry.year.toString() === selectedYear);
-             const rotationIssues = checkRotationIssues(groupedData[field]); // Check issues across all years for the field
+        <Stack gap="xl">
+          {filteredFields.length > 0 ? filteredFields.map((field) => {
+            const fieldRotations = selectedYear
+              ? groupedData[field].filter((entry: RotationEntry) => entry.year.toString() === selectedYear)
+              : groupedData[field];
 
-             return (
-               <Box key={field}>
-                 <Title order={4} mb="sm">{field}</Title>
-                 <Paper withBorder p="md" radius="sm">
-                   <Text size="sm" c="dimmed" mb="xs">Planned Rotation Sequence ({selectedYear})</Text>
-                   <Group wrap="wrap" gap="xs" mb="md">
-                     {fieldRotations.map((entry: RotationEntry, index: number) => (
-                       <React.Fragment key={entry.id}>
-                        <Badge
-                           leftSection={<IconPlant2 size={14}/>}
-                           variant="light"
-                           color={entry.status === 'Planned' ? 'gray' : entry.status === 'Growing' ? 'green' : 'blue'}
-                           size="lg"
-                         >
-                          {entry.crop} ({entry.season})
-                         </Badge>
-                         {index < fieldRotations.length - 1 && <IconArrowRight size={16} color="gray" />}
-                       </React.Fragment>
-                     ))}
-                   </Group>
-                   {rotationIssues.length > 0 && (
-                     <>
-                       <Divider my="xs" />
-                       <Alert variant="outline" color="orange" title="Potential Rotation Considerations" icon={<IconAlertTriangle />} mt="sm" radius="xs">
-                         <Stack gap="xs">
-                           {rotationIssues.map((issue: string, idx: number) => <Text key={idx} size="xs">- {issue}</Text>)}
-                          </Stack>
-                        </Alert>
+            if (fieldRotations.length === 0 && selectedYear) return null;
+
+            const fieldIssues: string[] = rotationIssues[field] || [];
+
+            return (
+              <Box key={field}>
+                <Title order={4} mb="sm">{field}</Title>
+                <Paper withBorder p="md" radius="sm">
+                  <Text size="sm" c="dimmed" mb="xs">Rotation Sequence {selectedYear ? `(${selectedYear})` : '(All Years)'}</Text>
+                  <Group wrap="wrap" gap="xs" mb="md">
+                    {fieldRotations.map((entry: RotationEntry, index: number) => (
+                      <React.Fragment key={entry.id}>
+                        <Button
+                          variant="light"
+                          size="sm"
+                          onClick={() => handleSelectEntry(entry)}
+                          leftSection={<IconPlant2 size={14}/>}
+                          color={entry.status === 'Planned' ? 'gray' : entry.status === 'Growing' ? 'green' : 'blue'}
+                          px="xs"
+                        >
+                          {entry.crop} ({entry.season} {entry.year})
+                        </Button>
+                        {index < fieldRotations.length - 1 && <IconArrowRight size={16} color="gray" />}
+                      </React.Fragment>
+                    ))}
+                  </Group>
+                  {fieldIssues.length > 0 && (
+                    <>
+                      <Divider my="xs" />
+                      <Alert variant="outline" color="orange" title="Potential Rotation Considerations" icon={<IconAlertTriangle />} mt="sm" radius="xs">
+                        <Stack gap="xs">
+                          {fieldIssues.map((issue: string, idx: number) => <Text key={idx} size="xs">- {issue}</Text>)}
+                        </Stack>
+                      </Alert>
                     </>
-                   )}
-                 </Paper>
-               </Box>
-             );
+                  )}
+                </Paper>
+              </Box>
+            );
           }) : (
-             <Text c="dimmed" ta="center">No rotation data found for the selected year.</Text>
-           )}
-         </Stack>
-       </Paper>
+            <Text c="dimmed" ta="center">No rotation data found{selectedYear ? ` for ${selectedYear}`: ''}. Add entries to get started.</Text>
+          )}
+        </Stack>
+      </Paper>
 
-       {/* Original Table (Optional - could be removed or kept for detailed view) */}
-       {/* <Title order={3} mt="xl" mb="md">Detailed View</Title>
-       <Table striped highlightOnHover withTableBorder withColumnBorders>
-         <Table.Thead> ... </Table.Thead>
-         <Table.Tbody> ... </Table.Tbody>
-       </Table> */}
+      <Modal
+        opened={detailsModalOpened}
+        onClose={() => setDetailsModalOpened(false)}
+        title={`Details: ${selectedEntry?.crop} (${selectedEntry?.field} - ${selectedEntry?.year})`}
+      >
+        {selectedEntry && (
+          <Stack>
+            <Text><strong>Field:</strong> {selectedEntry.field}</Text>
+            <Text><strong>Year:</strong> {selectedEntry.year}</Text>
+            <Text><strong>Season:</strong> {selectedEntry.season}</Text>
+            <Text><strong>Crop:</strong> {selectedEntry.crop}</Text>
+            <Text><strong>Family:</strong> {selectedEntry.family || 'N/A'}</Text>
+            <Text><strong>Status:</strong> <Badge color={selectedEntry.status === 'Planned' ? 'gray' : selectedEntry.status === 'Growing' ? 'green' : 'blue'} variant="light">{selectedEntry.status}</Badge></Text>
+            <Group justify="flex-end" mt="md">
+              <Button variant="outline" leftSection={<IconPencil size={14}/>} onClick={() => handleEditEntryClick(selectedEntry)}>Edit</Button>
+              <Button color="red" leftSection={<IconTrash size={14}/>} onClick={() => handleDeleteEntry(selectedEntry.id)}>Delete</Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      <RotationEntryForm
+        opened={formModalOpened}
+        onClose={() => setFormModalOpened(false)}
+        onSubmit={handleSaveEntry}
+        initialValues={currentEntry}
+        title={modalTitle}
+      />
     </Container>
   );
 } 

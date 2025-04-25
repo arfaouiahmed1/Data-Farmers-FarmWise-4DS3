@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useState, useRef } from 'react';
-import dynamic from 'next/dynamic'; // Import dynamic
 import {
     Title,
     Text,
@@ -22,15 +21,12 @@ import {
     Image
 } from '@mantine/core';
 import { IconPlant2, IconInfoCircle, IconMapPin, IconBug, IconLeaf, IconMessageChatbot, IconUpload, IconPhoto, IconX, IconSend } from '@tabler/icons-react';
+import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import L, { Layer } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import styles from './CropHealthPage.module.css';
 import { GeoJsonObject } from 'geojson';
 import { Dropzone, IMAGE_MIME_TYPE, FileWithPath } from '@mantine/dropzone';
-
-// Dynamically import the map component with SSR disabled
-const CropHealthMap = dynamic(() => import('@/components/CropHealth/CropHealthMap'), {
-    ssr: false,
-    loading: () => <Group justify="center" align="center" style={{ height: '400px' }}><Loader /> Loading Map...</Group> // Optional loading state
-});
 
 // Define interface for Feature properties
 interface FieldProperties {
@@ -92,6 +88,70 @@ const farmFieldsData: GeoJSON.FeatureCollection<GeoJSON.Polygon, FieldProperties
         },
       },
   ],
+};
+
+// --- Helper Functions (Map) ---
+const calculateHealthScore = (ndvi: number | undefined, evi: number | undefined): number => {
+    if (ndvi === undefined || evi === undefined) return 0;
+    const normNdvi = Math.max(0, Math.min(1, (ndvi + 1) / 2));
+    const normEvi = Math.max(0, Math.min(1, evi));
+    return 0.6 * normNdvi + 0.4 * normEvi;
+};
+const getColor = (score: number): string => {
+  return score > 0.7 ? '#4CAF50' :
+         score > 0.4 ? '#FFEB3B' :
+                       '#F44336';
+};
+const styleFeature = (feature: GeoJSON.Feature<GeoJSON.Geometry, FieldProperties> | undefined) => {
+  if (!feature || !feature.properties) {
+    return {
+        fillColor: '#CCCCCC',
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        fillOpacity: 0.5,
+      };
+  }
+  const { ndvi, evi } = feature.properties;
+  const score = calculateHealthScore(ndvi, evi);
+  return {
+    fillColor: getColor(score),
+    weight: 2,
+    opacity: 1,
+    color: 'white',
+    dashArray: '3',
+    fillOpacity: 0.7,
+  };
+};
+const onEachFeature = (feature: GeoJSON.Feature<GeoJSON.Geometry, FieldProperties>, layer: Layer) => {
+    if (feature.properties) {
+        const { name, ndvi, evi } = feature.properties;
+        const score = calculateHealthScore(ndvi, evi);
+        const popupContent = `
+            <b>${name || 'Unnamed Field'}</b><br/>
+            NDVI: ${ndvi !== undefined ? ndvi.toFixed(2) : 'N/A'}<br/>
+            EVI: ${evi !== undefined ? evi.toFixed(2) : 'N/A'}<br/>
+            Health Score: ${score.toFixed(2)}
+        `;
+        layer.bindPopup(popupContent);
+    }
+};
+interface FitBoundsProps {
+    geoJsonData: GeoJsonObject | null;
+}
+const FitBounds: React.FC<FitBoundsProps> = ({ geoJsonData }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (map && geoJsonData && (geoJsonData.type === 'FeatureCollection' || geoJsonData.type === 'Feature')) {
+            const geoJsonLayer = L.geoJSON(geoJsonData);
+            if (Object.keys(geoJsonLayer.getBounds()).length > 0) {
+                 map.fitBounds(geoJsonLayer.getBounds());
+            } else {
+                console.warn("Could not calculate bounds for GeoJSON data.");
+            }
+        }
+    }, [map, geoJsonData]);
+    return null;
 };
 
 // --- Image Analysis Component ---
@@ -306,63 +366,86 @@ const TreatmentChat: React.FC = () => {
     );
 };
 
+
 // --- Main Page Component ---
 export default function CropHealthPage() {
-    const [activeTab, setActiveTab] = useState<string | null>('map');
+  // Check if running in browser for Leaflet
+  const isBrowser = typeof window !== 'undefined';
 
-    // Add state or logic to fetch/update farmFieldsData if it's dynamic
-    const [currentGeoJsonData, setCurrentGeoJsonData] = useState<GeoJSON.FeatureCollection<GeoJSON.Polygon, FieldProperties> | null>(farmFieldsData);
+  return (
+    <Container fluid>
+      <Title order={2} mb="lg">
+        <IconPlant2 size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
+        Crop Health Monitoring
+      </Title>
+      <Text c="dimmed" mb="xl">
+        Utilize map overlays, image analysis, and AI chat to monitor and manage crop health.
+      </Text>
 
-    return (
-        <Container fluid className={styles.pageContainer}>
-            <Title order={2} mb="lg">Crop Health Monitoring</Title>
+        <Tabs defaultValue="map">
+            <Tabs.List grow>
+                <Tabs.Tab value="map" leftSection={<IconMapPin size={16} />}>
+                    Map View
+                </Tabs.Tab>
+                <Tabs.Tab value="disease" leftSection={<IconBug size={16} />}>
+                    Disease Detection
+                </Tabs.Tab>
+                <Tabs.Tab value="weed" leftSection={<IconLeaf size={16} />}>
+                    Weed Identification
+                </Tabs.Tab>
+                <Tabs.Tab value="chat" leftSection={<IconMessageChatbot size={16} />}>
+                    Treatment Chat
+                </Tabs.Tab>
+            </Tabs.List>
 
-            <Tabs value={activeTab} onChange={setActiveTab} variant="pills" radius="md" mb="lg">
-                <Tabs.List grow>
-                    <Tabs.Tab value="map" leftSection={<IconMapPin style={{ width: rem(16), height: rem(16) }} />}>
-                        Field Map Overview
-                    </Tabs.Tab>
-                    <Tabs.Tab value="disease" leftSection={<IconBug style={{ width: rem(16), height: rem(16) }} />}>
-                        Disease Detection
-                    </Tabs.Tab>
-                    <Tabs.Tab value="weed" leftSection={<IconLeaf style={{ width: rem(16), height: rem(16) }} />}>
-                        Weed Identification
-                    </Tabs.Tab>
-                     <Tabs.Tab value="chat" leftSection={<IconMessageChatbot style={{ width: rem(16), height: rem(16) }} />}>
-                        Treatment Advisor
-                    </Tabs.Tab>
-                </Tabs.List>
+            <Tabs.Panel value="map" pt="lg">
+                 <Paper withBorder p="xl" radius="md" shadow="sm" className={styles.mapPaper}>
+                    {isBrowser ? (
+                    <MapContainer
+                        center={[40.75, -73.95]} // Initial center (will be adjusted by FitBounds)
+                        zoom={12}              // Initial zoom
+                        className={styles.mapContainer} // Apply CSS module style
+                    >
+                        <TileLayer
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                        {farmFieldsData.type === 'FeatureCollection' && (
+                        <GeoJSON
+                            data={farmFieldsData}
+                            style={styleFeature}
+                            onEachFeature={onEachFeature}
+                        />
+                        )}
+                        <FitBounds geoJsonData={farmFieldsData} />
+                    </MapContainer>
+                    ) : (
+                    <Alert variant="light" color="blue" title="Map Loading..." icon={<IconInfoCircle />}>
+                        The interactive map will load shortly.
+                    </Alert>
+                    )}
+                </Paper>
+            </Tabs.Panel>
 
-                <Tabs.Panel value="map" pt="xs">
-                    <Paper withBorder radius="md" p="md" shadow="sm">
-                        <Title order={4} mb="sm">Satellite Imagery Analysis (NDVI/EVI)</Title>
-                        {/* Use the dynamically imported map component */}
-                        <CropHealthMap geoJsonData={currentGeoJsonData} />
-                        <Text size="sm" c="dimmed" mt="xs">
-                            Green areas indicate healthier vegetation based on NDVI/EVI scores. Click on a field for details.
-                        </Text>
-                    </Paper>
-                </Tabs.Panel>
+            <Tabs.Panel value="disease" pt="lg">
+                 <Paper withBorder p="xl" radius="md" shadow="sm">
+                     <Title order={4} mb="md">Upload Crop Image for Disease Analysis</Title>
+                    <ImageAnalysis type="disease" />
+                 </Paper>
+            </Tabs.Panel>
 
-                <Tabs.Panel value="disease" pt="xs">
-                    <Paper withBorder radius="md" p="md" shadow="sm">
-                         <ImageAnalysis type="disease" />
-                    </Paper>
-                </Tabs.Panel>
+            <Tabs.Panel value="weed" pt="lg">
+      <Paper withBorder p="xl" radius="md" shadow="sm">
+                     <Title order={4} mb="md">Upload Image for Weed Identification</Title>
+                     <ImageAnalysis type="weed" />
+      </Paper>
+            </Tabs.Panel>
 
-                <Tabs.Panel value="weed" pt="xs">
-                     <Paper withBorder radius="md" p="md" shadow="sm">
-                        <ImageAnalysis type="weed" />
-                    </Paper>
-                </Tabs.Panel>
+            <Tabs.Panel value="chat" pt="lg">
+                 <TreatmentChat />
+            </Tabs.Panel>
+        </Tabs>
 
-                 <Tabs.Panel value="chat" pt="xs">
-                    <Paper withBorder radius="md" p="0" shadow="sm" style={{ height: '60vh', display: 'flex', flexDirection: 'column' }}>
-                        <TreatmentChat />
-                    </Paper>
-                </Tabs.Panel>
-            </Tabs>
-
-        </Container>
-    );
+    </Container>
+  );
 }

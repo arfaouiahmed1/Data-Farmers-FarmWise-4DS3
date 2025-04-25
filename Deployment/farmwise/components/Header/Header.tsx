@@ -10,7 +10,6 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image'; // Import the Next.js Image component
 import { usePathname } from 'next/navigation'; // Added usePathname hook
@@ -28,20 +27,8 @@ const links = [
 
 export function AppHeader() {
   const [opened, { toggle }] = useDisclosure(false);
-  const [scrolled, setScrolled] = useState(false);
   const theme = useMantineTheme();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const pathname = usePathname(); // Get current pathname
 
   // Smooth scroll handler (only for homepage)
   const handleScroll = (event: React.MouseEvent<HTMLAnchorElement>, link: string) => {
@@ -63,27 +50,22 @@ export function AppHeader() {
   // Generate items based on current path
   const items = links.map((link) => {
     const isHomepage = pathname === '/';
-    const commonProps = {
-      key: link.label,
-      className: classes.link,
-    };
-
-    if (isHomepage && link.link.startsWith('/#')) {
-      // On homepage and it's a hash link, use smooth scroll
+    if (isHomepage) {
+      // On homepage, use smooth scroll
       return (
         <a
-          {...commonProps}
+          key={link.label}
           href={link.link}
+          className={classes.link}
           onClick={(event) => handleScroll(event, link.link)}
         >
           {link.label}
         </a>
       );
     } else {
-      // On other pages, or if it's not a hash link, use standard Next.js Link
-      // This will navigate to the homepage section if needed, or just follow the link
+      // On other pages, use standard Link to navigate back to homepage + hash
       return (
-        <Link {...commonProps} href={link.link}>
+        <Link key={link.label} href={link.link} className={classes.link}>
           {link.label}
         </Link>
       );
@@ -91,10 +73,7 @@ export function AppHeader() {
   });
 
   return (
-    <Box
-      component="header"
-      className={`${classes.header} ${scrolled ? classes.headerBlurred : ''}`}
-    >
+    <Box component="header" className={classes.header}>
       <Container size="lg" className={classes.inner}>
         {/* Logo/Brand */}
         <Link href="/" passHref legacyBehavior>

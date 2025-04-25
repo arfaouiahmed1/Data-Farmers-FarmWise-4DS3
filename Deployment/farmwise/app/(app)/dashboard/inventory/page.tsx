@@ -135,9 +135,9 @@ export default function InventoryPage() {
     <Container fluid>
       <Group justify="space-between" mb="lg">
         <Title order={2}>
-           <IconBuildingWarehouse size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
-          Inventory Management
-        </Title>
+         <IconBuildingWarehouse size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
+        Inventory Management
+      </Title>
         <Button leftSection={<IconPlus size={16} />} onClick={handleAddItem}>
           Add Item
         </Button>

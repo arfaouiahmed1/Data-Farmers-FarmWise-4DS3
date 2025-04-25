@@ -160,9 +160,9 @@ export default function TrackerPage() {
     <Container fluid>
       <Group justify="space-between" mb="lg">
         <Title order={2}>
-           <IconListDetails size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
-          Farm Log & Tracker
-        </Title>
+         <IconListDetails size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
+        Farm Log & Tracker
+      </Title>
         <Button leftSection={<IconPlus size={16} />} onClick={handleAddLog}>
           Add Log Entry
         </Button>

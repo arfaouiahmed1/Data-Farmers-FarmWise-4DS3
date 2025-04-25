@@ -370,7 +370,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {toolsNavItems.length > 0 && (
               <>
                 <Divider label="Tools" labelPosition="center" my="sm" />
-                {renderNavLinks(toolsNavItems)}
+            {renderNavLinks(toolsNavItems)}
               </>
             )}
           </Stack>
