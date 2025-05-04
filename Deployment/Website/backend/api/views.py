@@ -13,12 +13,15 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import json
 import math # Import math for calculations
+import os # Add os import
+from django.conf import settings # Add settings import
 
 from ultralytics import YOLO
 
 # --- Configuration ---
-# Use the path provided by the user
-MODEL_PATH = r"C:\Users\ahmed\Desktop\PIDS\Data-Farmers-FarmWise-4DS3\Models\Farm Boundaries\yolov8l-seg.pt"
+# Use a relative path based on the Django project's BASE_DIR
+# Assuming BASE_DIR points to the 'backend' directory
+MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Farm Boundaries/yolov8l-seg.pt'))
 # Load the model (consider loading it once globally if performance is critical)
 # For simplicity here, loading per request. Optimize later if needed.
 try:

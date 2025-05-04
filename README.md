@@ -36,6 +36,25 @@ FarmWise is a comprehensive agricultural recommendation system powered by machin
 - **Remote Sensing**: Processing and analysis of satellite imagery data
 - **Deployment**: Containerized application for scalable and consistent deployment
 
+## Project Structure
+```
+FarmWise/
+├── Deployment/
+│   ├── Mobile/         # Future mobile application (Flutter/Kotlin/Swift)
+│   └── Website/        # Main web application
+│       ├── backend/    # Django REST framework backend
+│       └── farmwise/   # Next.js frontend
+├── Models/
+│   └── README.md       # ML/DL models (YOLOv8, etc.)
+├── Datasets/
+│   └── README.md       # Datasets for training and evaluation
+├── Notebooks/
+│   └── README.md       # Jupyter notebooks for analysis & experimentation
+├── .gitignore          # Git ignore file
+├── README.md           # Project overview (this file)
+└── ...               # Configuration files (.idea, etc.)
+```
+
 ## Installation and Setup
 
 ### Backend Setup
@@ -76,6 +95,12 @@ FarmWise is a comprehensive agricultural recommendation system powered by machin
    npm run build
    npm run start
    ```
+
+## Usage
+
+1.  **Access the Frontend:** Once both the backend and frontend servers are running, open your web browser and navigate to `http://localhost:3000` (or the port specified by Next.js).
+2.  **Explore Features:** Use the navigation menu to explore the various features like the dashboard, AI advisor, disease detection, mapping, etc.
+3.  **Interact:** Follow the on-screen prompts to upload images, view recommendations, and analyze data.
 
 ## Contribution
 Contributions are welcome! Feel free to submit issues and pull requests to improve FarmWise.

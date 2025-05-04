@@ -138,6 +138,9 @@ cython_debug/
 # VS Code settings
 .vscode/
 
+# IntelliJ / PyCharm settings
+.idea/
+
 # OS generated files
 .DS_Store
 Thumbs.db
