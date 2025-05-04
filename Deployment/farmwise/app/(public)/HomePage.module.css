@@ -103,6 +103,15 @@
   overflow: hidden;
   border: 1px solid transparent;
   background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  z-index: 5;
+}
+
+/* Active feature card styling */
+.featureCardActive {
+  border-color: var(--mantine-color-farmGreen-6);
+  box-shadow: var(--mantine-shadow-md);
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+  z-index: 6;
 }
 
 .featureCard:hover {

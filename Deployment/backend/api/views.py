@@ -12,12 +12,13 @@ from django.views.decorators.csrf import csrf_exempt # Ensure csrf_exempt is imp
 from django.utils.decorators import method_decorator
 from django.views import View
 import json
+import math # Import math for calculations
 
 from ultralytics import YOLO
 
 # --- Configuration ---
 # Use the path provided by the user
-MODEL_PATH = r"C:\Users\ahmed\Desktop\PIDS\Data-Farmers-FarmWise-4DS3\Models\yolov8l-seg.pt"
+MODEL_PATH = r"C:\Users\ahmed\Desktop\PIDS\Data-Farmers-FarmWise-4DS3\Models\Farm Boundaries\yolov8l-seg.pt"
 # Load the model (consider loading it once globally if performance is critical)
 # For simplicity here, loading per request. Optimize later if needed.
 try:
@@ -46,6 +47,32 @@ def pixel_to_geo(px, py, img_width, img_height, bounds):
     geo_lat = bounds['north'] - (norm_y * map_height_deg) # Y is inverted (0 is top)
 
     return {'lat': geo_lat, 'lng': geo_lng}
+
+# --- Helper Function: Calculate approximate area per pixel ---
+def calculate_area_per_pixel(bounds, img_width, img_height):
+    """Calculates approximate area in square meters per pixel."""
+    R_EARTH = 6371000 # Earth radius in meters
+    lat_north = math.radians(bounds['north'])
+    lat_south = math.radians(bounds['south'])
+    lon_east = math.radians(bounds['east'])
+    lon_west = math.radians(bounds['west'])
+
+    avg_lat = (lat_north + lat_south) / 2.0
+
+    # Approx distance north-south and east-west in meters
+    dist_ns = R_EARTH * (lat_north - lat_south)
+    dist_ew = R_EARTH * (lon_east - lon_west) * math.cos(avg_lat)
+
+    # Avoid division by zero if image dimensions are invalid
+    if img_height <= 0 or img_width <= 0:
+        return 0.0
+
+    meters_per_pixel_y = dist_ns / img_height
+    meters_per_pixel_x = dist_ew / img_width
+
+    # Area per pixel in square meters
+    area_sq_m_per_pixel = meters_per_pixel_x * meters_per_pixel_y
+    return area_sq_m_per_pixel
 
 # --- API View ---
 @method_decorator(csrf_exempt, name='dispatch') # Disable CSRF for API endpoint for simplicity
@@ -165,13 +192,23 @@ def detect_farm_boundaries_view(request):
         print("Running model inference...")
         try:
             # Increase confidence threshold to filter weaker detections
-            results = model.predict(source=img_np, save=False, conf=0.3) 
+            # Add iou parameter and adjust confidence level
+            results = model.predict(source=img_np, save=False, conf=0.5, iou=0.45)
         except Exception as pred_err:
             print(f"Error during model prediction: {pred_err}")
             return JsonResponse({'error': 'Error during model prediction'}, status=500)
             
         print(f"Inference complete. Results: {len(results) if results else 0}")
         
+        # Calculate area per pixel once
+        try:
+            area_sq_m_per_pixel = calculate_area_per_pixel(bounds_for_helper, img_width, img_height)
+            print(f"Approx area per pixel (sq m): {area_sq_m_per_pixel}")
+        except Exception as area_calc_err:
+            print(f"Error calculating area per pixel: {area_calc_err}")
+            # Default to 0 or handle appropriately if calculation fails
+            area_sq_m_per_pixel = 0.0
+
         # --- Process Results and Convert to GeoJSON ---
         geojson_features = []
         if results and results[0].masks:
@@ -201,6 +238,28 @@ def detect_farm_boundaries_view(request):
                     continue
                 # --- End Smoothing ---
 
+                # --- Calculate Area ---
+                area_hectares = 0.0
+                size_category = "Unknown"
+                if area_sq_m_per_pixel > 0:
+                    pixel_area = cv2.contourArea(smoothed_contour)
+                    area_sq_m = pixel_area * area_sq_m_per_pixel
+                    area_hectares = round(area_sq_m / 10000.0, 2) # Convert to hectares, round to 2 decimal places
+
+                    # --- Classify Size ---
+                    # Adjust thresholds as needed
+                    if area_hectares < 1:
+                        size_category = "Hobby Farm (<1 Ha)"
+                    elif area_hectares < 10:
+                        size_category = "Standard Cultivation (1-10 Ha)"
+                    elif area_hectares < 100:
+                        size_category = "Large Estate (10-100 Ha)"
+                    else:
+                        size_category = "Major Operation (>100 Ha)"
+                else:
+                    print(f"Skipping area calculation for mask {i} due to invalid area_per_pixel.")
+                # --- End Area Calculation & Classification ---
+
 
                 # Convert *smoothed* pixel coordinates to geo coordinates (list of [lng, lat]) for GeoJSON
                 geo_polygon_coords = []
@@ -228,7 +287,10 @@ def detect_farm_boundaries_view(request):
                             "coordinates": [geo_polygon_coords] # GeoJSON requires an array of rings
                         },
                         "properties": {
-                            "id": i # Add an identifier if needed
+                            "id": i, # Add an identifier if needed
+                            "area_hectares": area_hectares,
+                            "size_category": size_category,
+                            "message": f"Detected a {size_category.split(' (')[0]}." # Example message
                         }
                     }
                     geojson_features.append(feature)

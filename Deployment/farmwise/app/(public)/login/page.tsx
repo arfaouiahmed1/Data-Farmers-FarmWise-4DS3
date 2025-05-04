@@ -21,6 +21,7 @@ import {
   IconBrandFacebook,
   IconBrandWindows,
 } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 import classes from './LoginPage.module.css'; // We'll create this CSS module next
 
 // Animation variant
@@ -34,6 +35,14 @@ const containerVariant = {
 };
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  const handleLogin = () => {
+    // In a real app, you would authenticate the user here
+    // For now, we're just navigating to the dashboard
+    router.push('/dashboard');
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -61,8 +70,14 @@ export default function LoginPage() {
                   Forgot password?
               </Anchor>
               </Group>
-              <Button fullWidth mt="xl" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }}>
-              Sign in with Email
+              <Button 
+                fullWidth 
+                mt="xl" 
+                variant="gradient" 
+                gradient={{ from: 'farmGreen', to: 'cyan' }}
+                onClick={handleLogin}
+              >
+                Sign in with Email
               </Button>
           </Stack>
 

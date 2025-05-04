@@ -31,56 +31,90 @@ import {
   Stack,
   Table,
   Tabs,
+  Tooltip,
 } from '@mantine/core';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  IconChartInfographic,
-  IconPlant2,
-  IconScan,
-  IconSatellite,
-  IconListDetails,
-  IconTractor,
-  IconDroplet,
-  IconSun,
-  IconBug,
-  IconVaccine,
-  IconZoomScan,
-  IconRulerMeasure,
-  IconCheck,
-  IconUpload,
-  IconBrain,
-  IconReportAnalytics,
-  IconBulb,
-  IconMessages,
+  // General & Recommendation Icons
+  IconChartInfographic, // Replaced - was general, now specific? keep for now
+  IconPlant2, // Crop Rec, Fertilizer, Disease, Soil
+  IconTractor, // Yield Prediction
+  IconDroplet, // Irrigation, Water Resource Mgt
+  IconSun, // Weather (keep for widget)
+  IconTestPipe, // Fertilizer, Soil Health
+  IconRulerMeasure, // Satellite Analysis (Size)
+  IconBulb, // How it Works (Optimize)
+  IconWorld, // Satellite Analysis (General)
+  IconChartLine, // Yield Prediction, Analytics
+
+  // Disease & Plant Health Icons
+  IconScan, // General Disease Detection
+  IconBug, // Disease Identification
+  IconVaccine, // Treatment Rec, Fertilizer
+  IconZoomScan, // Weed Detection
+  IconDeviceMobile, // Disease Detection (Widget visual)
+  IconLeaf, // Disease Detection (Widget visual)
+  IconAlertTriangle, // Disease Alert (Widget visual)
+  IconShieldCheck, // Treatment Success (Widget visual)
+
+  // Satellite Icons
+  IconSatellite, // General Satellite
+  // IconRulerMeasure already included
+  // IconWorld already included
+
+  // Process & UI Icons
+  IconUpload, // How it Works
+  IconBrain, // How it Works (AI Analysis)
+  IconReportAnalytics, // How it Works (Insights)
+  IconCheck, // Pricing, Success
+  IconMessages, // Contact / Testimonials?
+  IconListDetails, // Feature details
+  IconQuote, // Testimonials
+
+  // Weather Widget Icons (Keep as is)
   IconCloudRain,
   IconTemperature,
   IconWind,
   IconDropletFilled,
   IconArrowUp,
   IconArrowDown,
+
+  // Social & Footer Icons (Keep as is)
   IconBrandTwitter,
   IconBrandInstagram,
   IconBrandLinkedin,
-  IconDeviceMobile,
-  IconLeaf,
-  IconAlertTriangle,
-  IconShieldCheck,
-  IconWorld,
-  IconTestPipe,
-  IconChartLine,
-  IconQuote, // Added for testimonials
+
+  // New/Refined Feature Icons from README
+  IconMoneybag, // Farmer Segmentation (Financial)
+  IconUsersGroup, // Farmer Segmentation (General)
+  IconMapSearch, // Land Use Classification
+  IconTimeline, // Performance Tracking / Yield Prediction Trends
+  IconGauge, // Resource Optimization (General)
+  IconEyeglass, // Environmental Monitoring
+  IconPlant, // Vegetation Index
+  IconTargetArrow, // Pesticide Guidance
+
 } from '@tabler/icons-react';
 import { AreaChart, PieChart, BarChart, DonutChart, LineChart } from '@mantine/charts';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import classes from './HomePage.module.css';
-import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
+// Removed: import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { Carousel } from '@mantine/carousel';
 import Autoplay from 'embla-carousel-autoplay';
 
-// Animation variants
+// --- Animation Variants ---
 const sectionVariant = {
   hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: 'easeOut', staggerChildren: 0.1 },
+  },
+};
+
+const itemVariant = {
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
@@ -88,22 +122,26 @@ const sectionVariant = {
   },
 };
 
-const itemVariant = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.4, ease: 'easeOut' },
-  },
-};
+const featureItemVariant = (i: number) => ({
+    hidden: { opacity: 0, y: 50 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            delay: i * 0.15, // Slightly adjusted delay
+            duration: 0.7,
+            ease: [0.215, 0.61, 0.355, 1] // Keep ease for nice effect
+        }
+    }
+});
 
-// Recommendation widget animation variants
+
 const widgetVariant = {
   hidden: { opacity: 0, x: 20 },
   visible: { 
     opacity: 1, 
     x: 0,
-    transition: { duration: 0.6, ease: 'easeOut' }
+    transition: { duration: 0.5, ease: 'easeOut' }
   },
   exit: { 
     opacity: 0, 
@@ -112,16 +150,18 @@ const widgetVariant = {
   }
 };
 
-// Sample data for the chart
-const chartData = [
-  { date: 'Mar 22', YieldEst: 2890, AvgYield: 2200 },
-  { date: 'Mar 23', YieldEst: 2756, AvgYield: 2100 },
-  { date: 'Mar 24', YieldEst: 3322, AvgYield: 2300 },
-  { date: 'Mar 25', YieldEst: 3470, AvgYield: 2450 },
-  { date: 'Mar 26', YieldEst: 3129, AvgYield: 2500 },
+// --- Data Definitions ---
+
+// Hero Carousel Images
+const heroImages = [
+  { src: '/federico-respini-sYffw0LNr7s-unsplash.jpg', alt: 'Farm field landscape' },
+  { src: '/gozha-net-xDrxJCdedcI-unsplash.jpg', alt: 'Close up of crops' },
+  { src: '/markus-spiske-vrbZVyX2k4I-unsplash.jpg', alt: 'Tractor in field' },
+  { src: '/megan-thomas-xMh_ww8HN_Q-unsplash.jpg', alt: 'Farmer inspecting plants' },
+  { src: '/phuc-long-aqrIcYonB-o-unsplash.jpg', alt: 'Drone view of farm' },
 ];
 
-// Crop suitability data
+// --- Widget Specific Data (Reinstated) ---
 const cropSuitabilityData = [
   { crop: 'Corn', suitability: 92, color: 'yellow.6', notes: 'Excellent soil compatibility, ideal rainfall' },
   { crop: 'Wheat', suitability: 78, color: 'yellow.4', notes: 'Good soil conditions, moderate temperature' },
@@ -130,7 +170,14 @@ const cropSuitabilityData = [
   { crop: 'Cotton', suitability: 32, color: 'gray.5', notes: 'Poor, climate not suitable' },
 ];
 
-// Resource usage data
+const yieldChartData = [ // Renamed from chartData to avoid conflict with Mantine Chart props
+  { date: 'Mar 22', YieldEst: 2890, AvgYield: 2200 },
+  { date: 'Mar 23', YieldEst: 2756, AvgYield: 2100 },
+  { date: 'Mar 24', YieldEst: 3322, AvgYield: 2300 },
+  { date: 'Mar 25', YieldEst: 3470, AvgYield: 2450 },
+  { date: 'Mar 26', YieldEst: 3129, AvgYield: 2500 },
+];
+
 const resourceData = {
   water: {
     current: 1240, // m³/hectare
@@ -155,7 +202,6 @@ const resourceData = {
   }
 };
 
-// Weather forecast data
 const weatherForecastData = [
   { date: 'Today', temp: 24, precipitation: 10, condition: 'Partly Cloudy', icon: IconSun },
   { date: 'Tomorrow', temp: 22, precipitation: 60, condition: 'Rain Showers', icon: IconCloudRain },
@@ -166,146 +212,577 @@ const weatherForecastData = [
   { date: 'Sun', temp: 22, precipitation: 40, condition: 'Scattered Showers', icon: IconCloudRain },
 ];
 
-// Feature data
-const features = [
-  {
-    icon: IconChartInfographic,
-    title: 'Smart Recommendations',
-    description:
-      'Leverage AI for predictions on crops, yield, fertilizer/water usage, and weather forecasts to optimize your planning.',
-    details: [
-      { icon: IconPlant2, text: 'Crop suitability' },
-      { icon: IconTractor, text: 'Yield estimation' },
-      { icon: IconDroplet, text: 'Resource usage (water, fertilizer)' },
-      { icon: IconSun, text: 'Localized weather forecasts' },
-    ],
-    extraContent: null, // We'll render this dynamically based on the active widget
-  },
-  {
-    icon: IconScan,
-    title: 'Plant Health Analysis',
-    description:
-      'Upload images to instantly detect diseases and weeds, receiving tailored treatment suggestions from our models.',
-    details: [
-        { icon: IconBug, text: 'Disease identification' },
-        { icon: IconVaccine, text: 'Treatment recommendations' },
-        { icon: IconZoomScan, text: 'Weed detection' },
-    ],
-    extraContent: (
-      <Paper withBorder p="xs" mt="md">
-        <Text size="xs" c="dimmed" ta="center" mb="xs">Analysis Simulation</Text>
-        <Box style={{ position: 'relative', height: rem(100), overflow: 'hidden' }}>
-          {/* Phone Icon - Animating position */}
-          <motion.div
-            style={{ position: 'absolute', top: rem(30), left: rem(20), zIndex: 3 }}
-            animate={{ x: [0, 60, 60, 0] }}
-            transition={{
-                repeat: Infinity, 
-                duration: 6,
-                ease: "easeInOut",
-                times: [0, 0.25, 0.75, 1]
-            }}
-          >
-            <IconDeviceMobile size={40} color="var(--mantine-color-dimmed)" />
-          </motion.div>
+// --- Features Data (Derived from README) ---
+interface FeatureDetail {
+  icon: React.FC<any>;
+  text: string;
+}
 
-          {/* Leaf Icon - Animates color */}
-          <motion.div 
-             style={{ position: 'absolute', top: rem(30), right: rem(40), zIndex: 1 }}
-             animate={{
-                 color: [
-                     "var(--mantine-color-farmGreen-6)",
-                     "var(--mantine-color-farmGreen-6)",
-                     "var(--mantine-color-yellow-7)",
-                     "var(--mantine-color-farmGreen-6)",
-                     "var(--mantine-color-farmGreen-6)"
-                 ]
-             }}
-             transition={{
-                 repeat: Infinity,
-                 duration: 6,
-                 times: [0, 0.3, 0.4, 0.8, 1] 
-             }}
-          >
-            <IconLeaf size={40} />
-          </motion.div>
+interface Feature {
+  id: string; // Unique ID for key prop and potentially for widget selection
+  icon: React.FC<any>;
+  title: string;
+  description: string;
+  details?: FeatureDetail[]; // Optional for features without sub-details
+  color?: string; // Optional color for theme icon
+  widgetComponent?: React.FC; // Optional associated interactive widget
+}
 
-          {/* Scanning Line */}
-          <motion.div
-              style={{
-                  position: 'absolute',
-                  right: rem(45),
-                  width: rem(30),
-                  height: rem(2),
-                  backgroundColor: "var(--mantine-color-cyan-5)",
-                  boxShadow: "0 0 5px var(--mantine-color-cyan-3)",
-                  opacity: 0,
-                  y: rem(30),
-                  zIndex: 2,
-              }}
-              animate={{ 
-                  opacity: [0, 1, 1, 0, 0], 
-                  y: [rem(30), rem(30), rem(70), rem(70), rem(30)]
-              }}
-              transition={{
-                  repeat: Infinity,
-                  duration: 6,
-                  times: [0, 0.15, 0.35, 0.4, 1]
-              }}
-          />
+// --- Detailed Widget Components (Re-implemented & Adapted) ---
 
-         {/* Analysis Indicator (Brain) */}
-         <motion.div
-             style={{ position: 'absolute', top: rem(5), left: rem(90), opacity: 0, zIndex: 4 }}
-             animate={{ 
-                 opacity: [0, 0, 1, 1, 0, 0],
-                 rotate: [0, 0, 0, 360, 360, 0]
-             }} 
-             transition={{ 
-                 repeat: Infinity, 
-                 duration: 6, 
-                 times: [0, 0.3, 0.4, 0.5, 0.6, 1]
-             }}
-         >
-             <IconBrain size={20} color="var(--mantine-color-blue-5)"/>
-         </motion.div>
-
-         {/* Results */}
-         {/* Disease Name */}
-         <motion.div
-             style={{ position: 'absolute', top: rem(5), left: 0, right: 0, opacity: 0, textAlign: 'center'}}
-             animate={{ opacity: [0, 0, 1, 1, 0] }}
-             transition={{ repeat: Infinity, duration: 6, times: [0, 0.55, 0.6, 0.85, 1] }}
-         >
-              <Badge color="red" variant="light" leftSection={<IconAlertTriangle size={12}/>}>Leaf Blight</Badge>
-         </motion.div>
-
-         {/* Action Recommended */}
-         <motion.div
-             style={{ position: 'absolute', bottom: rem(5), left: 0, right: 0, opacity: 0, textAlign: 'center'}}
-             animate={{ opacity: [0, 0, 1, 1, 0] }}
-             transition={{ repeat: Infinity, duration: 6, times: [0, 0.65, 0.7, 0.85, 1] }}
-         >
-              <Badge color="green" variant="light" leftSection={<IconShieldCheck size={12}/>}>Action: Fungicide</Badge>
-         </motion.div>
-
+// 1. Recommendation Widgets
+  const CropSuitabilityWidget = () => (
+    <motion.div 
+      key="crop-suitability"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-farmGreen-6)` }}>
+        <Group justify="space-between" mb="md">
+          <Text size="sm" fw={500} c="dimmed">Crop Suitability Analysis</Text>
+          <Badge color="farmGreen" variant="light">AI Powered</Badge>
+        </Group>
+        <Box>
+          {cropSuitabilityData.map((crop) => (
+            <HoverCard key={crop.crop} width={280} shadow="md" withArrow openDelay={200} closeDelay={100}>
+              <HoverCard.Target>
+                <Box mb="md">
+                  <Group justify="space-between" mb={5}>
+                    <Text size="sm">{crop.crop}</Text>
+                    <Text size="sm" fw={500} c={crop.suitability > 70 ? "farmGreen" : crop.suitability > 50 ? "yellow" : "red"}>
+                      {crop.suitability}%
+                    </Text>
+                  </Group>
+                  <Progress 
+                    value={crop.suitability} color={crop.color} size="md" radius="xl"
+                    animated={true} striped={true}
+                  />
+                </Box>
+              </HoverCard.Target>
+              <HoverCard.Dropdown>
+                <Text size="sm">{crop.notes}</Text>
+              </HoverCard.Dropdown>
+            </HoverCard>
+          ))}
         </Box>
       </Paper>
-    ),
+    </motion.div>
+  );
+  
+  const YieldEstimationWidget = () => (
+    <motion.div 
+      key="yield-estimation"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-farmGreen-6)` }}>
+        <Text size="sm" fw={500} c="dimmed" mb="md">Yield Estimation (kg/ha)</Text>
+        <Box mb="md">
+          <LineChart 
+            h={120} data={yieldChartData} dataKey="date" withYAxis yAxisProps={{ width: 30 }} gridAxis="y"
+            series={[
+              { name: 'YieldEst', color: 'farmGreen.6', label: 'Estimated Yield' },
+              { name: 'AvgYield', color: 'blue.5', label: 'Avg. Regional Yield' },
+            ]}
+            curveType="monotone"
+            tooltipProps={{
+              content: ({ label, payload }) => (
+                  <Paper px="md" py="sm" withBorder shadow="md">
+                    <Text fw={500} mb={5}>{label}</Text>
+                    {payload?.map((item: any) => (
+                      <Text key={item.name} c={item.color} fz="sm">
+                        {item.payload.label}: {item.value} kg/ha
+                      </Text>
+                    ))}
+                  </Paper>
+              )
+            }}
+          />
+        </Box>
+        <Group justify="space-between" mb="xs"> {/* Reduced margin */}
+          <Stack gap={0}>
+            <Text size="sm" c="dimmed">Projected Yield</Text>
+            <Group gap="xs"> <Text size="xl" fw={700}>3,215</Text> <Text size="xs" c="dimmed">kg/ha</Text> </Group>
+          </Stack>
+          <Badge color="green" size="lg" variant="light" leftSection={<IconArrowUp size={14} />}> +18% vs Avg </Badge>
+          </Group>
+      </Paper>
+    </motion.div>
+  );
+  
+  const ResourceUsageWidget = () => (
+    <motion.div 
+      key="resource-usage"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-cyan-6)` }}>
+        <Tabs defaultValue="water" variant="pills" radius="md">
+          <Tabs.List grow mb="md">
+            <Tabs.Tab value="water" leftSection={<IconDroplet size={16} />}>Water</Tabs.Tab>
+            <Tabs.Tab value="fertilizer" leftSection={<IconTestPipe size={16} />}>Fertilizer</Tabs.Tab>
+          </Tabs.List>
+          
+          <Tabs.Panel value="water">
+            <Group justify="space-between" mb="md">
+              <Stack gap={0}> <Text size="sm" c="dimmed">Current Usage</Text> <Group gap="xs"> <Text size="lg" fw={600}>{resourceData.water.current}</Text> <Text size="xs" c="dimmed">m³/ha</Text> </Group> </Stack>
+              <Stack gap={0} align="flex-end"> <Text size="sm" c="dimmed">Recommended</Text> <Group gap="xs"> <Text size="lg" fw={600} c="cyan">{resourceData.water.recommended}</Text> <Text size="xs" c="dimmed">m³/ha</Text> </Group> </Stack>
+                </Group>
+            <Text size="sm" fw={500} c="dimmed" mb="xs">Weekly Distribution (m³)</Text>
+            <Box mb="md">
+              <BarChart h={100} data={resourceData.water.forecast} dataKey="week" series={[{ name: 'amount', color: 'cyan.6' }]} barProps={{ radius: 4 }} tickLine="x" withYAxis={false} gridAxis="none" />
+            </Box>
+             <Group align="center" gap="xs">
+                <ThemeIcon radius="xl" size="sm" color="blue" variant="light"> <IconBulb size={14} /> </ThemeIcon>
+                <Text size="xs" c="dimmed">Potential savings: {resourceData.water.savings}% following optimized schedule.</Text>
+              </Group>
+          </Tabs.Panel>
+          
+          <Tabs.Panel value="fertilizer">
+            <Group justify="space-between" mb="md">
+              <Stack gap={0}> <Text size="sm" c="dimmed">Current Usage</Text> <Group gap="xs"> <Text size="lg" fw={600}>{resourceData.fertilizer.current}</Text> <Text size="xs" c="dimmed">kg/ha</Text> </Group> </Stack>
+              <Stack gap={0} align="flex-end"> <Text size="sm" c="dimmed">Recommended</Text> <Group gap="xs"> <Text size="lg" fw={600} c="green">{resourceData.fertilizer.recommended}</Text> <Text size="xs" c="dimmed">kg/ha</Text> </Group> </Stack>
+                </Group>
+            <Text size="sm" fw={500} c="dimmed" mb="xs">Nutrient Breakdown (kg/ha)</Text>
+            <Box mb="md">
+              <Table striped highlightOnHover withTableBorder withColumnBorders>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Nutrient</Table.Th>
+                    <Table.Th ta="right">Current</Table.Th>
+                    <Table.Th ta="right">Recommended</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {resourceData.fertilizer.forecast.map((item) => (
+                    <Table.Tr key={item.nutrient}>
+                      <Table.Td>{item.nutrient}</Table.Td>
+                      <Table.Td ta="right">{item.current}</Table.Td>
+                      <Table.Td ta="right">{item.recommended}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Box>
+             <Group align="center" gap="xs">
+                 <ThemeIcon radius="xl" size="sm" color="green" variant="light"> <IconBulb size={14} /> </ThemeIcon>
+                <Text size="xs" c="dimmed">Optimize application for {resourceData.fertilizer.savings}% reduction.</Text>
+              </Group>
+          </Tabs.Panel>
+        </Tabs>
+      </Paper>
+    </motion.div>
+  );
+
+const WeatherForecastWidget = () => (
+      <motion.div
+      key="weather-forecast"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-blue-6)` }}>
+        <Text size="sm" fw={500} c="dimmed" mb="md" ta="center">7-Day Weather Forecast</Text>
+        <ScrollArea>
+          <Group gap="md" wrap="nowrap" mb="md">
+            {weatherForecastData.map((day, index) => (
+              <motion.div
+                key={day.date} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1, duration: 0.4 }}
+              >
+                <Paper withBorder p="sm" radius="md" w={80} shadow="xs" style={{ textAlign: 'center', backgroundColor: index === 0 ? 'var(--mantine-color-body)' : undefined }}>
+                  <Text size="xs" fw={500} mb={5}>{day.date}</Text>
+                  <Center mb={5}> <day.icon size={24} style={{ color: day.condition.includes('Rain') ? 'var(--mantine-color-blue-5)' : day.condition.includes('Sunny') ? 'var(--mantine-color-yellow-5)' : 'var(--mantine-color-gray-5)' }} /> </Center>
+                  <Text size="lg" fw={600} lh={1.1}>{day.temp}°</Text>
+                  {/* <Text size="xs" c="dimmed" mb={5}>{day.condition}</Text> */}
+                  <Group justify="center" gap={3} mt={3}> <IconDroplet size={12} color="var(--mantine-color-blue-5)" /> <Text size="xs" c="dimmed">{day.precipitation}%</Text> </Group>
+                </Paper>
+              </motion.div>
+            ))}
+            </Group>
+        </ScrollArea>
+         <Group align="center" gap="xs" mt="sm">
+             <ThemeIcon radius="xl" size="sm" color="blue" variant="light"> <IconMessages size={14} /> </ThemeIcon>
+             <Text size="xs" c="dimmed">Rain expected mid-week. Consider delaying fertilizer application.</Text>
+          </Group>
+      </Paper>
+    </motion.div>
+  );
+
+// Combined Recommendation Widget with Tabs
+const RecommendationWidget: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<string | null>('suitability');
+
+    const renderWidget = () => {
+        switch (activeTab) {
+            case 'suitability': return <CropSuitabilityWidget />;
+            case 'yield': return <YieldEstimationWidget />;
+            case 'resources': return <ResourceUsageWidget />;
+            case 'weather': return <WeatherForecastWidget />;
+            default: return null;
+        }
+    };
+
+    return (
+        <Stack gap="lg">
+             <Tabs value={activeTab} onChange={setActiveTab} variant="pills" radius="md">
+                <Tabs.List grow>
+                    <Tabs.Tab value="suitability" leftSection={<IconPlant2 size={16} />}>Suitability</Tabs.Tab>
+                    <Tabs.Tab value="yield" leftSection={<IconTractor size={16} />}>Yield</Tabs.Tab>
+                    <Tabs.Tab value="resources" leftSection={<IconGauge size={16} />}>Resources</Tabs.Tab>
+                    <Tabs.Tab value="weather" leftSection={<IconSun size={16} />}>Weather</Tabs.Tab>
+                </Tabs.List>
+            </Tabs>
+            <AnimatePresence mode="wait">
+                {renderWidget()}
+            </AnimatePresence>
+        </Stack>
+    );
+};
+
+// 2. Plant Health Widgets
+const DiseaseIdentificationWidget = () => (
+            <motion.div
+      key="disease-identification"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-red-6)` }}>
+        <Group justify="space-between" mb="md">
+          <Text size="sm" fw={500} c="dimmed">Disease Identification</Text>
+          <Badge color="red" variant="light">AI Powered</Badge>
+        </Group>
+        <Box style={{ position: 'relative', height: rem(180), overflow: 'hidden' }}>
+            {/* Simplified Simulation: Phone scanning a leaf */}
+            <Center style={{ height: '100%' }}>
+            <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                    style={{ position: 'relative' }}
+                 >
+                    <IconDeviceMobile size={80} stroke={1} color="var(--mantine-color-gray-5)" />
+            <motion.div
+                        style={{ position: 'absolute', top: '25%', left: '25%', color: 'var(--mantine-color-farmGreen-5)' }}
+                        animate={{ color: ['var(--mantine-color-farmGreen-5)', 'var(--mantine-color-yellow-6)', 'var(--mantine-color-red-7)', 'var(--mantine-color-farmGreen-5)']}}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear"}}
+                    >
+                        <IconLeaf size={40} />
+                    </motion.div>
+                     {/* Scanning Line */}
+                  <motion.div 
+                        style={{ position: 'absolute', top: '20%', left: '25%', width: '50%', height: '2px', background: 'var(--mantine-color-cyan-4)', boxShadow: '0 0 4px var(--mantine-color-cyan-3)', opacity: 0 }}
+                        animate={{ opacity: [0, 1, 1, 0], y: ['0%', '50%', '50%', '0%'] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                     />
+            </motion.div>
+            </Center>
+             {/* Result Badge */}
+            <motion.div 
+                style={{ position: 'absolute', bottom: rem(10), left: 0, right: 0, textAlign: 'center', opacity: 0}}
+                animate={{ opacity: [0, 0, 1, 1, 0] }}
+                transition={{ repeat: Infinity, duration: 5, delay: 1, times: [0, 0.4, 0.5, 0.9, 1] }}
+            >
+                 <Badge color="red" variant="filled" size="lg" leftSection={<IconAlertTriangle size={14}/>}>Late Blight Detected</Badge>
+              </motion.div>
+        </Box>
+         <Group align="center" gap="xs" mt="sm">
+            <ThemeIcon radius="xl" size="sm" color="red" variant="light"> <IconBug size={14} /> </ThemeIcon>
+            <Text size="xs" c="dimmed">Identifies 50+ crop diseases from images.</Text>
+        </Group>
+      </Paper>
+            </motion.div>
+  );
+
+const TreatmentRecommendationsWidget = () => (
+            <motion.div
+      key="treatment-recommendations"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-green-6)` }}>
+        <Group justify="space-between" mb="md">
+          <Text size="sm" fw={500} c="dimmed">Treatment Recommendations</Text>
+           <Badge color="green" variant="light">Actionable Advice</Badge>
+        </Group>
+         <Stack gap="md">
+            {/* Example Diagnosis */}
+            <Paper withBorder p="sm" radius="sm" bg="var(--mantine-color-red-light)">
+                <Group justify="space-between">
+                    <Group gap="xs"> <ThemeIcon color="red" variant="light" radius="sm" size="lg"><IconBug size={18}/></ThemeIcon> <Text fw={500} size="sm">Diagnosis: Late Blight</Text> </Group>
+                    <Text size="sm" c="red" fw={600}>Severity: High</Text>
+                 </Group>
+            </Paper>
+             {/* Recommended Treatments */}
+            <Box>
+                 <Text size="sm" fw={500} mb="xs">Recommended Actions:</Text>
+                <Paper withBorder p="sm" radius="sm" mb="xs" style={{ borderLeft: `3px solid var(--mantine-color-blue-6)`}}>
+                     <Group justify="space-between">
+                        <Group gap="xs"> <ThemeIcon color="blue" variant="light" size="md" radius="xl"><IconVaccine size={16} /></ThemeIcon> <Text fw={500}>Fungicide</Text> </Group>
+                        <Badge color="blue" variant="filled" size="sm">Primary</Badge>
+                    </Group>
+                    <Text size="xs" ml={34} c="dimmed">Apply copper-based fungicide spray.</Text>
+                </Paper>
+                <Paper withBorder p="sm" radius="sm" style={{ borderLeft: `3px solid var(--mantine-color-orange-6)`}}>
+                     <Group justify="space-between">
+                        <Group gap="xs"> <ThemeIcon color="orange" variant="light" size="md" radius="xl"><IconPlant2 size={16} /></ThemeIcon> <Text fw={500}>Pruning/Removal</Text> </Group>
+                         <Badge color="orange" variant="light" size="sm">Secondary</Badge>
+                    </Group>
+                    <Text size="xs" ml={34} c="dimmed">Remove and destroy heavily infected plants/leaves.</Text>
+                 </Paper>
+             </Box>
+         </Stack>
+      </Paper>
+              </motion.div>
+  );
+              
+const WeedDetectionWidget = () => (
+              <motion.div
+      key="weed-detection"
+      initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+    >
+      <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-yellow-6)` }}>
+         <Group justify="space-between" mb="md">
+          <Text size="sm" fw={500} c="dimmed">Weed Detection</Text>
+          <Badge color="yellow" variant="light">AI Powered</Badge>
+        </Group>
+         <Box style={{ position: 'relative', height: rem(180), overflow: 'hidden' }}>
+             {/* Simplified Field View */}
+             <Box style={{ height: '100%', background: 'linear-gradient(to bottom, var(--mantine-color-green-1), var(--mantine-color-green-3))', borderRadius: rem(4), padding: rem(10) }}>
+                 {/* Crop Rows */}
+                 {Array(5).fill(0).map((_, r) => (
+                     <Group key={r} mb="xs" gap="sm" wrap="nowrap">
+                         {/* Crops */}
+                         {Array(6).fill(0).map((_, c) => <Box key={`c-${r}-${c}`} h={15} w={15} style={{ borderRadius: '50%', background: 'var(--mantine-color-farmGreen-6)' }} />)}
+                         {/* Random Weeds */}
+                         {Math.random() > 0.6 && (
+                             <motion.div
+                                key={`w-${r}`}
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.5 + Math.random(), duration: 0.5 }}
+                             >
+                                 <Tooltip label="Weed Detected" withArrow position="top">
+                                     <Box h={18} w={18} style={{ borderRadius: '3px', background: 'var(--mantine-color-yellow-7)', border: '1px solid var(--mantine-color-yellow-9)'}} />
+                                 </Tooltip>
+            </motion.div>
+                         )}
+                     </Group>
+                 ))}
+                 {/* Scanning Overlay */}
+              <motion.div
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 180, 255, 0.1)', border: '1px dashed var(--mantine-color-cyan-5)', opacity: 0 }}
+                    animate={{ opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, repeatDelay: 1 }}
+                />
+             </Box>
+         </Box>
+         <Group align="center" gap="xs" mt="sm">
+            <ThemeIcon radius="xl" size="sm" color="yellow" variant="light"> <IconZoomScan size={14} /> </ThemeIcon>
+            <Text size="xs" c="dimmed">Identifies common weeds for targeted action.</Text>
+        </Group>
+      </Paper>
+              </motion.div>
+  );
+
+
+// Combined Plant Health Widget with Tabs
+const PlantHealthWidget: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<string | null>('disease');
+
+    const renderWidget = () => {
+        switch (activeTab) {
+            case 'disease': return <DiseaseIdentificationWidget />;
+            case 'treatment': return <TreatmentRecommendationsWidget />;
+            case 'weeds': return <WeedDetectionWidget />;
+            default: return null;
+        }
+    };
+
+    return (
+        <Stack gap="lg">
+            <Tabs value={activeTab} onChange={setActiveTab} variant="pills" radius="md">
+                <Tabs.List grow>
+                    <Tabs.Tab value="disease" leftSection={<IconBug size={16} />} color="red">Disease ID</Tabs.Tab>
+                    <Tabs.Tab value="treatment" leftSection={<IconVaccine size={16} />} color="green">Treatment</Tabs.Tab>
+                    <Tabs.Tab value="weeds" leftSection={<IconZoomScan size={16} />} color="yellow">Weed ID</Tabs.Tab>
+                </Tabs.List>
+            </Tabs>
+             <AnimatePresence mode="wait">
+                {renderWidget()}
+            </AnimatePresence>
+        </Stack>
+    );
+};
+
+// 3. Satellite Widget (Using the previous detailed implementation)
+const SatelliteWidget: React.FC = () => {
+    // Renamed SatelliteFarmInsightsWidget to SatelliteWidget internally
+    const [housePositions, setHousePositions] = useState<{ top: string; left: string }[] | null>(null);
+    const [analysisComplete, setAnalysisComplete] = useState(false);
+
+    useEffect(() => {
+      const positions = Array(15).fill(0).map(() => ({ top: `${10 + Math.random() * 80}%`, left: `${10 + Math.random() * 80}%` }));
+      setHousePositions(positions);
+      const timer = setTimeout(() => setAnalysisComplete(true), 5000);
+      return () => clearTimeout(timer);
+    }, []);
+
+    return (
+              <motion.div
+        key="satellite-insights" initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+      >
+        <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-blue-6)` }}>
+          <Group justify="space-between" mb="md">
+            <Group gap="xs">
+               <ThemeIcon size="sm" variant="light" color="blue"><IconSatellite size={16} /></ThemeIcon>
+               <Text size="sm" fw={500} c="dimmed">Satellite Analysis</Text>
+                </Group>
+            <Badge color="blue" variant="light">Automated</Badge>
+          </Group>
+
+          <Box style={{ position: 'relative', height: rem(200), overflow: 'hidden', background: 'var(--mantine-color-dark-8)', borderRadius: 'var(--mantine-radius-sm)', border: '1px solid var(--mantine-color-dark-6)' }}>
+            {/* Simplified Visual Elements */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.8 }} style={{ position: 'absolute', top: '5%', left: '5%', width: '35%', height: '30%', background: 'var(--mantine-color-farmGreen-8)', borderRadius: '4px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 1.1 }} style={{ position: 'absolute', top: '5%', left: '42%', width: '15%', height: '18%', background: 'var(--mantine-color-yellow-8)', borderRadius: '4px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 1.4 }} style={{ position: 'absolute', top: '38%', left: '5%', width: '35%', height: '25%', background: 'var(--mantine-color-farmGreen-7)', borderRadius: '4px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 1.7 }} style={{ position: 'absolute', top: '66%', left: '5%', width: '35%', height: '28%', background: 'var(--mantine-color-farmGreen-9)', borderRadius: '4px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 2.0 }} style={{ position: 'absolute', top: '5%', left: '60%', width: '8%', height: '90%', background: 'var(--mantine-color-dark-5)', transform: 'skewY(-20deg)', borderRadius: '2px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 2.3 }} style={{ position: 'absolute', top: '5%', left: '70%', width: '25%', height: '20%', background: 'var(--mantine-color-yellow-7)', borderRadius: '4px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 2.6 }} style={{ position: 'absolute', top: '28%', left: '70%', width: '25%', height: '35%', background: 'var(--mantine-color-farmGreen-6)', borderRadius: '4px' }}/>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 2.9 }} style={{ position: 'absolute', top: '66%', left: '70%', width: '25%', height: '28%', background: 'var(--mantine-color-dark-6)', borderRadius: '4px' }}>
+               {housePositions && housePositions.map((pos, i) => ( <motion.div key={`house-${i}`} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2, delay: 3.0 + (i * 0.1) % 1 }} style={{ position: 'absolute', top: pos.top, left: pos.left, width: '3px', height: '3px', background: 'var(--mantine-color-gray-5)', borderRadius: '50%' }} /> ))}
+            </motion.div>
+            {/* Scanning Lines */}
+            <motion.div style={{ position: 'absolute', left: 0, top: '0%', width: '100%', height: '2px', background: 'rgba(0, 180, 255, 0.7)', boxShadow: '0 0 8px rgba(0, 180, 255, 0.9)', zIndex: 3 }} animate={{ top: ['0%', '100%', '100%', '0%'], opacity: [1, 1, 0, 0] }} transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, repeatDelay: 2, times: [0, 0.5, 0.51, 1] }} />
+            <motion.div style={{ position: 'absolute', left: '0%', top: 0, width: '2px', height: '100%', background: 'rgba(0, 180, 255, 0.7)', boxShadow: '0 0 8px rgba(0, 180, 255, 0.9)', zIndex: 3 }} animate={{ left: ['0%', '100%', '100%', '0%'], opacity: [1, 1, 0, 0] }} transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, repeatDelay: 2, times: [0, 0.5, 0.51, 1] }} />
+            {/* Analysis Text */}
+            <motion.div style={{ position: 'absolute', top: '45%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 4 }} animate={{ opacity: analysisComplete ? 0 : [0, 1, 1, 0], }} transition={{ duration: 4, repeat: analysisComplete ? 0 : Infinity, repeatDelay: 2 }}>
+              <Text ta="center" fw={700} style={{ color: 'rgba(0, 200, 255, 0.9)', textShadow: '0 0 10px rgba(0, 150, 255, 0.7)' }}> ANALYZING </Text>
+            </motion.div>
+            {/* Results Overlay */}
+            <motion.div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '5px', background: 'rgba(0, 0, 25, 0.6)', backdropFilter: 'blur(3px)', zIndex: 10, opacity: 0 }} animate={{ opacity: analysisComplete ? 1 : 0 }} transition={{ duration: 0.8 }}>
+              <motion.div initial={{ scale: 0 }} animate={{ scale: analysisComplete ? 1 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.2 }}>
+                <ThemeIcon size={40} radius={20} color="blue" variant="filled"> <IconRulerMeasure size={20} /> </ThemeIcon>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: analysisComplete ? 1 : 0, y: analysisComplete ? 0 : 10 }} transition={{ duration: 0.5, delay: 0.6 }}>
+                <Badge size="lg" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }}> Medium Farm </Badge>
+              </motion.div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: analysisComplete ? 1 : 0 }} transition={{ duration: 0.5, delay: 0.8 }}>
+                 <Text size="xs" c="gray.3" ta="center">Confidence: 94%</Text>
+              </motion.div>
+            </motion.div>
+          </Box>
+          <Group align="center" gap="xs" mt="sm">
+            <ThemeIcon radius="xl" size="sm" color="blue" variant="light"> <IconListDetails size={14} /> </ThemeIcon>
+            <Text size="xs" c="dimmed">Provides farm size, field count, and crop type estimation.</Text>
+        </Group>
+        </Paper>
+      </motion.div>
+    );
+}
+
+// 4. Segmentation & Analytics Widget (Placeholder/Simplified)
+const SegmentationAnalyticsWidget: React.FC = () => {
+    // Example: Simple performance tracking display
+    return (
+         <motion.div
+            key="segmentation-analytics"
+            initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
+        >
+             <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-grape-6)` }}>
+                <Group justify="space-between" mb="md">
+                    <Text size="sm" fw={500} c="dimmed">Farm Analytics</Text>
+                    <Badge color="grape" variant="light">Data Driven</Badge>
+            </Group>
+                <Stack gap="md">
+                    <Paper withBorder p="sm" radius="sm">
+                        <Group justify="space-between">
+                            <Group gap="xs"><ThemeIcon color="grape" variant="light" size="md"><IconUsersGroup size={16}/></ThemeIcon><Text size="sm" fw={500}>Farmer Segments</Text></Group>
+                            <Badge color="grape" variant="outline">Example: High Yield</Badge>
+                        </Group>
+                        <Text size="xs" c="dimmed" mt="xs">Grouping based on production, land use, etc. (Details require backend data).</Text>
+          </Paper>
+                     <Paper withBorder p="sm" radius="sm">
+                        <Group justify="space-between">
+                             <Group gap="xs"><ThemeIcon color="teal" variant="light" size="md"><IconTimeline size={16}/></ThemeIcon><Text size="sm" fw={500}>Performance Trend</Text></Group>
+                             <Badge color="teal" variant="light" leftSection={<IconArrowUp size={12}/>}>+8% YTD</Badge>
+                        </Group>
+                        <Text size="xs" c="dimmed" mt="xs">Monitor key metrics over time to track progress and identify areas for improvement.</Text>
+                    </Paper>
+                 </Stack>
+        </Paper>
+      </motion.div>
+    );
+};
+
+
+// --- Features Data (Updated with real widget components) ---
+interface FeatureDetail {
+  icon: React.FC<any>;
+  text: string;
+}
+
+interface Feature {
+  id: string; // Unique ID for key prop and potentially for widget selection
+  icon: React.FC<any>;
+  title: string;
+  description: string;
+  details?: FeatureDetail[]; // Optional for features without sub-details
+  color?: string; // Optional color for theme icon
+  widgetComponent?: React.FC; // Optional associated interactive widget
+}
+
+const featuresData: Feature[] = [
+  {
+    id: 'recommendations',
+    icon: IconBulb, // Changed icon to represent 'Insights'
+    title: 'Intelligent Recommendations',
+    description: 'AI-driven insights for crop selection, yield prediction, fertilizer/irrigation optimization, and pesticide guidance.',
+    details: [
+      { icon: IconPlant2, text: 'Crop Suitability' },
+      { icon: IconTractor, text: 'Yield Prediction' },
+      { icon: IconGauge, text: 'Resource Optimization' }, // Combines Fertilizer, Irrigation, Water Mgt.
+      { icon: IconTargetArrow, text: 'Pesticide Guidance' },
+    ],
+    color: 'farmGreen',
+    widgetComponent: RecommendationWidget,
   },
   {
-    icon: IconSatellite,
-    title: 'Satellite Farm Insights',
-    description:
-      'Utilize satellite imagery analysis to automatically determine farm size (small, medium, large) for better recommendations.',
+    id: 'plantHealth',
+    icon: IconScan,
+    title: 'Plant Health Analysis',
+    description: 'Identify plant diseases and weeds from images using advanced AI, with tailored treatment suggestions.',
     details: [
-        { icon: IconRulerMeasure, text: 'Accurate farm size classification' },
-        { icon: IconListDetails, text: 'Input for personalized advice' },
-    ]
+      { icon: IconBug, text: 'Disease Detection' },
+      { icon: IconZoomScan, text: 'Weed Identification' },
+      { icon: IconVaccine, text: 'Treatment Advice' },
+    ],
+    color: 'red', // Indicate potential issues
+    widgetComponent: PlantHealthWidget,
+  },
+  {
+    id: 'satellite',
+    icon: IconSatellite,
+    title: 'Satellite Imagery Insights',
+    description: 'Monitor crop health, classify land use, track vegetation indices, and detect environmental stress using satellite data.',
+    details: [
+        { icon: IconWorld, text: 'Crop Monitoring' },
+        { icon: IconMapSearch, text: 'Land Use Classification' },
+        { icon: IconPlant, text: 'Vegetation Index Tracking' },
+        { icon: IconEyeglass, text: 'Environmental Monitoring' },
+    ],
+    color: 'blue',
+    widgetComponent: SatelliteWidget,
+  },
+    {
+    id: 'segmentation',
+    icon: IconUsersGroup, // Changed icon
+    title: 'Segmentation & Analytics',
+    description: 'Understand farmer segments, analyze land use patterns, and track farm performance over time for targeted strategies.',
+    details: [
+        { icon: IconMoneybag, text: 'Farmer Profiling' }, // Financial aspect implied
+        { icon: IconMapSearch, text: 'Land Use Analysis' }, // Reiteration, but distinct focus
+        { icon: IconTimeline, text: 'Performance Tracking' },
+    ],
+    color: 'grape', // Different color for analytics
+    widgetComponent: SegmentationAnalyticsWidget,
   },
 ];
 
-// How it works data
+// How it works data (Keep as is)
 const howItWorksSteps = [
     { icon: IconUpload, title: 'Upload Data', description: 'Easily upload field data, images, or connect sensors.' },
     { icon: IconBrain, title: 'AI Analysis', description: 'Our models process your data using advanced ML algorithms.' },
@@ -313,49 +790,50 @@ const howItWorksSteps = [
     { icon: IconBulb, title: 'Optimize & Act', description: 'Implement suggestions to improve yield and efficiency.' },
 ];
 
-// Pricing Tiers Data
+// Pricing Tiers Data (Keep as is, maybe adjust features slightly based on README)
 const pricingTiers = [
     {
         title: 'Basic',
         price: '$0',
         period: '/ month',
         features: [
-            'Limited Recommendations',
-            'Basic Weather Forecast',
+            'Basic Crop Recommendations', // Refined
+            'Standard Weather Forecast', // Refined
             'Community Support'
         ],
-        buttonText: 'Get Started',
+        buttonText: 'Get Started Free', // Refined
         buttonVariant: 'default'
     },
     {
         title: 'Pro',
-        price: '$49',
+        price: '$49', // Keep price for example
         period: '/ month',
         features: [
             'Full Recommendation Suite',
-            'Advanced Disease Detection',
-            'Satellite Farm Size Analysis',
-            'Priority Support'
+            'AI Disease/Weed Detection', // Refined
+            'Basic Satellite Analysis', // Refined
+            'Priority Email Support' // Refined
         ],
-        buttonText: 'Choose Pro',
-        buttonVariant: 'gradient'
+        buttonText: 'Choose Pro Plan', // Refined
+        buttonVariant: 'gradient' // Keep gradient for emphasis
     },
     {
         title: 'Enterprise',
         price: 'Contact Us',
         period: '',
         features: [
-            'All Pro Features',
+            'All Pro Features +', // Refined
+            'Advanced Satellite Insights', // Refined
             'Custom Model Integration',
             'Dedicated Account Manager',
-            'API Access'
+            // 'API Access' // Keep if applicable
         ],
-        buttonText: 'Contact Sales',
-        buttonVariant: 'default'
+        buttonText: 'Request Enterprise Demo', // Refined
+        buttonVariant: 'outline' // Change variant for distinction
     }
 ];
 
-// Testimonials Data
+// Testimonials Data (Keep as is)
 const testimonials = [
     {
         quote: "FarmWise transformed how we manage our crops. The yield predictions are incredibly accurate!",
@@ -371,25 +849,14 @@ const testimonials = [
     }
 ];
 
-// Weather data example
-const weatherData = {
-  current: {
-    temp: 24,
-    humidity: 65,
-    windSpeed: 12,
-    condition: 'Partly Cloudy',
-    icon: IconCloudRain,
-  },
-  forecast: [
-    { day: 'Mon', temp: 25, icon: IconSun },
-    { day: 'Tue', temp: 22, icon: IconCloudRain },
-    { day: 'Wed', temp: 28, icon: IconSun },
-    { day: 'Thu', temp: 21, icon: IconCloudRain },
-    { day: 'Fri', temp: 23, icon: IconSun },
-  ],
-};
-
-// Crop distribution data for pie chart
+// Analytics Data (Keep as is - structure is fine, widgets can be added later)
+const chartData = [
+  { date: 'Mar 22', YieldEst: 2890, AvgYield: 2200 },
+  { date: 'Mar 23', YieldEst: 2756, AvgYield: 2100 },
+  { date: 'Mar 24', YieldEst: 3322, AvgYield: 2300 },
+  { date: 'Mar 25', YieldEst: 3470, AvgYield: 2450 },
+  { date: 'Mar 26', YieldEst: 3129, AvgYield: 2500 },
+];
 const cropDistributionData = [
   { name: 'Corn', value: 35, color: 'yellow.6' },
   { name: 'Wheat', value: 25, color: 'yellow.4' },
@@ -397,1648 +864,163 @@ const cropDistributionData = [
   { name: 'Alfalfa', value: 15, color: 'farmGreen.5' },
   { name: 'Other', value: 5, color: 'gray.5' },
 ];
-
-// Soil health data
 const soilHealthData = [
   { name: 'Field A', nitrogen: 65, phosphorus: 42, potassium: 85 },
   { name: 'Field B', nitrogen: 75, phosphorus: 55, potassium: 60 },
   { name: 'Field C', nitrogen: 58, phosphorus: 70, potassium: 75 },
   { name: 'Field D', nitrogen: 80, phosphorus: 40, potassium: 90 },
 ];
-
-// Monthly rainfall data
 const rainfallData = [
-  { month: 'Jan', amount: 50 },
-  { month: 'Feb', amount: 45 },
-  { month: 'Mar', amount: 70 },
-  { month: 'Apr', amount: 85 },
-  { month: 'May', amount: 60 },
-  { month: 'Jun', amount: 35 },
-  { month: 'Jul', amount: 20 },
-  { month: 'Aug', amount: 25 },
-  { month: 'Sep', amount: 40 },
-  { month: 'Oct', amount: 55 },
-  { month: 'Nov', amount: 65 },
-  { month: 'Dec', amount: 60 },
+  { month: 'Jan', amount: 50 }, { month: 'Feb', amount: 45 }, { month: 'Mar', amount: 70 },
+  { month: 'Apr', amount: 85 }, { month: 'May', amount: 60 }, { month: 'Jun', amount: 35 },
+  { month: 'Jul', amount: 20 }, { month: 'Aug', amount: 25 }, { month: 'Sep', amount: 40 },
+  { month: 'Oct', amount: 55 }, { month: 'Nov', amount: 65 }, { month: 'Dec', amount: 60 },
 ];
 
-const imageList = [
-  { src: '/federico-respini-sYffw0LNr7s-unsplash.jpg', alt: 'Farm field landscape' },
-  { src: '/gozha-net-xDrxJCdedcI-unsplash.jpg', alt: 'Close up of crops' },
-  { src: '/markus-spiske-vrbZVyX2k4I-unsplash.jpg', alt: 'Tractor in field' },
-  { src: '/megan-thomas-xMh_ww8HN_Q-unsplash.jpg', alt: 'Farmer inspecting plants' },
-  { src: '/phuc-long-aqrIcYonB-o-unsplash.jpg', alt: 'Drone view of farm' },
-];
-
+// --- Main Page Component ---
 export default function HomePage() {
-  const autoplay = useRef(Autoplay({ delay: 5000 }));
-  const [activeRecommendationWidget, setActiveRecommendationWidget] = useState(0);
-  const [animationKey, setAnimationKey] = useState(0);
-  const [activePlantHealthWidget, setActivePlantHealthWidget] = useState(0);
-  const [plantHealthAnimationKey, setPlantHealthAnimationKey] = useState(0);
-  
-  // Auto cycle through recommendation widgets
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveRecommendationWidget((prev: number) => (prev + 1) % 4);
-    }, 8000); // Change every 8 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
+  const autoplay = useRef(Autoplay({ delay: 5000, stopOnInteraction: false }));
+  const [activeFeatureWidgetId, setActiveFeatureWidgetId] = useState<string>(featuresData[0].id); // Default to first feature
 
-  // Widget selector component
-  const RecommendationSelector = () => {
-    const widgetOptions = [
-      { value: 0, label: 'Crop Suitability', icon: IconPlant2 },
-      { value: 1, label: 'Yield Estimation', icon: IconTractor },
-      { value: 2, label: 'Resource Usage', icon: IconDroplet },
-      { value: 3, label: 'Weather Forecast', icon: IconSun },
-    ];
-
-    // Handle selector click - updates the widget and resets animation
-    const handleSelectorClick = (value: number) => {
-      setActiveRecommendationWidget(value);
-      setAnimationKey(prev => prev + 1); // Change key to force remount and reset animation
-    };
-
-    return (
-      <Group justify="center" gap="sm" mb="md" mt={5}>
-        {widgetOptions.map((option) => (
-          <motion.div
-            key={option.value}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <ActionIcon
-              variant={activeRecommendationWidget === option.value ? "filled" : "subtle"}
-              color={activeRecommendationWidget === option.value ? "farmGreen" : "gray"}
-              radius="md"
-              size="lg"
-              onClick={() => handleSelectorClick(option.value)}
-              title={option.label}
-              className={activeRecommendationWidget === option.value ? classes.activeSelector : undefined}
-            >
-              <option.icon size={22} />
-            </ActionIcon>
-          </motion.div>
-        ))}
-      </Group>
-    );
+  const handleFeatureSelect = (id: string) => {
+    setActiveFeatureWidgetId(id);
   };
 
-  // Plant Health Analysis selector
-  const PlantHealthSelector = () => {
-    const widgetOptions = [
-      { value: 0, label: 'Disease Identification', icon: IconBug },
-      { value: 1, label: 'Treatment Recommendations', icon: IconVaccine },
-      { value: 2, label: 'Weed Detection', icon: IconZoomScan },
-    ];
+  // Find the active feature and its widget component
+  const activeFeature = featuresData.find(f => f.id === activeFeatureWidgetId);
+  const ActiveWidgetComponent = activeFeature?.widgetComponent;
 
-    // Handle selector click - updates the widget and resets animation
-    const handleSelectorClick = (value: number) => {
-      setActivePlantHealthWidget(value);
-      setPlantHealthAnimationKey(prev => prev + 1); // Change key to force remount and reset animation
-    };
+  // --- Reusable Components ---
 
-    return (
-      <Group justify="center" gap="sm" mb="md" mt={5}>
-        {widgetOptions.map((option) => (
-          <motion.div
-            key={option.value}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <ActionIcon
-              variant={activePlantHealthWidget === option.value ? "filled" : "subtle"}
-              color={activePlantHealthWidget === option.value ? "red" : "gray"}
-              radius="md"
-              size="lg"
-              onClick={() => handleSelectorClick(option.value)}
-              title={option.label}
-            >
-              <option.icon size={22} />
-            </ActionIcon>
-          </motion.div>
-        ))}
-      </Group>
-    );
-  };
-  
-  // Disease Identification Widget
-  const DiseaseIdentificationWidget = () => (
-    <motion.div 
-      key="disease-identification"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
+  // Feature Card Component (New Design)
+  const FeatureCard: React.FC<{ feature: Feature; index: number; isActive: boolean; onSelect: (id: string) => void }> =
+    ({ feature, index, isActive, onSelect }) => (
+    <div
+      style={{ 
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        zIndex: 10
+      }}
     >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Group justify="space-between" mb="md">
-          <Text size="sm" fw={500} c="dimmed">Disease Identification</Text>
-          <Badge color="red" variant="light">AI Powered</Badge>
-        </Group>
-        
-        <Box style={{ position: 'relative', height: rem(180), overflow: 'hidden' }}>
-          {/* Clear instructions about the process */}
-          <Text size="xs" c="dimmed" ta="center" mb="sm">
-            Leaf Analysis in Progress
-          </Text>
-          
-          {/* Actual leaf image with clear shape */}
-          <Center style={{ position: 'relative', height: rem(150) }}>
-            <motion.div
-              style={{
-                width: rem(140),
-                height: rem(100),
-                background: '#65a30d',
-                clipPath: 'polygon(50% 0%, 80% 10%, 100% 35%, 100% 70%, 80% 90%, 50% 100%, 20% 90%, 0% 70%, 0% 35%, 20% 10%)',
-                position: 'relative',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                borderRadius: '100% 0% 100% 0% / 12% 80% 20% 88%'
-              }}
-              animate={{
-                boxShadow: ['0 2px 10px rgba(0,0,0,0.2)', '0 2px 15px rgba(0,0,0,0.3)', '0 2px 10px rgba(0,0,0,0.2)']
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              {/* Leaf veins for realism */}
-              <Box style={{ 
-                position: 'absolute', 
-                top: '10%', 
-                left: '50%', 
-                height: '80%', 
-                width: '1px', 
-                background: 'rgba(255,255,255,0.5)', 
-                transform: 'translateX(-50%)' 
-              }} />
-                
-              {Array(4).fill(0).map((_, i) => (
-                <Box 
-                  key={i}
-                  style={{ 
-                    position: 'absolute', 
-                    top: `${20 + i * 15}%`, 
-                    left: '50%', 
-                    width: '70%', 
-                    height: '1px', 
-                    background: 'rgba(255,255,255,0.4)', 
-                    transform: `translateX(-50%) rotate(${i % 2 === 0 ? 25 : -25}deg)`,
-                  }} 
-                />
-              ))}
-              
-              {/* Disease spots that grow over time */}
-              {Array(5).fill(0).map((_, i) => {
-                const positions = [
-                  { top: '20%', left: '25%' },
-                  { top: '50%', left: '70%' },
-                  { top: '75%', left: '30%' },
-                  { top: '35%', left: '80%' },
-                  { top: '60%', left: '20%' }
-                ];
-                
-                return (
-                  <motion.div 
-                    key={i}
-                    style={{ 
-                      position: 'absolute', 
-                      width: 0,
-                      height: 0, 
-                      borderRadius: '50%',
-                      background: 'rgba(150, 30, 30, 0.8)',
-                      top: positions[i].top,
-                      left: positions[i].left,
-                      boxShadow: '0 0 3px rgba(150, 30, 30, 0.5)'
-                    }}
-                    animate={{ 
-                      width: [0, rem(10 + Math.random() * 8)],
-                      height: [0, rem(10 + Math.random() * 8)]
-                    }}
-                    transition={{ 
-                      delay: 0.8 + i * 0.3,
-                      duration: 1,
-                      ease: "easeOut"
-                    }}
-                  />
-                );
-              })}
-            </motion.div>
-            
-            {/* Scanning effect */}
-            <motion.div
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: 0,
-                width: rem(2),
-                height: '100%',
-                background: 'rgba(0, 180, 255, 0.6)',
-                boxShadow: '0 0 10px rgba(0, 180, 255, 0.8)',
-                transform: 'translateX(-50%)'
-              }}
-              animate={{ 
-                opacity: [0, 1, 1, 0],
-                top: ['0%', '0%', '100%', '100%']
-              }}
-              transition={{ 
-                duration: 2.5,
-                times: [0, 0.1, 0.9, 1],
-                repeat: Infinity,
-                repeatDelay: 0.5
-              }}
-            />
-          </Center>
-          
-          {/* Clear results display */}
-          <motion.div
-            style={{
-              position: 'absolute',
-              top: rem(30),
-              right: rem(10),
-              zIndex: 6,
-              background: 'white',
-              padding: rem(8),
-              borderRadius: rem(8),
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              border: '1px solid rgba(0,0,0,0.1)',
-              width: rem(150),
-              opacity: 0
-            }}
-            animate={{ 
-              opacity: [0, 1],
-              x: [20, 0]
-            }}
-            transition={{ 
-              duration: 0.5,
-              delay: 3,
-              ease: "easeOut"
-            }}
-          >
-            <Stack gap="xs">
-              <Group gap="xs">
-                <ThemeIcon size="md" radius="xl" color="red">
-                  <IconAlertTriangle size={16} />
-                </ThemeIcon>
-                <Text size="sm" fw={600} c="red">Late Blight</Text>
-              </Group>
-              
-              <Text size="xs" c="dimmed">Severity:</Text>
-              <Progress 
-                value={85} 
-                color="red" 
-                size="xs" 
-                radius="xl"
-                animated={true}
-              />
-              <Group align="center" gap={5}>
-                <Text size="xs" fw={600}>High</Text>
-                <Text size="xs" c="dimmed">(Confidence: 94%)</Text>
-              </Group>
-            </Stack>
-          </motion.div>
-        </Box>
-        
-        <Paper 
-          withBorder 
-          p="md" 
-          mt="md" 
-          radius="md"
-          bg="rgba(220, 50, 50, 0.05)"
-          style={{ border: '1px solid var(--mantine-color-red-2)' }}
-        >
-          <Group align="flex-start" gap="md">
-            <ThemeIcon radius="xl" size="lg" color="red" variant="light">
-              <IconBug size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="sm" fw={500} mb={4} c="red.7">Disease Recognition</Text>
-              <Text size="sm">Our AI identifies 50+ crop diseases from a single image for faster treatment decisions.</Text>
-            </div>
-          </Group>
-        </Paper>
-      </Paper>
-    </motion.div>
-  );
-  
-  // Treatment Recommendations Widget
-  const TreatmentRecommendationsWidget = () => (
-    <motion.div 
-      key="treatment-recommendations"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
-    >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Group justify="space-between" mb="md">
-          <Text size="sm" fw={500} c="dimmed">Treatment Recommendations</Text>
-          <Badge color="green" variant="light">AI POWERED</Badge>
-        </Group>
-        
-        <Box style={{ position: 'relative', height: rem(180), overflow: 'hidden' }}>
-          <Grid gutter={10}>
-            {/* Left column - Diagnosed Issue */}
-            <Grid.Col span={5}>
-              <Text fw={600} size="sm" ta="center" mb={10}>
-                Diagnosed Issue
-              </Text>
-              
-              <Box style={{ 
-                height: rem(120),
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                position: 'relative'
-              }}>
-                {/* Plant with disease image */}
-                <Box style={{ 
-                  width: rem(90), 
-                  height: rem(90),
-                  background: "#8bc34a",
-                  borderRadius: "50% 50% 4px 4px",
-                  position: 'relative',
-                  marginBottom: rem(10)
-                }}>
-                  {/* Red disease spots */}
-                  {Array(5).fill(0).map((_, i) => (
-                    <Box
-                      key={`disease-spot-${i}`}
-                      style={{
-                        position: 'absolute',
-                        width: rem(5 + Math.random() * 4),
-                        height: rem(5 + Math.random() * 4),
-                        borderRadius: '50%',
-                        background: '#d32f2f',
-                        top: `${20 + Math.random() * 50}%`,
-                        left: `${20 + Math.random() * 60}%`,
-                      }}
-                    />
-                  ))}
-                </Box>
-                
-                {/* Disease label */}
-                <Badge 
-                  color="red" 
-                  size="lg"
-                  style={{
-                    padding: '3px 10px',
-                    marginTop: rem(5)
-                  }}
-                >
-                  Late Blight
-                </Badge>
-                
-                <Group justify="space-between" w="100%" mt={10}>
-                  <Text size="sm" c="dimmed">Severity:</Text>
-                  <Text size="sm" fw={600} c="red">High</Text>
-                </Group>
-              </Box>
-            </Grid.Col>
-            
-            {/* Divider */}
-            <Grid.Col span={1} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Box style={{ width: 1, height: '80%', background: 'rgba(0,0,0,0.1)' }} />
-            </Grid.Col>
-            
-            {/* Right column - Treatment Recommendations */}
-            <Grid.Col span={6}>
-              <Text fw={600} size="sm" ta="center" mb={10}>
-                Recommended Treatments
-              </Text>
-              
-              <Box>
-                <Paper 
-                  withBorder 
-                  p="sm"
-                  radius="md"
-                  style={{
-                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                    borderLeft: '3px solid var(--mantine-color-blue-6)',
-                    marginBottom: rem(10)
-                  }}
-                >
-                  <Group justify="space-between" mb={5}>
-                    <Group gap="xs">
-                      <ThemeIcon color="blue" size="md" radius="xl">
-                        <IconVaccine size={16} />
-                      </ThemeIcon>
-                      <Text fw={600}>Fungicide</Text>
-                    </Group>
-                    <Badge color="blue" variant="filled">PRIMARY</Badge>
-                  </Group>
-                  
-                  <Text size="sm" ml={30} c="dimmed">
-                    Apply copper-based fungicide spray to affected areas
-                  </Text>
-                </Paper>
-                
-                <Box style={{ opacity: 0.7 }}>
-                  <Group gap="xs" mb={5}>
-                    <ThemeIcon color="green" size="sm" variant="light" radius="xl">
-                      <IconPlant2 size={14} />
-                    </ThemeIcon>
-                    <Text size="sm" fw={500}>Plant Removal</Text>
-                  </Group>
-                  
-                  <Text size="xs" ml={30} c="dimmed" mb={5}>
-                    Remove and destroy infected plants
-                  </Text>
-                </Box>
-              </Box>
-            </Grid.Col>
-          </Grid>
-        </Box>
-        
-        <Paper 
-          withBorder 
-          p="md" 
-          mt="md" 
-          radius="md"
-          bg="rgba(0, 180, 0, 0.05)"
-          style={{ border: '1px solid var(--mantine-color-green-2)' }}
-        >
-          <Group align="flex-start" gap="md">
-            <ThemeIcon radius="xl" size="lg" color="green" variant="light">
-              <IconVaccine size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="sm" fw={500} mb={4} c="green.7">Treatment Advisor</Text>
-              <Text size="sm">Our system suggests optimal treatment strategies based on disease type, severity, and local conditions.</Text>
-            </div>
-          </Group>
-        </Paper>
-      </Paper>
-    </motion.div>
-  );
-  
-  // Weed Detection Widget
-  const WeedDetectionWidget = () => (
-    <motion.div 
-      key="weed-detection"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
-    >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Group justify="space-between" mb="md">
-          <Text size="sm" fw={500} c="dimmed">Weed Detection</Text>
-          <Badge color="blue" variant="light">AI Powered</Badge>
-        </Group>
-        
-        <Box style={{ position: 'relative', height: rem(180), overflow: 'hidden' }}>
-          {/* Phone frame */}
-          <Center style={{ height: '100%' }}>
-            <Box style={{ 
-              width: rem(110), 
-              height: rem(160), 
-              borderRadius: rem(12), 
-              border: '8px solid #333', 
-              overflow: 'hidden',
-              position: 'relative',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-            }}>
-              {/* Phone screen - field with crops and weeds */}
-              <Box style={{ 
-                width: '100%', 
-                height: '100%', 
-                background: 'linear-gradient(180deg, #7da030 0%, #5c8022 100%)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                {/* Crop rows */}
-                {Array(3).fill(0).map((_, i) => (
-                  <Box 
-                    key={`crop-row-${i}`}
-                    style={{
-                      position: 'absolute',
-                      width: '100%',
-                      height: '3px',
-                      top: `${30 + i * 30}%`,
-                      background: 'rgba(255,255,255,0.2)'
-                    }}
-                  />
-                ))}
-                
-                {/* Crops */}
-                {Array(12).fill(0).map((_, i) => {
-                  const row = Math.floor(i / 4);
-                  const col = i % 4;
-                  return (
-                    <Box 
-                      key={`crop-${i}`}
-                      style={{
-                        position: 'absolute',
-                        width: rem(8),
-                        height: rem(8),
-                        borderRadius: '50%',
-                        background: '#a1c940',
-                        border: '1px solid #749628',
-                        top: `${25 + row * 30}%`,
-                        left: `${15 + col * 25}%`
-                      }}
-                    />
-                  );
-                })}
-                
-                {/* Weeds with detection boxes */}
-                {Array(4).fill(0).map((_, i) => {
-                  const positions = [
-                    { top: '20%', left: '28%' },
-                    { top: '40%', left: '68%' },
-                    { top: '75%', left: '42%' },
-                    { top: '50%', left: '22%' }
-                  ];
-                  
-                  return (
-                    <React.Fragment key={`weed-group-${i}`}>
-                      {/* Weed */}
-                      <motion.div
-                        style={{
-                          position: 'absolute',
-                          width: rem(10),
-                          height: rem(10),
-                          borderRadius: '2px',
-                          background: '#b88c3b',
-                          top: positions[i].top,
-                          left: positions[i].left,
-                          zIndex: 2
-                        }}
-                        animate={{
-                          scale: [1, 1.1, 1],
-                          rotate: [0, i % 2 === 0 ? 5 : -5, 0]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          delay: i * 0.5
-                        }}
-                      />
-                      
-                      {/* Detection box */}
-                      <motion.div
-                        style={{
-                          position: 'absolute',
-                          width: rem(16),
-                          height: rem(16),
-                          border: '1px solid red',
-                          borderRadius: '2px',
-                          top: `calc(${positions[i].top} - 3px)`,
-                          left: `calc(${positions[i].left} - 3px)`,
-                          zIndex: 3
-                        }}
-                        initial={{ opacity: 0 }}
-                        animate={{
-                          opacity: [0, 1, 1, 0],
-                          scale: [0.9, 1.1, 1, 0.9]
-                        }}
-                        transition={{
-                          duration: 2,
-                          times: [0, 0.3, 0.7, 1],
-                          delay: 1.5 + i * 0.5,
-                          repeat: Infinity,
-                          repeatDelay: 3
-                        }}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-                
-                {/* Camera interface elements */}
-                <Box style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  pointerEvents: 'none'
-                }}>
-                  {/* Corner markers for camera view */}
-                  {[
-                    { top: '10%', left: '10%' },
-                    { top: '10%', right: '10%' },
-                    { bottom: '10%', left: '10%' },
-                    { bottom: '10%', right: '10%' }
-                  ].map((pos, i) => (
-                    <Box
-                      key={`corner-${i}`}
-                      style={{
-                        position: 'absolute',
-                        width: rem(10),
-                        height: rem(10),
-                        borderStyle: 'solid',
-                        borderWidth: '0px',
-                        ...pos,
-                        ...(i === 0 ? { borderTop: '1px solid white', borderLeft: '1px solid white' } :
-                           i === 1 ? { borderTop: '1px solid white', borderRight: '1px solid white' } :
-                           i === 2 ? { borderBottom: '1px solid white', borderLeft: '1px solid white' } :
-                                     { borderBottom: '1px solid white', borderRight: '1px solid white' })
-                      }}
-                    />
-                  ))}
-                  
-                  {/* Scanning animation */}
-                  <motion.div
-                    style={{
-                      position: 'absolute',
-                      width: '100%',
-                      height: '1px',
-                      background: 'rgba(0, 180, 255, 0.8)',
-                      boxShadow: '0 0 4px rgba(0, 180, 255, 0.6)',
-                      top: '0%'
-                    }}
-                    animate={{
-                      top: ['0%', '100%', '0%']
-                    }}
-                    transition={{
-                      duration: 3,
-                      ease: "easeInOut",
-                      repeat: Infinity,
-                      repeatDelay: 0.5
-                    }}
-                  />
-                  
-                  {/* Record button */}
-                  <Box style={{
-                    position: 'absolute',
-                    bottom: '5%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: rem(18),
-                    height: rem(18),
-                    borderRadius: '50%',
-                    border: '2px solid white',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}>
-                    <motion.div
-                      style={{
-                        width: rem(12),
-                        height: rem(12),
-                        borderRadius: '50%',
-                        background: 'red'
-                      }}
-                      animate={{
-                        scale: [1, 0.8, 1]
-                      }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity
-                      }}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          </Center>
-          
-          {/* Detection results */}
-          <motion.div
-            style={{
-              position: 'absolute',
-              top: rem(10),
-              right: rem(5),
-              background: 'white',
-              padding: rem(8),
-              borderRadius: rem(8),
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              border: '1px solid rgba(0,0,0,0.1)',
-              width: rem(120),
-              zIndex: 5,
-              opacity: 0
-            }}
-            animate={{
-              opacity: [0, 1],
-              x: [20, 0]
-            }}
-            transition={{
-              duration: 0.5,
-              delay: 2,
-              ease: "easeOut"
-            }}
-          >
-            <Stack gap="xs">
-              <Text size="sm" fw={600} c="blue.7">Detected: 4 Weeds</Text>
-              <Progress value={100} color="blue" size="xs" radius="xl" animated={true} />
-              <Group justify="space-between" gap={4}>
-                <Badge size="xs" variant="outline" color="green">Auto-targeting</Badge>
-                <Badge size="xs" variant="filled" color="blue">Active</Badge>
-              </Group>
-            </Stack>
-          </motion.div>
-        </Box>
-        
-        <Paper 
-          withBorder 
-          p="md" 
-          mt="md" 
-          radius="md"
-          bg="rgba(0, 120, 220, 0.05)"
-          style={{ border: '1px solid var(--mantine-color-blue-2)' }}
-        >
-          <Group align="flex-start" gap="md">
-            <ThemeIcon radius="xl" size="lg" color="blue" variant="light">
-              <IconZoomScan size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="sm" fw={500} mb={4} c="blue.7">Weed Monitoring</Text>
-              <Text size="sm">Smartphone-based detection identifies weed types for targeted treatment, reducing chemical usage by up to 70%.</Text>
-            </div>
-          </Group>
-        </Paper>
-      </Paper>
-    </motion.div>
-  );
-
-  // Get active plant health widget based on state
-  const getActivePlantHealthWidget = () => {
-    // Use key to force remount when manually selecting
-    const widgetWithKey = (widget: React.ReactNode) => (
-      <div key={`health-widget-${activePlantHealthWidget}-${plantHealthAnimationKey}`}>
-        {widget}
-      </div>
-    );
-    
-    switch (activePlantHealthWidget) {
-      case 0:
-        return widgetWithKey(<DiseaseIdentificationWidget />);
-      case 1:
-        return widgetWithKey(<TreatmentRecommendationsWidget />);
-      case 2:
-        return widgetWithKey(<WeedDetectionWidget />);
-      default:
-        return widgetWithKey(<DiseaseIdentificationWidget />);
-    }
-  };
-  
-  const WeatherForecastWidget = () => (
-    <motion.div 
-      key="weather-forecast"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
-    >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Text size="sm" fw={500} c="dimmed" mb="md" ta="center">7-Day Weather Forecast</Text>
-        
-        <ScrollArea>
-          <Group gap="md" wrap="nowrap" mb="md">
-            {weatherForecastData.map((day, index) => (
-              <motion.div
-                key={day.date}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-              >
-                <Paper 
-                  withBorder 
-                  p="md" 
-                  radius="md" 
-                  w={90} 
-                  shadow="sm"
-                  style={{ 
-                    textAlign: 'center',
-                    backgroundColor: index === 0 ? 'var(--mantine-color-body)' : undefined
-                  }}
-                >
-                  <Text size="sm" fw={500} mb={8}>{day.date}</Text>
-                  <Center mb={8}>
-                    <day.icon size={28} style={{ color: day.condition.includes('Rain') ? 'var(--mantine-color-blue-5)' : day.condition.includes('Sunny') ? 'var(--mantine-color-yellow-5)' : 'var(--mantine-color-gray-5)' }} />
-                  </Center>
-                  <Text size="xl" fw={700} lh={1.2}>{day.temp}°C</Text>
-                  <Text size="xs" c="dimmed" mb={5}>{day.condition}</Text>
-                  <Group justify="center" gap={4}>
-                    <IconDroplet size={14} color="var(--mantine-color-blue-5)" />
-                    <Text size="xs" c="dimmed">{day.precipitation}%</Text>
-                  </Group>
-                </Paper>
-              </motion.div>
-            ))}
-          </Group>
-        </ScrollArea>
-        
-        <Paper 
-          withBorder 
-          p="md" 
-          mt="md" 
-          radius="md"
-          bg="rgba(0, 140, 240, 0.05)"
-          style={{ border: '1px solid var(--mantine-color-blue-2)' }}
-        >
-          <Group align="flex-start" gap="md">
-            <ThemeIcon radius="xl" size="lg" color="blue" variant="light">
-              <IconCloudRain size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="sm" fw={500} mb={4} c="blue.7">Weather Advisory</Text>
-              <Text size="sm">Rainfall expected mid-week. Consider delaying fertilizer application until Friday for optimal absorption.</Text>
-            </div>
-          </Group>
-        </Paper>
-      </Paper>
-    </motion.div>
-  );
-  
-  const CropSuitabilityWidget = () => (
-    <motion.div 
-      key="crop-suitability"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
-    >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Group justify="space-between" mb="md">
-          <Text size="sm" fw={500} c="dimmed">Crop Suitability Analysis</Text>
-          <Badge color="farmGreen" variant="light">AI Powered</Badge>
-        </Group>
-        
-        <Box>
-          {cropSuitabilityData.map((crop) => (
-            <HoverCard key={crop.crop} width={280} shadow="md" withArrow openDelay={200} closeDelay={100}>
-              <HoverCard.Target>
-                <Box mb="md">
-                  <Group justify="space-between" mb={5}>
-                    <Text size="sm">{crop.crop}</Text>
-                    <Text size="sm" fw={500} c={crop.suitability > 70 ? "farmGreen" : crop.suitability > 50 ? "yellow" : "red"}>
-                      {crop.suitability}%
-                    </Text>
-                  </Group>
-                  <Progress 
-                    value={crop.suitability} 
-                    color={crop.color} 
-                    size="md" 
-                    radius="xl"
-                    animated={true}
-                    striped={true}
-                  />
-                </Box>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Text size="sm">{crop.notes}</Text>
-              </HoverCard.Dropdown>
-            </HoverCard>
-          ))}
-        </Box>
-        
-        <Paper 
-          withBorder 
-          p="md" 
-          mt="md" 
-          radius="md"
-          bg="rgba(0, 180, 0, 0.05)"
-          style={{ border: '1px solid var(--mantine-color-green-2)' }}
-        >
-          <Group align="flex-start" gap="md">
-            <ThemeIcon radius="xl" size="lg" color="farmGreen" variant="light">
-              <IconPlant2 size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="sm" fw={500} mb={4} c="farmGreen.7">Crop Recommendation</Text>
-              <Text size="sm">Our AI analysis indicates corn and soybeans are highly suitable for your soil conditions and local climate.</Text>
-            </div>
-          </Group>
-        </Paper>
-      </Paper>
-    </motion.div>
-  );
-  
-  const YieldEstimationWidget = () => (
-    <motion.div 
-      key="yield-estimation"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
-    >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Text size="sm" fw={500} c="dimmed" mb="md">Yield Estimation (kg/ha)</Text>
-        <Box mb="md">
-          <LineChart 
-            h={120}
-            data={chartData}
-            dataKey="date"
-            series={[
-              { name: 'YieldEst', color: 'farmGreen.6', label: 'Estimated Yield' },
-              { name: 'AvgYield', color: 'blue.5', label: 'Avg. Regional Yield' },
-            ]}
-            curveType="monotone"
-            withYAxis
-            yAxisProps={{ width: 30 }}
-            gridAxis="y"
-            tooltipProps={{
-              content: ({ label, payload }) => (
-                  <Paper px="md" py="sm" withBorder shadow="md">
-                    <Text fw={500} mb={5}>{label}</Text>
-                    {payload?.map((item: any) => (
-                      <Text key={item.name} c={item.color} fz="sm">
-                        {item.payload.label}: {item.value} kg/ha
-                      </Text>
-                    ))}
-                  </Paper>
-              )
-            }}
-          />
-        </Box>
-        
-        <Group justify="space-between" mb="md">
-          <Stack gap={0}>
-            <Text size="sm" c="dimmed">Projected Yield</Text>
-            <Group gap="xs">
-              <Text size="xl" fw={700}>3,215</Text>
-              <Text size="xs" c="dimmed">kg/ha</Text>
-            </Group>
-          </Stack>
-          
-          <Badge color="green" size="lg" variant="light" leftSection={
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <IconArrowUp size={14} />
-            </motion.div>
-          }>
-            +18% vs Avg
-          </Badge>
-        </Group>
-        
-        <Paper 
-          withBorder 
-          p="md" 
-          mt="md"
-          radius="md"
-          bg="rgba(0, 180, 0, 0.05)"
-          style={{ border: '1px solid var(--mantine-color-green-2)' }}
-        >
-          <Group align="flex-start" gap="md">
-            <ThemeIcon radius="xl" size="lg" color="farmGreen" variant="light">
-              <IconTractor size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="sm" fw={500} mb={4} c="farmGreen.7">Yield Insight</Text>
-              <Text size="sm">Based on current conditions and historical data, your yield is projected to be 18% above regional average.</Text>
-            </div>
-          </Group>
-        </Paper>
-      </Paper>
-    </motion.div>
-  );
-  
-  const ResourceUsageWidget = () => (
-    <motion.div 
-      key="resource-usage"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={widgetVariant}
-    >
-      <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-        <Tabs defaultValue="water" variant="outline">
-          <Tabs.List grow mb="md">
-            <Tabs.Tab value="water" leftSection={<IconDroplet size={16} />}>Water</Tabs.Tab>
-            <Tabs.Tab value="fertilizer" leftSection={<IconVaccine size={16} />}>Fertilizer</Tabs.Tab>
-          </Tabs.List>
-          
-          <Tabs.Panel value="water">
-            <Group justify="space-between" mb="md">
-              <Stack gap={0}>
-                <Text size="sm" c="dimmed">Current Usage</Text>
-                <Group gap="xs">
-                  <Text size="xl" fw={700}>{resourceData.water.current}</Text>
-                  <Text size="xs" c="dimmed">m³/ha</Text>
-                </Group>
-              </Stack>
-              
-              <Stack gap={0} align="flex-end">
-                <Text size="sm" c="dimmed">Recommended</Text>
-                <Group gap="xs">
-                  <Text size="xl" fw={700} c="cyan">{resourceData.water.recommended}</Text>
-                  <Text size="xs" c="dimmed">m³/ha</Text>
-                </Group>
-              </Stack>
-            </Group>
-            
-            <Text size="sm" fw={500} c="dimmed" mb="xs">Weekly Distribution (m³)</Text>
-            <Box mb="md">
-              <BarChart
-                h={100}
-                data={resourceData.water.forecast}
-                dataKey="week"
-                series={[{ name: 'amount', color: 'cyan.6' }]}
-                barProps={{ radius: 4 }}
-                tickLine="x"
-                withYAxis={false}
-                gridAxis="none"
-              />
-            </Box>
-            
-            <Paper 
-              withBorder 
-              p="md" 
-              mt="md"
-              radius="md"
-              bg="rgba(0, 140, 240, 0.05)"
-              style={{ border: '1px solid var(--mantine-color-blue-2)' }}
-            >
-              <Group align="flex-start" gap="md">
-                <ThemeIcon radius="xl" size="lg" color="blue" variant="light">
-                  <IconDroplet size={20} />
-                </ThemeIcon>
-                <div>
-                  <Text size="sm" fw={500} mb={4} c="blue.7">Water Optimization</Text>
-                  <Text size="sm">Potential water savings of {resourceData.water.savings}% by following AI-optimized irrigation schedule.</Text>
-                </div>
-              </Group>
-            </Paper>
-          </Tabs.Panel>
-          
-          <Tabs.Panel value="fertilizer">
-            <Group justify="space-between" mb="md">
-              <Stack gap={0}>
-                <Text size="sm" c="dimmed">Current Usage</Text>
-                <Group gap="xs">
-                  <Text size="xl" fw={700}>{resourceData.fertilizer.current}</Text>
-                  <Text size="xs" c="dimmed">kg/ha</Text>
-                </Group>
-              </Stack>
-              
-              <Stack gap={0} align="flex-end">
-                <Text size="sm" c="dimmed">Recommended</Text>
-                <Group gap="xs">
-                  <Text size="xl" fw={700} c="green">{resourceData.fertilizer.recommended}</Text>
-                  <Text size="xs" c="dimmed">kg/ha</Text>
-                </Group>
-              </Stack>
-            </Group>
-            
-            <Text size="sm" fw={500} c="dimmed" mb="xs">Nutrient Breakdown</Text>
-            <Box mb="md">
-              <Table striped highlightOnHover withTableBorder withColumnBorders>
-                <thead>
-                  <tr>
-                    <th>Nutrient</th>
-                    <th style={{ textAlign: 'right' }}>Current</th>
-                    <th style={{ textAlign: 'right' }}>Recommended</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resourceData.fertilizer.forecast.map((item) => (
-                    <tr key={item.nutrient}>
-                      <td>{item.nutrient}</td>
-                      <td style={{ textAlign: 'right' }}>{item.current} kg/ha</td>
-                      <td style={{ textAlign: 'right' }}>{item.recommended} kg/ha</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </Box>
-            
-            <Paper 
-              withBorder 
-              p="md" 
-              mt="md"
-              radius="md"
-              bg="rgba(0, 180, 0, 0.05)"
-              style={{ border: '1px solid var(--mantine-color-green-2)' }}
-            >
-              <Group align="flex-start" gap="md">
-                <ThemeIcon radius="xl" size="lg" color="green" variant="light">
-                  <IconVaccine size={20} />
-                </ThemeIcon>
-                <div>
-                  <Text size="sm" fw={500} mb={4} c="green.7">Fertilizer Optimization</Text>
-                  <Text size="sm">Optimize fertilizer application for a {resourceData.fertilizer.savings}% reduction while maintaining yield.</Text>
-                </div>
-              </Group>
-            </Paper>
-          </Tabs.Panel>
-        </Tabs>
-      </Paper>
-    </motion.div>
-  );
-
-  // Satellite Farm Insights Widget - ENHANCED
-  const SatelliteFarmInsightsWidget = () => {
-    const [housePositions, setHousePositions] = useState<{ top: string; left: string }[] | null>(null);
-    const [analysisComplete, setAnalysisComplete] = useState(false);
-
-    useEffect(() => {
-      // Generate positions only on the client after mount
-      const positions = Array(15).fill(0).map(() => ({
-        top: `${10 + Math.random() * 80}%`,
-        left: `${10 + Math.random() * 80}%`,
-      }));
-      setHousePositions(positions);
-      
-      // Set analysis complete after 5 seconds
-      const timer = setTimeout(() => {
-        setAnalysisComplete(true);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }, []); // Empty dependency array ensures this runs only once on mount
-
-    return (
-      <motion.div
-        key="satellite-insights"
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        variants={widgetVariant}
+      <Card
+        shadow="md"
+        radius="md"
+        className={`${classes.featureCard} ${isActive ? classes.featureCardActive : ''}`}
+        padding="xl"
+        withBorder
+        onClick={() => feature.widgetComponent && onSelect(feature.id)}
+        style={{ 
+          cursor: feature.widgetComponent ? 'pointer' : 'default', 
+          height: '100%',
+          opacity: 1,
+          position: 'relative'
+        }}
       >
-        <Paper withBorder p="md" mt="md" radius="md" shadow="sm">
-          <Group justify="space-between" mb="md">
-            <Group>
-              <motion.div
-                animate={{ 
-                  rotate: [0, 0, 360],
-                  scale: [1, 1.2, 1]
-                }}
-                transition={{
-                  duration: 5,
-                  repeat: Infinity,
-                  repeatDelay: 4,
-                  times: [0, 0.1, 1]
-                }}
-              >
-                <IconSatellite size={20} style={{ color: 'var(--mantine-color-blue-5)' }} />
-              </motion.div>
-            <Text size="sm" fw={500} c="dimmed">Satellite Analysis</Text>
-            </Group>
-            <Badge color="blue" variant="light">AI Powered</Badge>
-          </Group>
+        <Stack justify="space-between" style={{ height: '100%' }}>
+          {/* Top Section: Icon and Title */}
+          <Box>
+             <Group justify="space-between" align="flex-start" wrap="nowrap" mb="md">
+                  <ThemeIcon
+                      size={60} // Slightly smaller icon
+                      radius="lg" // Rounded large
+                      variant="light" // Use light variant for subtle background
+                      color={feature.color || 'farmGreen'}
+                  >
+                      <feature.icon style={{ width: rem(32), height: rem(32) }} stroke={1.5} />
+                  </ThemeIcon>
+                   {/* Optional: Add a small 'Active' indicator if needed */}
+                  {isActive && feature.widgetComponent && <Badge variant="filled" color={feature.color || 'farmGreen'} size="sm">Active</Badge>}
+              </Group>
 
-          <Box style={{
-            position: 'relative',
-            height: rem(200),
-            overflow: 'hidden',
-            background: 'var(--mantine-color-dark-8)', // Dark background for satellite view
-            borderRadius: 'var(--mantine-radius-sm)',
-            border: '1px solid var(--mantine-color-dark-6)'
-          }}>
-            {/* Field 1 (Top Left Large) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              style={{ position: 'absolute', top: '5%', left: '5%', width: '35%', height: '30%', background: 'var(--mantine-color-farmGreen-8)', borderRadius: '4px' }}
-            />
-            {/* Field 2 (Top Left Small) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.1 }}
-              style={{ position: 'absolute', top: '5%', left: '42%', width: '15%', height: '18%', background: 'var(--mantine-color-yellow-8)', borderRadius: '4px' }}
-            />
-            {/* Field 3 (Mid Left) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.4 }}
-              style={{ position: 'absolute', top: '38%', left: '5%', width: '35%', height: '25%', background: 'var(--mantine-color-farmGreen-7)', borderRadius: '4px' }}
-            />
-            {/* Field 4 (Bottom Left) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.7 }}
-              style={{ position: 'absolute', top: '66%', left: '5%', width: '35%', height: '28%', background: 'var(--mantine-color-farmGreen-9)', borderRadius: '4px' }}
-            />
-            {/* Road (Vertical) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 2.0 }}
-              style={{ position: 'absolute', top: '5%', left: '60%', width: '8%', height: '90%', background: 'var(--mantine-color-dark-5)', transform: 'skewY(-20deg)', borderRadius: '2px' }}
-            />
-            {/* Field 5 (Top Right) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 2.3 }}
-              style={{ position: 'absolute', top: '5%', left: '70%', width: '25%', height: '20%', background: 'var(--mantine-color-yellow-7)', borderRadius: '4px' }}
-            />
-            {/* Field 6 (Mid Right Large) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 2.6 }}
-              style={{ position: 'absolute', top: '28%', left: '70%', width: '25%', height: '35%', background: 'var(--mantine-color-farmGreen-6)', borderRadius: '4px' }}
-            />
-            
-            {/* Residential Area (Bottom Right) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 2.9 }}
-              style={{ position: 'absolute', top: '66%', left: '70%', width: '25%', height: '28%', background: 'var(--mantine-color-dark-6)', borderRadius: '4px' }}
-            >
-               {/* Tiny dots for houses - Render only when positions are ready */}
-               {housePositions && housePositions.map((pos, i) => (
-                  <motion.div 
-                    key={`house-${i}`}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ 
-                      duration: 0.2, 
-                      delay: 3.0 + (i * 0.1) % 1 // Stagger the appearance
-                    }}
-                    style={{ 
-                      position: 'absolute', 
-                      top: pos.top, 
-                      left: pos.left, 
-                      width: '3px', 
-                      height: '3px', 
-                      background: 'var(--mantine-color-gray-5)', 
-                      borderRadius: '50%' 
-                    }} 
-                  />
-               ))}
-            </motion.div>
-
-            {/* Grid overlay */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.2, 0.2, 0] }}
-              transition={{ 
-                duration: 6, 
-                delay: 0.5,
-                repeat: Infinity,
-                repeatDelay: 3
-              }}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundImage: 'linear-gradient(rgba(0, 180, 255, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 180, 255, 0.3) 1px, transparent 1px)',
-                backgroundSize: '20px 20px',
-                zIndex: 2
-              }}
-            />
-
-            {/* Horizontal Scanning Line Animation */}
-            <motion.div
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: '0%',
-                width: '100%',
-                height: '2px',
-                background: 'rgba(0, 180, 255, 0.7)',
-                boxShadow: '0 0 8px rgba(0, 180, 255, 0.9)',
-                zIndex: 3
-              }}
-              animate={{
-                top: ['0%', '100%', '100%', '0%'],
-                opacity: [1, 1, 0, 0]
-              }}
-              transition={{
-                duration: 4,
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatDelay: 2,
-                times: [0, 0.5, 0.51, 1]
-              }}
-            />
-
-            {/* Vertical Scanning Line Animation */}
-            <motion.div
-              style={{
-                position: 'absolute',
-                left: '0%',
-                top: 0,
-                width: '2px',
-                height: '100%',
-                background: 'rgba(0, 180, 255, 0.7)',
-                boxShadow: '0 0 8px rgba(0, 180, 255, 0.9)',
-                zIndex: 3
-              }}
-              animate={{
-                left: ['0%', '100%', '100%', '0%'],
-                opacity: [1, 1, 0, 0]
-              }}
-              transition={{
-                duration: 4,
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatDelay: 2,
-                times: [0, 0.5, 0.51, 1]
-              }}
-            />
-
-            {/* Calculating text that appears during scan */}
-            <motion.div
-              style={{
-                position: 'absolute',
-                top: '45%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 4
-              }}
-              animate={{
-                opacity: analysisComplete ? 0 : [0, 1, 1, 0],
-              }}
-              transition={{
-                duration: 4,
-                repeat: analysisComplete ? 0 : Infinity,
-                repeatDelay: 2
-              }}
-            >
-              <Text ta="center" fw={700} style={{ color: 'rgba(0, 200, 255, 0.9)', textShadow: '0 0 10px rgba(0, 150, 255, 0.7)' }}>
-                ANALYZING
-              </Text>
-              <motion.div
-                animate={{ opacity: [0, 1, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, repeatType: "loop" }}
-              >
-                <Text size="xs" ta="center" c="cyan">Processing satellite data...</Text>
-              </motion.div>
-            </motion.div>
-
-            {/* Classification Results */}
-            <motion.div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                flexDirection: 'column',
-                gap: '10px',
-                background: 'rgba(0, 0, 25, 0.5)',
-                backdropFilter: 'blur(4px)',
-                zIndex: 10,
-                opacity: 0
-              }}
-              animate={{
-                opacity: analysisComplete ? 1 : 0,
-              }}
-              transition={{
-                duration: 0.8,
-              }}
-            >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: analysisComplete ? 1 : 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.2 }}
-              >
-                <ThemeIcon size={60} radius={30} color="blue" variant="filled">
-                  <IconRulerMeasure size={30} />
-                </ThemeIcon>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: analysisComplete ? 1 : 0, y: analysisComplete ? 0 : 20 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <Badge
-                  size="xl"
-                variant="gradient"
-                gradient={{ from: 'blue', to: 'cyan' }}
-              >
-                  Medium Farm (150-500 acres)
-              </Badge>
-            </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: analysisComplete ? 1 : 0 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
-              >
-                <Text size="sm" c="gray.3" ta="center">Analysis complete with 94% confidence</Text>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: analysisComplete ? 1 : 0, y: analysisComplete ? 0 : 10 }}
-                transition={{ duration: 0.5, delay: 1 }}
-              >
-                <Group mt="sm">
-                  <Badge color="green" variant="light">6 Fields Detected</Badge>
-                  <Badge color="yellow" variant="light">2 Crop Types</Badge>
-                </Group>
-              </motion.div>
-            </motion.div>
+              <Text fz="lg" fw={600} className={classes.featureTitle} mt="sm" mb="xs">
+                  {feature.title}
+        </Text>
+              <Text fz="sm" c="dimmed" lh={1.5}>
+                  {feature.description}
+        </Text>
           </Box>
 
-          <Paper
-            withBorder
-            p="md"
-            mt="md"
-            radius="md"
-            bg="rgba(0, 120, 220, 0.05)"
-            style={{ border: '1px solid var(--mantine-color-blue-2)' }}
-          >
-            <Group align="flex-start" gap="md">
-              <ThemeIcon radius="xl" size="lg" color="blue" variant="light">
-                <IconRulerMeasure size={20} />
-              </ThemeIcon>
-              <div>
-                <Text size="sm" fw={500} mb={4} c="blue.7">Size Classification</Text>
-                <Text size="sm">Analysis indicates a medium-sized farm (150-500 acres), allowing for tailored resource recommendations.</Text>
-              </div>
-            </Group>
-          </Paper>
-        </Paper>
-      </motion.div>
-    );
-  }
-
-  // Get active recommendation widget based on state
-  const getActiveRecommendationWidget = () => {
-    // Use key to force remount when manually selecting
-    const widgetWithKey = (widget: React.ReactNode) => (
-      <div key={`widget-${activeRecommendationWidget}-${animationKey}`}>
-        {widget}
-      </div>
-    );
-    
-    switch (activeRecommendationWidget) {
-      case 0:
-        return widgetWithKey(<CropSuitabilityWidget />);
-      case 1:
-        return widgetWithKey(<YieldEstimationWidget />);
-      case 2:
-        return widgetWithKey(<ResourceUsageWidget />);
-      case 3:
-        return widgetWithKey(<WeatherForecastWidget />);
-      default:
-        return widgetWithKey(<YieldEstimationWidget />);
-    }
-  };
-
-  const howItWorksItems = howItWorksSteps.map((step, index) => (
-    <Stepper.Step
-        key={step.title}
-        icon={<step.icon size={24} />}
-        label={`Step ${index + 1}`}
-        description={step.title}
-    >
-      <Text size="sm">{step.description}</Text>
-    </Stepper.Step>
-  ));
-
-  const pricingItems = pricingTiers.map((tier) => (
-    <motion.div key={tier.title} variants={itemVariant}>
-      <Paper withBorder p="xl" className={classes.pricingCard}>
-        <Text ta="center" fz="lg" fw={500} mt="md">
-            {tier.title}
-        </Text>
-        <Text ta="center" fz="xl" fw={700} mt="sm">
-            {tier.price}
-            <Text span fz="sm" c="dimmed">{tier.period}</Text>
-        </Text>
-
-        <Divider my="md" />
-
+          {/* Bottom Section: Details List (if any) */}
+          {feature.details && feature.details.length > 0 && (
+            <Box mt="md">
+              {/* <Divider my="sm" /> */}
         <List
-            spacing="sm"
+                  spacing="xs" // Tighter spacing
             size="sm"
-            center
             icon={
-            <ThemeIcon color="farmGreen" size={24} radius="xl">
-                <IconCheck style={{ width: rem(16), height: rem(16) }} />
+                      <ThemeIcon size={20} radius="xl" variant="light" color={feature.color || 'farmGreen'}>
+                          <IconCheck style={{ width: rem(12), height: rem(12) }} />
             </ThemeIcon>
             }
         >
-            {tier.features.map((feature) => (
-                <List.Item key={feature}>{feature}</List.Item>
+                  {feature.details.map((detail) => (
+                      <List.Item key={detail.text}>
+                          {detail.text}
+                      </List.Item>
             ))}
         </List>
-
-        <Button
-            fullWidth
-            variant={tier.buttonVariant as any} // Cast because variant can be gradient string
-            gradient={tier.buttonVariant === 'gradient' ? { from: 'farmGreen', to: 'cyan' } : undefined}
-            mt="xl"
-            component={Link}
-            href={tier.price === 'Contact Us' ? '/contact' : '/signup'} // Example links
-        >
-            {tier.buttonText}
-        </Button>
-      </Paper>
-    </motion.div>
-  ));
-
-  // Weather widget component
-  const WeatherWidget = () => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-    >
-      <Paper p="md" withBorder className={classes.weatherWidget} style={{ width: rem(280) }}>
-        <Group mb="md">
-          <weatherData.current.icon size={32} />
-          <div>
-            <Text fw={700} size="xl">{weatherData.current.temp}°C</Text>
-            <Text size="sm">{weatherData.current.condition}</Text>
-          </div>
-        </Group>
-        
-        <Grid>
-          <Grid.Col span={4}>
-            <Group>
-              <IconDropletFilled size={20} />
-              <Text size="sm">{weatherData.current.humidity}%</Text>
-            </Group>
-          </Grid.Col>
-          <Grid.Col span={4}>
-            <Group>
-              <IconWind size={20} />
-              <Text size="sm">{weatherData.current.windSpeed} km/h</Text>
-            </Group>
-          </Grid.Col>
-          <Grid.Col span={4}>
-            <Group>
-              <IconTemperature size={20} />
-              <Group gap={4}>
-                <IconArrowUp size={16} />
-                <Text size="sm">26°</Text>
-              </Group>
-            </Group>
-          </Grid.Col>
-        </Grid>
-
-        <Divider my="sm" />
-        
-        <Group grow>
-          {weatherData.forecast.map((day) => (
-            <Flex key={day.day} direction="column" align="center" gap={5}>
-              <Text size="xs">{day.day}</Text>
-              <day.icon size={20} />
-              <Text size="sm">{day.temp}°</Text>
-            </Flex>
-          ))}
-        </Group>
-      </Paper>
-    </motion.div>
+            </Box>
+          )}
+        </Stack>
+      </Card>
+    </div>
   );
 
+  // --- Render Logic ---
   return (
     <>
       {/* Hero Section */}
       <motion.div 
+        className={classes.hero}
         initial="hidden" 
         animate="visible" 
-        variants={sectionVariant}
-        className={classes.hero}
+        variants={sectionVariant} // Apply section animation
       >
         {/* Background Carousel */}
         <Carousel
           withIndicators={false}
           withControls={false}
           height="100%"
-          slideSize="100%"
           loop
-          align="start"
-          slidesToScroll={1}
           className={classes.heroCarousel}
-          // @ts-ignore 
+          // @ts-ignore - Ignore plugin type issue if persistent
           plugins={[autoplay.current]}
           onMouseEnter={autoplay.current.stop}
           onMouseLeave={autoplay.current.reset}
         >
-          {imageList.map((image, index) => (
+          {heroImages.map((image, index) => (
               <Carousel.Slide key={index}>
                   <Image
                       src={image.src}
                       alt={image.alt}
-                      fill // Replace layout="fill"
-                      style={{ objectFit: 'cover' }} // Replace objectFit="cover"
-                      sizes="100vw" // Add sizes
-                      priority={index === 0}
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      sizes="100vw"
+                      priority={index === 0} // Prioritize first image
                   />
               </Carousel.Slide>
           ))}
         </Carousel>
+        <Overlay color="#000" opacity={0.65} zIndex={1} /> {/* Slightly darker overlay */}
 
-        {/* Overlay for text readability */}
-        <Overlay color="#000" opacity={0.6} zIndex={2} /> 
-
-        {/* Content on top */}
-        <Container size="lg" className={classes.heroInner}> 
-            <Group justify="space-between" w="100%" align="center">
-              <div style={{ flex: 1 }}> 
+        {/* Content */}
+        <Container size="lg" className={classes.heroInner} pos="relative" style={{ zIndex: 2 }}>
+             <motion.div variants={itemVariant}> {/* Animate content block */}
                 <Title className={classes.heroTitle}>
                     Grow Smarter with{' '}
                     <Text component="span" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }} inherit>
                         FarmWise
                     </Text>
                 </Title>
-                <Text className={classes.heroDescription} color="dimmed" mt="xl" mb="xl">
+            </motion.div>
+            <motion.div variants={itemVariant}> {/* Animate content block */}
+                <Text className={classes.heroDescription} mt="xl" mb="xl">
                     Leverage AI for intelligent recommendations, disease detection, and resource optimization.
                     Maximize your yield and efficiency like never before.
                 </Text>
+            </motion.div>
+            <motion.div variants={itemVariant}> {/* Animate content block */}
                 <Group mt="xl">
                   <Button
                       variant="gradient"
@@ -2051,211 +1033,83 @@ export default function HomePage() {
                   >
                       Get Started Now
                   </Button>
+                     <Button
+                        variant="white" // Secondary action
+                        size="xl"
+                        radius="xl"
+                        className={classes.heroControl}
+                        component={Link}
+                        href="#features" // Link to features section
+                    >
+                        Explore Features
+                    </Button>
                 </Group>
-              </div>
-              {/* <WeatherWidget /> */} {/* Removed WeatherWidget */}
-            </Group>
+             </motion.div>
         </Container>
       </motion.div>
 
-      {/* Features Section */}
-      <motion.section
+      {/* Features Section - Revamped Layout */}
+      <section
         id="features"
         className={classes.sectionWrapper}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-        variants={sectionVariant}
+        style={{ position: 'relative', zIndex: 2 }}
       >
-        <Container size="lg">
+        <Container size="xl"> {/* Use larger container for feature grid */}
+          <div>
             <Title order={2} className={classes.sectionTitle} ta="center">
-                <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                >
-                    Our
-                </motion.span>{' '}
-                <motion.span
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.6 }}
-                    className={classes.highlightedText}
-                >
-                    Key Features
-                </motion.span>
+              Unlock Your Farm's Potential
             </Title>
-            
-            <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xl" mt="xl">
-                {features.map((feature, index) => (
-                    <motion.div 
-                        key={feature.title} 
-                        custom={index}
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, amount: 0.1 }}
-                        variants={{
-                            hidden: { opacity: 0, y: 50 },
-                            visible: (i) => ({
-                                opacity: 1,
-                                y: 0,
-                                transition: {
-                                    delay: i * 0.2,
-                                    duration: 0.7,
-                                    ease: [0.215, 0.61, 0.355, 1]
-                                }
-                            })
-                        }}
-                    >
-                        <motion.div
-                            whileHover={{ scale: 1.03 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                        >
-                            <Card 
-                                shadow="md" 
-                                className={classes.featureCard} 
-                                padding="xl"
-                            >
-                                <motion.div
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ delay: index * 0.3 + 0.8, duration: 0.6, type: "spring" }}
-                                >
-                                    <ThemeIcon 
-                                        size={70} 
-                                        radius={35} 
-                                        variant="gradient" 
-                                        gradient={{ from: 'farmGreen', to: 'cyan', deg: 45 }}
-                                        className={classes.featureIcon}
-                                    >
-                                        <motion.div
-                                            animate={{ rotate: [0, 360] }}
-                                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                                            style={{ position: "absolute", width: "100%", height: "100%", borderRadius: "50%", border: "2px dashed rgba(255,255,255,0.2)" }}
-                                        />
-                                        <feature.icon style={{ width: rem(40), height: rem(40) }} stroke={1.5} />
-                                    </ThemeIcon>
-                                </motion.div>
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto"> {/* Increased max width */}
+              FarmWise offers a suite of powerful AI tools designed to optimize every aspect of your agricultural operations.
+            </Text>
+          </div>
 
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.3 + 1.2, duration: 0.4 }}
-                                >
-                                    <Text fz="lg" fw={600} className={classes.featureTitle} mt="md">
-                                        {feature.title}
-                                    </Text>
-                                </motion.div>
-
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: index * 0.3 + 1.4, duration: 0.5 }}
-                                >
-                                    <Text fz="sm" c="dimmed" mt="sm">
-                                        {feature.description}
-                                    </Text>
-                                </motion.div>
-                                
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    transition={{ delay: index * 0.3 + 1.6, duration: 0.5 }}
-                                >
-                                    <List
-                                        mt="md"
-                                        spacing="sm"
-                                        size="sm"
-                                        className={classes.featureCardList}
-                                        icon={
-                                            <ThemeIcon size={20} radius="xl" variant="light" color="farmGreen">
-                                                <IconListDetails style={{ width: rem(12), height: rem(12) }} />
-                                            </ThemeIcon>
-                                        }
-                                    >
-                                        {feature.details.map((detail, detailIndex) => (
-                                            <motion.div 
-                                                key={detail.text}
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: index * 0.2 + detailIndex * 0.1 + 1.8, duration: 0.3 }}
-                                            >
-                                                <List.Item
-                                                    icon={
-                                                        <ThemeIcon
-                                                            size={20}
-                                                            radius="xl"
-                                                            variant="light"
-                                                            color={index === 0 ? "farmGreen" : index === 1 && detailIndex === activePlantHealthWidget ? "red" : "farmGreen"}
-                                                            className={(index === 0 && detailIndex === activeRecommendationWidget) || (index === 1 && detailIndex === activePlantHealthWidget) ? classes.pulsingIcon : undefined}
-                                                        >
-                                                            <detail.icon style={{ width: rem(12), height: rem(12) }} />
-                                                        </ThemeIcon>
-                                                    }
-                                                >
-                                                    {detail.text}
-                                                </List.Item>
-                                            </motion.div>
-                                        ))}
-                                    </List>
-                                </motion.div>
-                                
-                                {/* Use Stack for consistent vertical spacing of selectors and widgets */}
-                                <Stack mt="lg" gap="md">
-                                    {index === 0 && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 2.3, duration: 0.5 }}
-                                        >
-                                            <RecommendationSelector />
-                                            <motion.div
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ delay: 2.5, duration: 0.5 }}
-                                            >
-                                                {getActiveRecommendationWidget()}
-                                            </motion.div>
-                                        </motion.div>
-                                    )}
-                                    {index === 1 && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 2.3, duration: 0.5 }}
-                                        >
-                                            <PlantHealthSelector />
-                                            <motion.div
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ delay: 2.5, duration: 0.5 }}
-                                            >
-                                                {getActivePlantHealthWidget()}
-                                            </motion.div>
-                                        </motion.div>
-                                    )}
-                                    {/* Render Satellite Widget for the third feature, maintaining structure */}
-                                    {index === 2 && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 2.3, duration: 0.5 }}
-                                        >
-                                            <SatelliteFarmInsightsWidget />
-                                        </motion.div>
-                                    )}
-                                </Stack>
-                            </Card>
-                        </motion.div>
-                    </motion.div>
+          {/* Grid for Features and Active Widget */}
+          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 'var(--mantine-spacing-xl)' }}>
+            {/* Feature Cards Column */}
+            <div style={{ flex: '1 1 600px', minWidth: '280px', minHeight: '500px', position: 'relative', zIndex: 5 }}>
+               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
+                {featuresData.map((feature, index) => (
+                    <FeatureCard
+                      key={feature.id}
+                      feature={feature}
+                      index={index}
+                      isActive={activeFeatureWidgetId === feature.id && !!feature.widgetComponent}
+                      onSelect={handleFeatureSelect}
+                    />
                 ))}
-            </SimpleGrid>
+               </SimpleGrid>
+            </div>
+
+            {/* Active Widget Column */}
+            <div style={{ flex: '1 1 400px', minWidth: '280px', minHeight: '500px', position: 'relative', zIndex: 1 }}>
+              {/* Ensure the motion div itself doesn't collapse */}
+              <motion.div variants={itemVariant} style={{ position: 'sticky', top: rem(80), height: 'fit-content' }}>
+                <Paper withBorder shadow="md" radius="md" p="xl" className={classes.stickyWidget} miw={300}> {/* Min width for widget area */}
+                   <Title order={3} mb="lg"> {activeFeature?.title || 'Feature Details'} </Title>
+                   {/* Remove AnimatePresence for now to isolate the issue */}
+                   {ActiveWidgetComponent && (
+                     <div key={activeFeatureWidgetId}>
+                       {React.createElement(ActiveWidgetComponent)}
+                     </div>
+                   )}
+                   {!ActiveWidgetComponent && (
+                     <div>
+                       <Center h={200}>
+                         <Text c="dimmed">Select a feature card to see details.</Text>
+                       </Center>
+                     </div>
+                   )}
+                 </Paper>
+                                            </motion.div>
+            </div>
+          </div>
         </Container>
-      </motion.section>
+      </section>
 
       <Divider my="xl" />
 
-      {/* Data Visualizations Section - Refactored */}
+      {/* Data Visualizations Section - Minor Styling Adjustments */}
       <motion.section
         id="analytics"
         className={classes.sectionWrapper}
@@ -2265,30 +1119,31 @@ export default function HomePage() {
         variants={sectionVariant}
       >
         <Container size="lg">
+          <motion.div variants={itemVariant}>
             <Title order={2} className={classes.sectionTitle} ta="center">
                 Farm Analytics Dashboard
             </Title>
-            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={560} mx="auto">
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
                 Visualize your farm's key metrics. Gain insights into crop distribution, soil health, rainfall patterns, and yield projections to make informed decisions.
             </Text>
+          </motion.div>
 
+            {/* Using motion.div for each grid item for staggered animation */}
             <Grid gutter="xl">
               {/* Crop Distribution */}
               <Grid.Col span={{ base: 12, md: 6, lg: 5 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}> {/* Ensure motion div takes full height */}
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}> {/* Added height 100% */}
+                <motion.div variants={itemVariant} style={{ height: '100%' }}>
+                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
                     <Group justify="space-between" mb="lg">
                         <Text fw={600} size="lg">Crop Distribution</Text>
                         <ThemeIcon variant="light" color="farmGreen" size="lg" radius="md">
                             <IconPlant2 size={20} />
                         </ThemeIcon>
                     </Group>
-                    {/* Use Flex to position chart and legend */}
                     <Flex direction={{ base: 'column', sm: 'row' }} gap="lg" align="center">
-                      {/* Pie Chart */}
-                      <Box flex={1} miw={180}> {/* Ensure chart has minimum width */}
+                      <Box flex={1} miw={180}>
                         <PieChart
-                          h={220} // Adjust height if needed
+                          h={220}
                           data={cropDistributionData}
                           tooltipDataSource="segment"
                           withTooltip
@@ -2303,10 +1158,8 @@ export default function HomePage() {
                               </Paper>
                             )
                           }}
-                          // Removed withLabels and labelsType
                         />
                       </Box>
-                      {/* Custom Legend */}
                       <Box flex={1}>
                         <Stack gap="sm">
                           {cropDistributionData.map((item) => (
@@ -2327,15 +1180,15 @@ export default function HomePage() {
 
               {/* Soil Health */}
               <Grid.Col span={{ base: 12, md: 6, lg: 7 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}> {/* Ensure motion div takes full height */}
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}> {/* Added height 100% */}
+                <motion.div variants={itemVariant} style={{ height: '100%' }}>
+                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
                      <Group justify="space-between" mb="lg">
                         <Text fw={600} size="lg">Soil Health Overview</Text>
                         <ThemeIcon variant="light" color="blue" size="lg" radius="md">
-                            <IconTestPipe size={20} /> {/* Changed icon */}
+                            <IconTestPipe size={20} />
                         </ThemeIcon>
                     </Group>
-                    <ScrollArea h={280} type="auto"> {/* Added ScrollArea */}
+                    <ScrollArea h={280} type="auto">
                       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
                         {soilHealthData.map((field) => (
                           <Box key={field.name} mb="md">
@@ -2369,8 +1222,8 @@ export default function HomePage() {
 
               {/* Yearly Rainfall */}
               <Grid.Col span={{ base: 12, md: 6, lg: 7 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}> {/* Ensure motion div takes full height */}
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}> {/* Added height 100% */}
+                <motion.div variants={itemVariant} style={{ height: '100%' }}>
+                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
                     <Group justify="space-between" mb="lg">
                         <Text fw={600} size="lg">Annual Rainfall (mm)</Text>
                          <ThemeIcon variant="light" color="cyan" size="lg" radius="md">
@@ -2405,18 +1258,18 @@ export default function HomePage() {
 
               {/* Yield Projection */}
               <Grid.Col span={{ base: 12, md: 6, lg: 5 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}> {/* Ensure motion div takes full height */}
+                <motion.div variants={itemVariant} style={{ height: '100%' }}>
                   <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
                     <Group justify="space-between" mb="lg">
                         <Text fw={600} size="lg">Yield Projection</Text>
                          <ThemeIcon variant="light" color="yellow" size="lg" radius="md">
-                            <IconChartLine size={20} /> {/* Changed icon */}
+                            <IconChartLine size={20} />
                         </ThemeIcon>
                     </Group>
-                    <Center style={{ flexDirection: 'column', height: 'calc(100% - 80px)' }}> {/* Adjust height */}
+                    <Center style={{ flexDirection: 'column', height: 'calc(100% - 80px)' }}>
                         <RingProgress
-                            size={160} // Increased size
-                            thickness={16} // Increased thickness
+                            size={160}
+                            thickness={16}
                             roundCaps
                             sections={[{ value: 75, color: 'farmGreen.6', tooltip: 'Projected completion: 75%' }]}
                             label={
@@ -2428,7 +1281,7 @@ export default function HomePage() {
                             mb="lg"
                         />
                         <Stack align="center" gap="xs">
-                             <Text size="lg" fw={700} ta="center" component="div"> {/* Added component="div" */}
+                             <Text size="lg" fw={700} ta="center" component="div">
                                On Track <Badge color="green" variant="light" size="sm">+5% vs Last Year</Badge>
                              </Text>
                              <Text size="sm" c="dimmed" ta="center">
@@ -2445,7 +1298,7 @@ export default function HomePage() {
 
       <Divider my="xl" />
 
-      {/* How It Works Section */}
+      {/* How It Works Section - Minor Styling Adjustments */}
       <motion.section
         id="how-it-works"
         className={classes.sectionWrapper}
@@ -2455,23 +1308,42 @@ export default function HomePage() {
         variants={sectionVariant}
       >
         <Container size="lg">
+          <motion.div variants={itemVariant}>
             <Title order={2} className={classes.sectionTitle} ta="center">
-                How FarmWise Works
+              Simple Steps to Smarter Farming
             </Title>
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
+                Getting started with FarmWise is easy. Follow these simple steps to begin optimizing your farm today.
+            </Text>
+          </motion.div>
+
+          {/* Stepper - Use motion.div for the container */}
+           <motion.div variants={itemVariant}>
             <Stepper 
-              active={-1} 
+                active={-1} // No active step initially
               mt="xl" 
               color="farmGreen" 
               allowNextStepsSelect={false}
-            >
-              {howItWorksItems}
+                orientation="horizontal" // Explicitly horizontal
+              >
+                {howItWorksSteps.map((step, index) => (
+                  <Stepper.Step
+                      key={step.title}
+                      icon={<step.icon size={24} />}
+                      label={`Step ${index + 1}`}
+                      description={step.title}
+                  >
+                    <Text size="sm">{step.description}</Text>
+                  </Stepper.Step>
+                ))}
             </Stepper>
+           </motion.div>
         </Container>
       </motion.section>
 
       <Divider my="xl" />
 
-      {/* Pricing Section */}
+      {/* Pricing Section - Minor Styling Adjustments */}
       <motion.section
         id="pricing"
         className={classes.sectionWrapper}
@@ -2481,21 +1353,74 @@ export default function HomePage() {
         variants={sectionVariant}
       >
         <Container size="lg">
+          <motion.div variants={itemVariant}>
             <Title order={2} className={classes.sectionTitle} ta="center">
                 Choose Your Plan
             </Title>
-            <Text c="dimmed" ta="center" mt="sm">
-                Start optimizing your farm today with a plan that suits your needs.
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
+              Start optimizing your farm today with a plan that fits your needs and budget. Flexible options available.
             </Text>
+           </motion.div>
+
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl" mt="xl">
-                {pricingItems}
+                {pricingTiers.map((tier, index) => (
+                  // Wrap each card in motion.div for staggered animation
+                  <motion.div key={tier.title} variants={itemVariant} style={{ height: '100%' }}>
+                    <Paper withBorder p="xl" radius="md" className={classes.pricingCard} style={{ height: '100%' }}>
+                       <Stack justify="space-between" style={{ height: '100%' }}>
+                         {/* Top part: Title & Price */}
+                         <Box>
+                            <Text ta="center" fz="xl" fw={600} mt="sm"> {/* Increased font size */}
+                                {tier.title}
+                            </Text>
+                            <Text ta="center" fz="2.5rem" fw={700} mt="md" lh={1.1}> {/* Larger price */}
+                                {tier.price}
+                                <Text span fz="sm" c="dimmed" fw={400}>{tier.period}</Text>
+                            </Text>
+                         </Box>
+
+                         {/* Middle part: Features */}
+                         <Box my="xl">
+                             <List
+                                spacing="sm"
+                                size="sm"
+                                center
+                                icon={
+                                <ThemeIcon color="farmGreen" size={20} radius="xl"> {/* Smaller icon */}
+                                    <IconCheck style={{ width: rem(12), height: rem(12) }} />
+                                </ThemeIcon>
+                                }
+                             >
+                                {tier.features.map((feature) => (
+                                    <List.Item key={feature}>{feature}</List.Item>
+                                ))}
+                            </List>
+                         </Box>
+
+                         {/* Bottom part: Button */}
+                         <Button
+                           fullWidth
+                           size="lg" // Larger button
+                           variant={tier.buttonVariant as any}
+                           gradient={tier.buttonVariant === 'gradient' ? { from: 'farmGreen', to: 'cyan' } : undefined}
+                           color={tier.buttonVariant === 'gradient' ? undefined : 'farmGreen'}
+                           mt="md" // Reduced margin top
+                           component={Link}
+                           href={tier.price === 'Contact Us' ? '/contact' : '/signup'}
+                         >
+                            {tier.buttonText}
+                         </Button>
+                       </Stack>
+                    </Paper>
+                  </motion.div>
+                ))}
             </SimpleGrid>
         </Container>
       </motion.section>
 
       <Divider my="xl" />
 
-      {/* Testimonials Section - Reworked */}
+      {/* Testimonials Section - Minor Styling Adjustments */}
       <motion.section
         id="testimonials"
         className={classes.sectionWrapper}
@@ -2505,16 +1430,17 @@ export default function HomePage() {
         variants={sectionVariant}
       >
         <Container size="lg">
+          <motion.div variants={itemVariant}>
             <Title order={2} className={classes.sectionTitle} ta="center">
                 What Farmers Are Saying
             </Title>
-            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={560} mx="auto">
-                Hear directly from farmers who have benefited from FarmWise insights.
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
+                Hear directly from farmers who have benefited from FarmWise insights and optimizations.
             </Text>
+           </motion.div>
 
-            {/* Use SimpleGrid for layout (can be swapped for Carousel later) */}
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl" mt="xl">
-                {testimonials.map((item) => (
+                {testimonials.map((item, index) => (
                     <motion.div key={item.author} variants={itemVariant} style={{ height: '100%' }}>
                         <Paper
                             withBorder
@@ -2529,7 +1455,7 @@ export default function HomePage() {
                                     <ThemeIcon variant="light" color="farmGreen" size={40} radius="md" mb="lg">
                                         <IconQuote size={24} />
                                     </ThemeIcon>
-                                    <Text fz="md" style={{ fontStyle: 'italic' }}>
+                                    <Text fz="md" lh={1.6} style={{ fontStyle: 'italic' }}> {/* Improved line height */}
                                         "{item.quote}"
                                     </Text>
                                 </Box>
@@ -2544,21 +1470,26 @@ export default function HomePage() {
         </Container>
       </motion.section>
 
-      {/* CTA Section */}
+      {/* CTA Section - Minor Styling Adjustments */}
       <motion.section
-        className={classes.ctaSection}
+        className={classes.ctaSection} // Keep custom class for specific styling
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.3 }}
         variants={sectionVariant}
       >
         <Container size="lg" className={classes.ctaInner}>
+          <motion.div variants={itemVariant}>
             <Title order={2} ta="center">
                 Ready to Boost Your Farm's Potential?
             </Title>
-            <Text ta="center" c="dimmed" mt="sm" mb="xl">
-                Join hundreds of farmers using FarmWise to make data-driven decisions.
+          </motion.div>
+          <motion.div variants={itemVariant}>
+            <Text ta="center" c="dimmed" mt="sm" mb="xl" maw={600} mx="auto">
+                Join hundreds of farmers using FarmWise to make data-driven decisions. Start your free trial today and see the difference.
             </Text>
+          </motion.div>
+          <motion.div variants={itemVariant}>
             <Center>
                 <Button
                     size="xl"
@@ -2568,11 +1499,28 @@ export default function HomePage() {
                     component={Link}
                     href="/signup"
                 >
-                    Sign Up for Free Trial
+                    Start Free Trial Now
                 </Button>
             </Center>
+          </motion.div>
         </Container>
       </motion.section>
+
+      {/* Consider adding a Footer here */}
+      {/*
+      <footer className={classes.footer}>
+          <Container size="lg">
+              <Group justify="space-between">
+                  <Text size="sm" c="dimmed">&copy; {new Date().getFullYear()} FarmWise. All rights reserved.</Text>
+                  <Group gap="xs">
+                      <ActionIcon size="lg" variant="default" radius="xl"> <IconBrandTwitter /> </ActionIcon>
+                      <ActionIcon size="lg" variant="default" radius="xl"> <IconBrandInstagram /> </ActionIcon>
+                      <ActionIcon size="lg" variant="default" radius="xl"> <IconBrandLinkedin /> </ActionIcon>
+                  </Group>
+              </Group>
+          </Container>
+      </footer>
+      */}
     </>
   );
 }

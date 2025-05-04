@@ -1,14 +1,15 @@
 .wrapper {
-  height: 100vh; /* Use 100vh for full viewport height */
+  min-height: 100vh; /* Ensure wrapper takes at least full height */
+  height: auto; /* Allow wrapper to grow beyond viewport */
   display: flex;
-  align-items: center; /* Center vertically */
-  justify-content: center; /* Center horizontally */
-  padding: var(--mantine-spacing-md); /* Add some padding */
-  position: relative; /* Already relative, good */
-  overflow: hidden; /* Keep overflow hidden */
-  background-color: #f0fdf4; /* Use a very light green/off-white base */
-  /* Removed background gradient and flowBackground animation */
-  z-index: 0; /* Ensure wrapper establishes stacking context if needed */
+  flex-direction: column; /* Ensure vertical stacking for centering paper */
+  align-items: center; /* Center paper horizontally */
+  justify-content: flex-start; /* Align paper to top when scrollable */
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md); /* Add more vertical padding */
+  position: relative;
+  /* overflow: hidden; */ /* REMOVE THIS to allow page scroll */
+  background-color: #f0fdf4;
+  z-index: 0;
 }
 
 /* Base style for new background shapes */
@@ -86,9 +87,9 @@
 }
 
 .mapPlaceholder {
-  height: 350px; /* Slightly smaller map */
+  /* This might not be used anymore if map loads directly */
+  height: 350px;
   width: 100%;
-  /* Adjust for dark background */
   background-color: var(--mantine-color-dark-5);
   border: 1px dashed var(--mantine-color-dark-3);
   display: flex;
@@ -96,7 +97,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--mantine-radius-md);
-  margin-bottom: var(--mantine-spacing-lg); /* Space below map */
+  margin-bottom: var(--mantine-spacing-lg);
 }
 
 /* Explicit dark background for paper */
@@ -104,5 +105,14 @@
  background-color: var(--mantine-color-dark-7); /* Dark background */
  z-index: 1; /* Keep paper above shapes */
  position: relative; /* Establish stacking context */
- /* Remove backdrop-filter if background is opaque */
+ /* Removed backdrop-filter, flex properties now handled inline */
+ /* display: flex, flexDirection: column, height, overflow are set inline */
 }
+
+/* Add some padding to the scrollable content area if needed */
+/* This is optional, as padding can be handled within the steps themselves */
+/* 
+.contentArea {
+  padding: var(--mantine-spacing-sm);
+}
+*/

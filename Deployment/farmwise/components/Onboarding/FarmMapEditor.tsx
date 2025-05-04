@@ -39,7 +39,7 @@ const GeomanIntegration = ({
     setBoundary, // Function to update the active boundary
     editableBoundaryKey, // Key to help reset state
     detectedBoundaries // Pass detected boundaries down
-  }: { 
+  }: {
     boundary: FarmMapEditorProps['boundary'];
     setBoundary: FarmMapEditorProps['setBoundary'];
     editableBoundaryKey?: FarmMapEditorProps['editableBoundaryKey'];
@@ -51,6 +51,7 @@ const GeomanIntegration = ({
 
   // Effect to load the active boundary into Geoman when it changes externally
   useEffect(() => {
+    console.log(`[GeomanIntegration Effect] Running. Boundary set: ${!!boundary}, Key: ${editableBoundaryKey}`);
     // Clear previous editable layers first
     drawnItemsRef.current?.clearLayers();
     isEditingRef.current = false; // Reset editing flag
@@ -59,43 +60,69 @@ const GeomanIntegration = ({
     map.pm.disableDraw();
 
     if (boundary && drawnItemsRef.current) {
+      console.log("[GeomanIntegration Effect] Boundary exists, attempting to load into Geoman.");
       // Convert GeoJSON to Leaflet layer(s)
-      const leafletLayer = L.geoJSON(boundary, {
-          style: { // Style for the editable layer
-            color: '#ffcc00', 
-            fillColor: '#ffcc00', 
-            fillOpacity: 0.4, 
-            weight: 3
-          }
-      });
-      // Add layer(s) to the FeatureGroup
-      leafletLayer.getLayers().forEach(layer => {
-        if (layer instanceof L.Path) { // Check if it's a path (polygon, rectangle, etc.)
-             drawnItemsRef.current?.addLayer(layer);
-             // Enable editing ONLY on this layer
-             (layer as any).pm.enable({ allowSelfIntersection: false });
-             isEditingRef.current = true;
-             if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
-                // Fit bounds to the loaded layer
-                if (layer.getBounds().isValid()) {
-                    map.fitBounds(layer.getBounds());
-                }
-             }
-        }
-      });
+      try {
+          const leafletLayer = L.geoJSON(boundary, {
+              style: { // Style for the editable layer
+                color: '#ffcc00',
+                fillColor: '#ffcc00',
+                fillOpacity: 0.4,
+                weight: 3
+              }
+          });
+          console.log("[GeomanIntegration Effect] Converted GeoJSON to Leaflet layer:", leafletLayer);
+
+          // Add layer(s) to the FeatureGroup
+          leafletLayer.getLayers().forEach(layer => {
+            if (layer instanceof L.Path) { // Check if it's a path (polygon, rectangle, etc.)
+                 console.log("[GeomanIntegration Effect] Adding layer to drawnItemsRef:", layer);
+                 drawnItemsRef.current?.addLayer(layer);
+                 // Enable editing ONLY on this layer
+                 try {
+                    console.log("[GeomanIntegration Effect] Enabling Geoman editing (pm.enable) on layer:", layer);
+                    (layer as any).pm.enable({ allowSelfIntersection: false });
+                    console.log("[GeomanIntegration Effect] Geoman editing enabled.");
+                    isEditingRef.current = true;
+
+                    if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+                        // Fit bounds to the loaded layer
+                        if (layer.getBounds().isValid()) {
+                            console.log("[GeomanIntegration Effect] Fitting map bounds to layer.");
+                            map.fitBounds(layer.getBounds());
+                        } else {
+                             console.warn("[GeomanIntegration Effect] Layer bounds are invalid, cannot fit map.");
+                        }
+                    }
+                 } catch (pmEnableError) {
+                    // Log specific error when enabling Geoman editing fails
+                    console.error("[GeomanIntegration Effect] Error enabling Geoman editing (pm.enable):", pmEnableError, "Layer:", layer, "Boundary Data:", boundary);
+                 }
+            } else {
+                console.warn("[GeomanIntegration Effect] Layer created from GeoJSON is not an L.Path, cannot enable editing:", layer);
+            }
+          });
+      } catch (geoJsonConversionError) {
+          // Log specific error when L.geoJSON fails
+          console.error("[GeomanIntegration Effect] Error converting GeoJSON boundary to Leaflet layer:", geoJsonConversionError, "Boundary Data:", boundary);
+      }
       // map.pm.disableDraw(); // Already disabled above
     } else {
-        // If no boundary is selected... 
+        console.log("[GeomanIntegration Effect] No boundary selected.");
+        // If no boundary is selected...
         if (!detectedBoundaries || detectedBoundaries.length === 0) {
            // ...AND no detected boundaries are showing, enable drawing for initial outline
-           map.pm.enableDraw('Polygon'); 
-           map.pm.enableDraw('Rectangle'); 
+           console.log("[GeomanIntegration Effect] No detected boundaries, enabling drawing.");
+           map.pm.enableDraw('Polygon');
+           map.pm.enableDraw('Rectangle');
         } else {
            // ...BUT detected boundaries ARE showing, keep drawing disabled.
+           console.log("[GeomanIntegration Effect] Detected boundaries exist, drawing remains disabled.");
            // map.pm.disableDraw(); // Already disabled above
         }
     }
-  }, [boundary, map, editableBoundaryKey, setBoundary, detectedBoundaries]); // Added dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundary, map, editableBoundaryKey, setBoundary, detectedBoundaries]); // Dependencies remain the same
 
   useEffect(() => {
     // Initialize Geoman controls

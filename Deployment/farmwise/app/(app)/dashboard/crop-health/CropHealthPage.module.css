@@ -29,3 +29,14 @@
   font-size: 0.9rem;
   line-height: 1.4;
 }
+
+.polygon3d {
+  filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5));
+  transform: translate3d(0, 0, 10px);
+  transition: all 0.3s ease;
+}
+
+.polygon3d:hover {
+  transform: translate3d(0, -5px, 20px);
+  filter: drop-shadow(5px 10px 10px rgba(0, 0, 0, 0.5));
+}

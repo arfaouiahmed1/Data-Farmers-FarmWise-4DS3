@@ -14,6 +14,7 @@ import {
 } from '@mantine/core';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import classes from './SignupPage.module.css'; // We'll create this CSS module next
 
 // Animation variant
@@ -27,6 +28,14 @@ const containerVariant = {
 };
 
 export default function SignupPage() {
+  const router = useRouter();
+
+  const handleSignup = () => {
+    // In a real app, you would register the user here
+    // For now, we're just navigating to the onboarding page
+    router.push('/onboarding');
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -51,8 +60,14 @@ export default function SignupPage() {
               <PasswordInput label="Password" placeholder="Your password" required mt="md" />
               <PasswordInput label="Confirm Password" placeholder="Confirm your password" required mt="md" />
               <Checkbox label="I accept terms and conditions" mt="lg" required/>
-              <Button fullWidth mt="xl" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }}>
-              Sign up
+              <Button 
+                fullWidth 
+                mt="xl" 
+                variant="gradient" 
+                gradient={{ from: 'farmGreen', to: 'cyan' }}
+                onClick={handleSignup}
+              >
+                Sign up
               </Button>
           </Stack>
         </Paper>
