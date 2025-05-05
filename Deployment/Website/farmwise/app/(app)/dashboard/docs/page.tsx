@@ -88,10 +88,10 @@ export default function DocumentationPage() {
       <Paper p="md" radius="md" withBorder>
         <Group>
           <Link href="/dashboard/help-support" passHref>
-            <Anchor className="anchor-link">
-              <Group gap={8}>
+            <Anchor component="span" className="anchor-link" style={{ textDecoration: 'none', cursor: 'pointer' }}> 
+              <Group gap={8} align="center">
                 <IconArrowLeft size={16} />
-                <span>Back to Help & Support</span>
+                <Text component="span" size="sm">Back to Help & Support</Text> 
               </Group>
             </Anchor>
           </Link>
