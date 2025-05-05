@@ -56,7 +56,7 @@ import {
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
 import { AiChatInterface } from '../AiChat/AiChatInterface';
 
@@ -78,10 +78,12 @@ interface NavItemProps {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpened, { toggle: toggleMobileNav }] = useDisclosure(false);
   const [aiModalOpened, { open: openAiModal, close: closeAiModal }] = useDisclosure(false);
+  const [logoutModalOpened, { open: openLogoutModal, close: closeLogoutModal }] = useDisclosure(false);
   const [isAiFullScreen, setIsAiFullScreen] = useState(false);
   const pathname = usePathname();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   
   // Set mounted to true once component is mounted (client-side only)
   useEffect(() => {
@@ -256,6 +258,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     </Group>
   );
 
+  const handleLogoutConfirm = () => {
+    closeLogoutModal();
+    // Add actual logout logic here (e.g., clear tokens, API calls)
+    console.log("Logging out...");
+    router.push('/login'); // Redirect to login page
+  };
+
   return (
     <AppShell
       header={{ height: 60 }}
@@ -348,11 +357,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Menu.Item leftSection={<IconSettings size={14} />} component={Link} href="/dashboard/settings">
                   Settings
                 </Menu.Item>
-                <Menu.Item leftSection={<IconInfoCircle size={14} />} component={Link} href="/dashboard/help">
+                <Menu.Item leftSection={<IconInfoCircle size={14} />} component={Link} href="/dashboard/help-support">
                   Help & Support
                 </Menu.Item>
                 <Divider />
-                <Menu.Item leftSection={<IconLogout size={14} />} color="red" component={Link} href="/login">
+                <Menu.Item
+                  leftSection={<IconLogout size={14} />}
+                  color="red"
+                  onClick={openLogoutModal}
+                >
                   Logout
                 </Menu.Item>
               </Menu.Dropdown>
@@ -428,6 +441,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         radius={isAiFullScreen ? 0 : "md" }
       >
         <AiChatInterface isFullScreen={isAiFullScreen} />
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        opened={logoutModalOpened}
+        onClose={closeLogoutModal}
+        title="Confirm Logout"
+        centered
+        size="sm"
+      >
+        <Text size="sm">Are you sure you want to log out?</Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={closeLogoutModal}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleLogoutConfirm}>
+            Logout
+          </Button>
+        </Group>
       </Modal>
     </AppShell>
   );
