@@ -1,0 +1,33 @@
+/* DashboardPage.module.css */
+
+.pageTitle {
+  font-family: 'Poppins', var(--mantine-font-family-headings); /* Ensure heading font */
+  font-weight: 700;
+}
+
+.dataCard {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  height: 100%; /* Ensure cards in a grid row have the same height */
+  display: flex; /* Enable flex column layout */
+  flex-direction: column; /* Stack content vertically */
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--mantine-shadow-md); /* Use medium shadow on hover */
+  }
+
+  /* Make buttons stick to the bottom */
+  & > button:last-child {
+      margin-top: auto; 
+  }
+}
+
+/* Style for the AI Treatment Advisor preformatted text */
+.treatmentText {
+    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+    font-family: var(--mantine-font-family-monospace); /* Use monospace font */
+    background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+    padding: var(--mantine-spacing-sm);
+    border-radius: var(--mantine-radius-sm);
+    line-height: 1.6;
+}
