@@ -1,3 +1,29 @@
 .linkButton {
   text-decoration: none;
+}
+
+.topicCard {
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.topicCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.videoPlaceholder {
+  background-color: #f0f0f0;
+  height: 140px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.videoPlaceholder:hover {
+  background-color: #e5e5e5;
 } 
