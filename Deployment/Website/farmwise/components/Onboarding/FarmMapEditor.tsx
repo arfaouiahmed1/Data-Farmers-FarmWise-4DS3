@@ -31,6 +31,7 @@ interface FarmMapEditorProps {
   onBoundarySelect?: (boundary: PolygonGeoJsonFeature) => void; // Callback when a detected boundary is clicked
   setMapInstance?: (map: Map) => void; // Callback to pass map instance up
   editableBoundaryKey?: number | string; // Key to force GeoJSON layer remount when boundary changes
+  hideAttribution?: boolean; // Whether to hide the attribution text
 }
 
 // Internal component to handle Geoman integration and loading external GeoJSON
@@ -237,7 +238,8 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
     detectedBoundaries = [], // Default to empty array
     onBoundarySelect,
     setMapInstance, // Accept the map instance setter
-    editableBoundaryKey
+    editableBoundaryKey,
+    hideAttribution = false // Default to showing attribution
   }) => {
 
   const mapRef = useRef<Map>(null); // Ref for the map instance
@@ -275,7 +277,7 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
       scrollWheelZoom={true}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        attribution={hideAttribution ? '' : '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         maxZoom={20} // Allow deeper zoom for details
         tileSize={512} // Use higher res tiles if available
