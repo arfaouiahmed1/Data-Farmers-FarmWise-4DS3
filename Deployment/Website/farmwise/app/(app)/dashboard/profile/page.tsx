@@ -11,10 +11,47 @@ import {
   Button, 
   Stack, 
   PasswordInput, 
-  Divider 
+  Divider,
+  Box // Import Box for map container styling
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconUser, IconMail, IconBuildingWarehouse, IconLock } from '@tabler/icons-react';
+// Dynamically import the map component to avoid SSR issues with Leaflet
+import dynamic from 'next/dynamic'; 
+import type { LatLngExpression } from 'leaflet';
+import type { Feature } from 'geojson'; // Import GeoJSON Feature type
+
+// Placeholder boundary data (replace with actual fetched GeoJSON)
+// Example Polygon Coordinates (around a fictional area)
+const placeholderFarmBoundary: Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    type: "Polygon",
+    coordinates: [
+      [
+        [-74.0060, 40.7128], // NYC approx
+        [-74.0050, 40.7138],
+        [-74.0040, 40.7128],
+        [-74.0050, 40.7118],
+        [-74.0060, 40.7128] 
+      ]
+    ]
+  }
+};
+
+// Placeholder center and zoom (replace with calculation based on boundary or user setting)
+const placeholderCenter: LatLngExpression = [40.7128, -74.0050]; // Centered near the polygon
+const placeholderZoom: number = 15;
+
+// --- Dynamically import the Map Editor ---
+// This prevents Leaflet from trying to run on the server where 'window' is not defined.
+const FarmMapEditor = dynamic(
+  () => import('@/components/Onboarding/FarmMapEditor'),
+  { ssr: false, // Disable server-side rendering for this component
+    loading: () => <Text>Loading map...</Text> // Optional loading indicator
+  } 
+);
 
 // Mock user data - replace with actual data fetching
 const initialUserData = {
@@ -28,6 +65,8 @@ const initialUserData = {
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState(initialUserData);
+  // Add state for boundary - eventually fetched
+  const [farmBoundary] = useState(placeholderFarmBoundary); 
 
   const form = useForm({
     initialValues: {
@@ -75,6 +114,11 @@ export default function ProfilePage() {
     // Make sure to verify currentPassword on the backend
     passwordForm.reset();
     // Add notification for success/failure
+  };
+
+  // Dummy function for setBoundary - map is view-only here
+  const handleBoundaryChange = () => {
+    console.log("Profile Map: Boundary change attempt ignored (view-only).");
   };
 
   return (
@@ -127,6 +171,29 @@ export default function ProfilePage() {
              <Button variant="outline" onClick={handleEditToggle}>Edit Profile</Button>
           )}
         </Group>
+      </Paper>
+
+      {/* Farm Map Preview Section */}
+      <Paper withBorder shadow="sm" p="lg" radius="md">
+        <Title order={4} mb="md">Farm Location & Boundary</Title>
+        <Box style={{ height: '300px', width: '100%', marginBottom: 'md' }}> 
+          {farmBoundary ? (
+            <FarmMapEditor
+              center={placeholderCenter} // Use dynamic center based on boundary later
+              zoom={placeholderZoom}
+              boundary={farmBoundary} // Pass the boundary data
+              setBoundary={handleBoundaryChange} // Provide dummy setter for view-only
+              // Disable editing features specifically for profile view if component supports it
+              // e.g., editable={false} or similar prop if available
+              // For FarmMapEditor, we prevent editing by not allowing pm controls to enable draw/edit easily
+              // and providing a dummy setBoundary function.
+            />
+          ) : (
+            <Text c="dimmed">No farm boundary data available.</Text>
+          )}
+        </Box>
+        {/* Add button to go to mapping page for editing later? */}
+        {/* <Button variant="light" size="xs">Edit Boundary in Mapping</Button> */}
       </Paper>
 
       <Divider label="Security" labelPosition="center" my="md" />
