@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Title, Text, Container, Paper, Alert, Button, FileInput, Group, Loader, Stack, Image as MantineImage } from '@mantine/core';
 import { IconBug, IconUpload, IconPhoto, IconX, IconCheck } from '@tabler/icons-react';
 
@@ -16,7 +16,16 @@ export default function DiseaseDetectionPage() {
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    console.log('selectedFile state changed:', selectedFile);
+  }, [selectedFile]);
+
+  useEffect(() => {
+    console.log('isLoading state changed:', isLoading);
+  }, [isLoading]);
+
   const handleFileChange = (file: File | null) => {
+    console.log('handleFileChange called with file:', file);
     setSelectedFile(file);
     setPrediction(null);
     setError(null);
@@ -28,11 +37,14 @@ export default function DiseaseDetectionPage() {
   };
 
   const handleSubmit = async () => {
+    console.log('handleSubmit function called. Current selectedFile:', selectedFile, 'isLoading:', isLoading);
     if (!selectedFile) {
       setError('Please select an image file first.');
+      console.log('handleSubmit: No selected file, exiting.');
       return;
     }
 
+    console.log('handleSubmit: Proceeding with file submission.');
     setIsLoading(true);
     setError(null);
     setPrediction(null);

@@ -18,8 +18,78 @@ from django.conf import settings # Add settings import
 
 from ultralytics import YOLO
 import torch
+import torch.nn as nn # Ensure nn is imported
+import torch.nn.functional as F # Ensure F is imported
 import torchvision.transforms as transforms
-from torchvision.models import resnet9 # Or your specific ResNet9 import if custom
+# from torchvision.models import resnet9 # Or your specific ResNet9 import if custom -- THIS LINE IS THE ISSUE
+
+# --- Model Definitions from Notebook ---
+def accuracy(outputs, labels):
+    _, preds = torch.max(outputs, dim=1)
+    return torch.tensor(torch.sum(preds == labels).item() / len(preds))
+
+class ImageClassificationBase(nn.Module):
+    def training_step(self, batch):
+        images, labels = batch
+        out = self(images)
+        loss = F.cross_entropy(out, labels)
+        return loss
+
+    def validation_step(self, batch):
+        images, labels = batch
+        out = self(images)
+        loss = F.cross_entropy(out, labels)
+        acc = accuracy(out, labels)
+        preds = torch.argmax(out, dim=1)
+        return {
+            "val_loss": loss.detach(),
+            "val_accuracy": acc,
+            "preds": preds.detach(),
+            "labels": labels.detach()
+        }
+
+    def validation_epoch_end(self, outputs):
+        batch_losses = [x["val_loss"] for x in outputs]
+        batch_accuracy = [x["val_accuracy"] for x in outputs]
+        epoch_loss = torch.stack(batch_losses).mean()
+        epoch_accuracy = torch.stack(batch_accuracy).mean()
+        return {"val_loss": epoch_loss, "val_accuracy": epoch_accuracy}
+
+    def epoch_end(self, epoch, result):
+        print("Epoch [{}], last_lr: {:.5f}, train_loss: {:.4f}, val_loss: {:.4f}, val_acc: {:.4f}".format(
+            epoch, result['lrs'][-1], result['train_loss'], result['val_loss'], result['val_accuracy']))
+
+def ConvBlock(in_channels, out_channels, pool=False):
+    layers = [nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+             nn.BatchNorm2d(out_channels),
+             nn.ReLU(inplace=True)]
+    if pool:
+        layers.append(nn.MaxPool2d(4))
+    return nn.Sequential(*layers)
+
+class ResNet9(ImageClassificationBase):
+    def __init__(self, in_channels, num_diseases):
+        super().__init__()
+        self.conv1 = ConvBlock(in_channels, 64)
+        self.conv2 = ConvBlock(64, 128, pool=True)
+        self.res1 = nn.Sequential(ConvBlock(128, 128), ConvBlock(128, 128))
+        self.conv3 = ConvBlock(128, 256, pool=True)
+        self.conv4 = ConvBlock(256, 512, pool=True)
+        self.res2 = nn.Sequential(ConvBlock(512, 512), ConvBlock(512, 512))
+        self.classifier = nn.Sequential(nn.MaxPool2d(4),
+                                       nn.Flatten(),
+                                       nn.Linear(512, num_diseases))
+
+    def forward(self, xb):
+        out = self.conv1(xb)
+        out = self.conv2(out)
+        out = self.res1(out) + out
+        out = self.conv3(out)
+        out = self.conv4(out)
+        out = self.res2(out) + out
+        out = self.classifier(out)
+        return out
+# --- End Model Definitions ---
 
 # --- Configuration ---
 # Use a relative path based on the Django project's BASE_DIR
@@ -47,17 +117,27 @@ except Exception as e:
     print(f"Error loading weed detection model: {e}")
     weed_model = None # Handle cases where the weed model fails to load
 
-# Load the disease detection model
-try:
-    disease_model = torch.load(DISEASE_MODEL_PATH, map_location=torch.device('cpu')) # Load on CPU
-    disease_model.eval()  # Set the model to evaluation mode
-    print(f"Successfully loaded disease detection model from {DISEASE_MODEL_PATH}")
-except Exception as e:
-    print(f"Error loading disease detection model: {e}")
-    disease_model = None
-
-# Define disease classes
+# Define disease classes (should be before model loading if num_classes is derived from it)
 DISEASE_CLASSES = ['Pepper,_bell___healthy', 'Orange___Haunglongbing_(Citrus_greening)', 'Apple___Apple_scab', 'Tomato___Target_Spot', 'Peach___healthy', 'Grape___Black_rot', 'Apple___healthy', 'Tomato___healthy', 'Tomato___Septoria_leaf_spot', 'Raspberry___healthy', 'Squash___Powdery_mildew', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Strawberry___healthy', 'Potato___Early_blight', 'Potato___Late_blight', 'Peach___Bacterial_spot', 'Potato___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Pepper,_bell___Bacterial_spot', 'Blueberry___healthy', 'Cherry_(including_sour)___healthy', 'Apple___Cedar_apple_rust', 'Strawberry___Leaf_scorch', 'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot', 'Tomato___Early_blight', 'Tomato___Spider_mites Two-spotted_spider_mite', 'Corn_(maize)___healthy', 'Tomato___Leaf_Mold', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 'Corn_(maize)___Common_rust_', 'Tomato___Bacterial_spot', 'Corn_(maize)___Northern_Leaf_Blight', 'Grape___healthy', 'Apple___Black_rot', 'Grape___Esca_(Black_Measles)', 'Soybean___healthy', 'Tomato___Tomato_mosaic_virus', 'Tomato___Late_blight']
+
+# Load the disease detection model
+disease_model = None # Initialize as None
+try:
+    num_classes = len(DISEASE_CLASSES)
+    # Instantiate the model architecture
+    disease_model_instance = ResNet9(in_channels=3, num_diseases=num_classes)
+    
+    # Load the state dictionary
+    state_dict = torch.load(DISEASE_MODEL_PATH, map_location=torch.device('cpu'))
+    disease_model_instance.load_state_dict(state_dict)
+    
+    # Set the model to evaluation mode
+    disease_model_instance.eval()
+    
+    disease_model = disease_model_instance # Assign the successfully loaded model
+    print(f"Successfully loaded disease detection model state_dict from {DISEASE_MODEL_PATH}")
+except Exception as e:
+    print(f"Error loading disease detection model: {e}") # disease_model remains None
 
 # --- Helper Function: Pixel Coordinates to Geo Coordinates ---
 # IMPORTANT: This is a simplified linear interpolation assuming a flat Earth projection
@@ -379,7 +459,7 @@ def detect_weeds_view(request):
         print("Running weed detection model inference...")
         try:
             # Use similar parameters as farm boundaries for consistency
-            results = weed_model.predict(source=img_np, save=False, conf=0.25, iou=0.45)
+            results = weed_model.predict(source=img_np, save=False, conf=0.5    , iou=0.45)
             print(f"Weed detection inference complete. Results: {len(results) if results else 0}")
         except Exception as pred_err:
             print(f"Error during weed model prediction: {pred_err}")
