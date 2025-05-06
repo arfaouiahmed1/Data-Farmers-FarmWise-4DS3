@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système de Recommandation Agricole</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Système de Recommandation Agricole</h1>
+            <div class="tabs">
+                <button class="tab-btn active" data-target="pesticide">Pesticides</button>
+                <button class="tab-btn" data-target="fertilizer">Fertilisants</button>
+                <button class="tab-btn" data-target="ml-models">Modèles ML</button>
+            </div>
+        </header>
+        
+        <main>
+            <!-- Section Pesticides -->
+            <section id="pesticide" class="tab-content active">
+                <div class="option-selector">
+                    <button class="option-btn active" data-target="pesticide-form">Mode Formulaire</button>
+                    <button class="option-btn" data-target="pesticide-free">Mode Description Libre</button>
+                </div>
+                
+                <!-- Mode Formulaire pour Pesticides -->
+                <div id="pesticide-form" class="option-content active">
+                    <form id="pesticide-form-data">
+                        <div class="form-group">
+                            <label for="pest-crop">Culture:</label>
+                            <select id="pest-crop" name="crop" required>
+                                <option value="">Sélectionnez une culture</option>
+                                <option value="tomate">Tomate</option>
+                                <option value="pomme de terre">Pomme de terre</option>
+                                <option value="blé">Blé</option>
+                                <option value="maïs">Maïs</option>
+                                <option value="raisin">Raisin</option>
+                                <option value="pomme">Pomme</option>
+                                <option value="olive">Olive</option>
+                                <option value="piment">Piment</option>
+                                <option value="agrumes">Agrumes</option>
+                                <option value="oignon">Oignon</option>
+                                <option value="carotte">Carotte</option>
+                                <option value="pastèque">Pastèque</option>
+                                <option value="melon">Melon</option>
+                                <option value="concombre">Concombre</option>
+                                <option value="aubergine">Aubergine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-region">Région:</label>
+                            <select id="pest-region" name="region" required>
+                                <option value="">Sélectionnez une région</option>
+                                <option value="Jendouba">Jendouba</option>
+                                <option value="Bizerte">Bizerte</option>
+                                <option value="Kairouan">Kairouan</option>
+                                <option value="Kasserine">Kasserine</option>
+                                <option value="Sfax">Sfax</option>
+                                <option value="Gabès">Gabès</option>
+                                <option value="Tataouine">Tataouine</option>
+                                <option value="Tunis">Tunis</option>
+                                <option value="Ariana">Ariana</option>
+                                <option value="Ben Arous">Ben Arous</option>
+                                <option value="Manouba">Manouba</option>
+                                <option value="Nabeul">Nabeul</option>
+                                <option value="Zaghouan">Zaghouan</option>
+                                <option value="Béja">Béja</option>
+                                <option value="Le Kef">Le Kef</option>
+                                <option value="Siliana">Siliana</option>
+                                <option value="Sousse">Sousse</option>
+                                <option value="Monastir">Monastir</option>
+                                <option value="Mahdia">Mahdia</option>
+                                <option value="Sidi Bouzid">Sidi Bouzid</option>
+                                <option value="Gafsa">Gafsa</option>
+                                <option value="Tozeur">Tozeur</option>
+                                <option value="Kébili">Kébili</option>
+                                <option value="Médenine">Médenine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-district">District:</label>
+                            <select id="pest-district" name="district">
+                                <option value="">Sélectionnez un district (optionnel)</option>
+                                <!-- Les districts seront remplis dynamiquement en fonction de la région sélectionnée -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-problem">Problème (ravageurs/maladies):</label>
+                            <select id="pest-problem" name="pest_problem" required>
+                                <option value="">Sélectionnez un problème</option>
+                                <option value="pucerons">Pucerons</option>
+                                <option value="mildiou">Mildiou</option>
+                                <option value="oïdium">Oïdium</option>
+                                <option value="mouche méditerranéenne">Mouche méditerranéenne</option>
+                                <option value="thrips">Thrips</option>
+                                <option value="aleurodes">Aleurodes (mouche blanche)</option>
+                                <option value="acariens">Acariens</option>
+                                <option value="fusariose">Fusariose</option>
+                                <option value="noctuelle">Noctuelle</option>
+                                <option value="pyrale">Pyrale</option>
+                                <option value="cochenilles">Cochenilles</option>
+                                <option value="pourriture des racines">Pourriture des racines</option>
+                                <option value="botrytis">Botrytis (pourriture grise)</option>
+                                <option value="tuta absoluta">Tuta absoluta</option>
+                                <option value="alternariose">Alternariose</option>
+                                <option value="anthracnose">Anthracnose</option>
+                                <option value="tavelure">Tavelure</option>
+                                <option value="autre">Autre problème</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-season">Saison actuelle:</label>
+                            <select id="pest-season" name="season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="printemps">Printemps</option>
+                                <option value="été">Été</option>
+                                <option value="automne">Automne</option>
+                                <option value="hiver">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-growing-season">Saison de croissance:</label>
+                            <select id="pest-growing-season" name="growing_season">
+                                <option value="">Sélectionnez une saison de croissance (optionnel)</option>
+                                <option value="printemps">Printemps</option>
+                                <option value="été">Été</option>
+                                <option value="automne">Automne</option>
+                                <option value="hiver">Hiver</option>
+                                <option value="printemps-été">Printemps-Été</option>
+                                <option value="automne-hiver">Automne-Hiver</option>
+                                <option value="toute l'année">Toute l'année</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-temperature">Température (°C):</label>
+                            <input type="number" id="pest-temperature" name="temperature" step="0.1" min="-10" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-humidity">Humidité (%):</label>
+                            <input type="number" id="pest-humidity" name="humidity" step="0.1" min="0" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pest-rainfall">Précipitations (mm):</label>
+                            <input type="number" id="pest-rainfall" name="rainfall" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <button type="submit" class="submit-btn">Obtenir des recommandations</button>
+                    </form>
+                </div>
+                
+                <!-- Mode Description Libre pour Pesticides -->
+                <div id="pesticide-free" class="option-content">
+                    <form id="pesticide-free-data">
+                        <div class="form-group">
+                            <label for="pest-description">Décrivez votre situation (culture, région, problème, conditions, etc.):</label>
+                            <textarea id="pest-description" name="description" rows="6" required placeholder="Exemple: Je cultive des tomates à Jendouba. J'ai un problème de pucerons et de mildiou. Nous sommes en été avec des températures autour de 25°C, une humidité de 70% et des précipitations récentes de 10mm."></textarea>
+                        </div>
+                        <button type="submit" class="submit-btn">Obtenir des recommandations</button>
+                    </form>
+                </div>
+                
+                <!-- Résultats pour Pesticides -->
+                <div id="pesticide-results" class="results-container">
+                    <h2>Recommandations de pesticides</h2>
+                    <div class="results-loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Calcul des recommandations en cours...</p>
+                    </div>
+                    <div class="results-content" style="display: none;">
+                        <div class="main-recommendation">
+                            <h3>Recommandation principale</h3>
+                            <div id="pesticide-main-recommendation"></div>
+                        </div>
+                        <div class="alternative-recommendations">
+                            <h3>Alternatives recommandées</h3>
+                            <div id="pesticide-alternatives"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Section Fertilisants -->
+            <section id="fertilizer" class="tab-content">
+                <div class="option-selector">
+                    <button class="option-btn active" data-target="fertilizer-form">Mode Formulaire</button>
+                    <button class="option-btn" data-target="fertilizer-free">Mode Description Libre</button>
+                </div>
+                
+                <!-- Mode Formulaire pour Fertilisants -->
+                <div id="fertilizer-form" class="option-content active">
+                    <form id="fertilizer-form-data">
+                        <div class="form-group">
+                            <label for="fert-crop">Culture:</label>
+                            <select id="fert-crop" name="crop" required>
+                                <option value="">Sélectionnez une culture</option>
+                                <option value="tomate">Tomate</option>
+                                <option value="pomme de terre">Pomme de terre</option>
+                                <option value="blé">Blé</option>
+                                <option value="maïs">Maïs</option>
+                                <option value="raisin">Raisin</option>
+                                <option value="pomme">Pomme</option>
+                                <option value="olive">Olive</option>
+                                <option value="piment">Piment</option>
+                                <option value="agrumes">Agrumes</option>
+                                <option value="oignon">Oignon</option>
+                                <option value="carotte">Carotte</option>
+                                <option value="pastèque">Pastèque</option>
+                                <option value="melon">Melon</option>
+                                <option value="concombre">Concombre</option>
+                                <option value="aubergine">Aubergine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-region">Région:</label>
+                            <select id="fert-region" name="region" required>
+                                <option value="">Sélectionnez une région</option>
+                                <option value="Jendouba">Jendouba</option>
+                                <option value="Bizerte">Bizerte</option>
+                                <option value="Kairouan">Kairouan</option>
+                                <option value="Kasserine">Kasserine</option>
+                                <option value="Sfax">Sfax</option>
+                                <option value="Gabès">Gabès</option>
+                                <option value="Tataouine">Tataouine</option>
+                                <option value="Tunis">Tunis</option>
+                                <option value="Ariana">Ariana</option>
+                                <option value="Ben Arous">Ben Arous</option>
+                                <option value="Manouba">Manouba</option>
+                                <option value="Nabeul">Nabeul</option>
+                                <option value="Zaghouan">Zaghouan</option>
+                                <option value="Béja">Béja</option>
+                                <option value="Le Kef">Le Kef</option>
+                                <option value="Siliana">Siliana</option>
+                                <option value="Sousse">Sousse</option>
+                                <option value="Monastir">Monastir</option>
+                                <option value="Mahdia">Mahdia</option>
+                                <option value="Sidi Bouzid">Sidi Bouzid</option>
+                                <option value="Gafsa">Gafsa</option>
+                                <option value="Tozeur">Tozeur</option>
+                                <option value="Kébili">Kébili</option>
+                                <option value="Médenine">Médenine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-district">District:</label>
+                            <select id="fert-district" name="district">
+                                <option value="">Sélectionnez un district (optionnel)</option>
+                                <!-- Les districts seront remplis dynamiquement en fonction de la région sélectionnée -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-nitrogen">Niveau d'azote N (kg/ha):</label>
+                            <input type="number" id="fert-nitrogen" name="nitrogen" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-phosphorus">Niveau de phosphore P (kg/ha):</label>
+                            <input type="number" id="fert-phosphorus" name="phosphorus" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-potassium">Niveau de potassium K (kg/ha):</label>
+                            <input type="number" id="fert-potassium" name="potassium" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-ph">pH du sol:</label>
+                            <input type="number" id="fert-ph" name="ph" step="0.1" min="0" max="14" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-plant">Type d'engrais:</label>
+                            <select id="fert-plant" name="fertilizer_plant">
+                                <option value="">Sélectionnez un type d'engrais (optionnel)</option>
+                                <option value="NPK">NPK standard</option>
+                                <option value="Urée">Urée</option>
+                                <option value="DAP">Phosphate diammonique (DAP)</option>
+                                <option value="Potasse">Potasse</option>
+                                <option value="Compost">Compost organique</option>
+                                <option value="Fumier">Fumier</option>
+                                <option value="Engrais foliaire">Engrais foliaire</option>
+                                <option value="Engrais liquide">Engrais liquide</option>
+                                <option value="Engrais à libération lente">Engrais à libération lente</option>
+                                <option value="Autre">Autre type d'engrais</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fert-season">Saison d'application:</label>
+                            <select id="fert-season" name="season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="printemps">Printemps</option>
+                                <option value="été">Été</option>
+                                <option value="automne">Automne</option>
+                                <option value="hiver">Hiver</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="submit-btn">Obtenir des recommandations</button>
+                    </form>
+                </div>
+                
+                <!-- Mode Description Libre pour Fertilisants -->
+                <div id="fertilizer-free" class="option-content">
+                    <form id="fertilizer-free-data">
+                        <div class="form-group">
+                            <label for="fert-description">Décrivez votre situation (culture, région, conditions du sol, etc.):</label>
+                            <textarea id="fert-description" name="description" rows="6" required placeholder="Exemple: Je cultive du maïs à Jendouba. Mon sol a des niveaux d'azote de 80 kg/ha, de phosphore de 40 kg/ha, de potassium de 20 kg/ha, et un pH de 6.5."></textarea>
+                        </div>
+                        <button type="submit" class="submit-btn">Obtenir des recommandations</button>
+                    </form>
+                </div>
+                
+                <!-- Résultats pour Fertilisants -->
+                <div id="fertilizer-results" class="results-container">
+                    <h2>Recommandations de fertilisants</h2>
+                    <div class="results-loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Calcul des recommandations en cours...</p>
+                    </div>
+                    <div class="results-content" style="display: none;">
+                        <div class="main-recommendation">
+                            <h3>Recommandation principale</h3>
+                            <div id="fertilizer-main-recommendation"></div>
+                        </div>
+                        <div class="alternative-recommendations">
+                            <h3>Alternatives recommandées</h3>
+                            <div id="fertilizer-alternatives"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Section Modèles ML -->
+            <section id="ml-models" class="tab-content">
+                <div class="option-selector">
+                    <button class="option-btn active" data-target="crop-classification">Classification des Cultures</button>
+                    <button class="option-btn" data-target="irrigation-optimization">Optimisation d'Irrigation</button>
+                    <button class="option-btn" data-target="yield-prediction">Prédiction de Rendement</button>
+                </div>
+                
+                <!-- Classification des Cultures -->
+                <div id="crop-classification" class="option-content active">
+                    <h2>Classification des Cultures</h2>
+                    <p class="model-description">Ce modèle vous aide à déterminer quelle culture est la plus adaptée aux conditions de votre sol et environnement.</p>
+                    <form id="crop-classification-form">
+                        <div class="form-group">
+                            <label for="cc-soil-n">Niveau d'azote N (kg/ha):</label>
+                            <input type="number" id="cc-soil-n" name="soil_n" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-soil-p">Niveau de phosphore P (kg/ha):</label>
+                            <input type="number" id="cc-soil-p" name="soil_p" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-soil-k">Niveau de potassium K (kg/ha):</label>
+                            <input type="number" id="cc-soil-k" name="soil_k" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-temperature">Température (°C):</label>
+                            <input type="number" id="cc-temperature" name="temperature" step="0.1" min="-10" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-humidity">Humidité (%):</label>
+                            <input type="number" id="cc-humidity" name="humidity" step="0.1" min="0" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-ph">pH du sol:</label>
+                            <input type="number" id="cc-ph" name="ph" step="0.1" min="0" max="14" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-rainfall">Précipitations (mm):</label>
+                            <input type="number" id="cc-rainfall" name="rainfall" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-area">Surface (ha):</label>
+                            <input type="number" id="cc-area" name="area" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-fertilizer-amount">Quantité d'engrais (kg):</label>
+                            <input type="number" id="cc-fertilizer-amount" name="fertilizer_amount" step="0.1" min="0" max="5000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-pesticide-amount">Quantité de pesticide (kg):</label>
+                            <input type="number" id="cc-pesticide-amount" name="pesticide_amount" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-governorate">Gouvernorat:</label>
+                            <select id="cc-governorate" name="governorate" required>
+                                <option value="">Sélectionnez un gouvernorat</option>
+                                <option value="Jendouba">Jendouba</option>
+                                <option value="Bizerte">Bizerte</option>
+                                <option value="Kairouan">Kairouan</option>
+                                <option value="Kasserine">Kasserine</option>
+                                <option value="Sfax">Sfax</option>
+                                <option value="Gabès">Gabès</option>
+                                <option value="Tataouine">Tataouine</option>
+                                <option value="Tunis">Tunis</option>
+                                <option value="Ariana">Ariana</option>
+                                <option value="Ben Arous">Ben Arous</option>
+                                <option value="Manouba">Manouba</option>
+                                <option value="Nabeul">Nabeul</option>
+                                <option value="Zaghouan">Zaghouan</option>
+                                <option value="Béja">Béja</option>
+                                <option value="Le Kef">Le Kef</option>
+                                <option value="Siliana">Siliana</option>
+                                <option value="Sousse">Sousse</option>
+                                <option value="Monastir">Monastir</option>
+                                <option value="Mahdia">Mahdia</option>
+                                <option value="Sidi Bouzid">Sidi Bouzid</option>
+                                <option value="Gafsa">Gafsa</option>
+                                <option value="Tozeur">Tozeur</option>
+                                <option value="Kébili">Kébili</option>
+                                <option value="Médenine">Médenine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-district">District:</label>
+                            <select id="cc-district" name="district">
+                                <option value="">Sélectionnez un district (optionnel)</option>
+                                <!-- Les districts seront remplis dynamiquement en fonction du gouvernorat sélectionné -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-irrigation">Méthode d'irrigation:</label>
+                            <select id="cc-irrigation" name="irrigation" required>
+                                <option value="">Sélectionnez une méthode</option>
+                                <option value="Drip">Goutte à goutte</option>
+                                <option value="Sprinkler">Aspersion</option>
+                                <option value="Flood">Inondation</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-fertilizer-type">Type d'engrais:</label>
+                            <select id="cc-fertilizer-type" name="fertilizer_type" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="Urea">Urée</option>
+                                <option value="DAP">Phosphate diammonique (DAP)</option>
+                                <option value="NPK">NPK standard</option>
+                                <option value="Potash">Potasse</option>
+                                <option value="Compost">Compost organique</option>
+                                <option value="Manure">Fumier</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-planting-season">Saison de plantation:</label>
+                            <select id="cc-planting-season" name="planting_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-growing-season">Saison de croissance:</label>
+                            <select id="cc-growing-season" name="growing_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cc-harvest-season">Saison de récolte:</label>
+                            <select id="cc-harvest-season" name="harvest_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="submit-btn">Prédire la culture adaptée</button>
+                    </form>
+                    
+                    <!-- Résultats pour Classification des Cultures -->
+                    <div id="crop-classification-results" class="results-container" style="display: none;">
+                        <h2>Résultats de la classification</h2>
+                        <div class="results-loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Analyse des données en cours...</p>
+                        </div>
+                        <div class="results-content" style="display: none;">
+                            <div class="main-recommendation">
+                                <h3>Culture recommandée</h3>
+                                <div id="crop-classification-main-result"></div>
+                            </div>
+                            <div class="alternative-recommendations">
+                                <h3>Autres cultures adaptées</h3>
+                                <div id="crop-classification-alternatives"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Optimisation d'Irrigation -->
+                <div id="irrigation-optimization" class="option-content">
+                    <h2>Optimisation d'Irrigation</h2>
+                    <p class="model-description">Ce modèle vous aide à déterminer la méthode d'irrigation optimale pour maximiser le rendement de votre culture.</p>
+                    <form id="irrigation-optimization-form">
+                        <div class="form-group">
+                            <label for="io-crop">Culture:</label>
+                            <select id="io-crop" name="crop" required>
+                                <option value="">Sélectionnez une culture</option>
+                                <option value="tomate">Tomate</option>
+                                <option value="pomme de terre">Pomme de terre</option>
+                                <option value="blé">Blé</option>
+                                <option value="maïs">Maïs</option>
+                                <option value="raisin">Raisin</option>
+                                <option value="pomme">Pomme</option>
+                                <option value="olive">Olive</option>
+                                <option value="piment">Piment</option>
+                                <option value="agrumes">Agrumes</option>
+                                <option value="oignon">Oignon</option>
+                                <option value="carotte">Carotte</option>
+                                <option value="pastèque">Pastèque</option>
+                                <option value="melon">Melon</option>
+                                <option value="concombre">Concombre</option>
+                                <option value="aubergine">Aubergine</option>
+                                <option value="pigeonpeas">Pois d'Angole</option>
+                                <option value="banana">Banane</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-soil-n">Niveau d'azote N (kg/ha):</label>
+                            <input type="number" id="io-soil-n" name="soil_n" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-soil-p">Niveau de phosphore P (kg/ha):</label>
+                            <input type="number" id="io-soil-p" name="soil_p" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-soil-k">Niveau de potassium K (kg/ha):</label>
+                            <input type="number" id="io-soil-k" name="soil_k" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-temperature">Température (°C):</label>
+                            <input type="number" id="io-temperature" name="temperature" step="0.1" min="-10" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-humidity">Humidité (%):</label>
+                            <input type="number" id="io-humidity" name="humidity" step="0.1" min="0" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-ph">pH du sol:</label>
+                            <input type="number" id="io-ph" name="ph" step="0.1" min="0" max="14" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-rainfall">Précipitations (mm):</label>
+                            <input type="number" id="io-rainfall" name="rainfall" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-area">Surface (ha):</label>
+                            <input type="number" id="io-area" name="area" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-fertilizer-amount">Quantité d'engrais (kg):</label>
+                            <input type="number" id="io-fertilizer-amount" name="fertilizer_amount" step="0.1" min="0" max="5000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-pesticide-amount">Quantité de pesticide (kg):</label>
+                            <input type="number" id="io-pesticide-amount" name="pesticide_amount" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-governorate">Gouvernorat:</label>
+                            <select id="io-governorate" name="governorate" required>
+                                <option value="">Sélectionnez un gouvernorat</option>
+                                <option value="Jendouba">Jendouba</option>
+                                <option value="Bizerte">Bizerte</option>
+                                <option value="Kairouan">Kairouan</option>
+                                <option value="Kasserine">Kasserine</option>
+                                <option value="Sfax">Sfax</option>
+                                <option value="Gabès">Gabès</option>
+                                <option value="Tataouine">Tataouine</option>
+                                <option value="Tunis">Tunis</option>
+                                <option value="Ariana">Ariana</option>
+                                <option value="Ben Arous">Ben Arous</option>
+                                <option value="Manouba">Manouba</option>
+                                <option value="Nabeul">Nabeul</option>
+                                <option value="Zaghouan">Zaghouan</option>
+                                <option value="Béja">Béja</option>
+                                <option value="Le Kef">Le Kef</option>
+                                <option value="Siliana">Siliana</option>
+                                <option value="Sousse">Sousse</option>
+                                <option value="Monastir">Monastir</option>
+                                <option value="Mahdia">Mahdia</option>
+                                <option value="Sidi Bouzid">Sidi Bouzid</option>
+                                <option value="Gafsa">Gafsa</option>
+                                <option value="Tozeur">Tozeur</option>
+                                <option value="Kébili">Kébili</option>
+                                <option value="Médenine">Médenine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-district">District:</label>
+                            <select id="io-district" name="district">
+                                <option value="">Sélectionnez un district (optionnel)</option>
+                                <!-- Les districts seront remplis dynamiquement en fonction du gouvernorat sélectionné -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-fertilizer-type">Type d'engrais:</label>
+                            <select id="io-fertilizer-type" name="fertilizer_type" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="Urea">Urée</option>
+                                <option value="DAP">Phosphate diammonique (DAP)</option>
+                                <option value="NPK">NPK standard</option>
+                                <option value="Potash">Potasse</option>
+                                <option value="Compost">Compost organique</option>
+                                <option value="Manure">Fumier</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-planting-season">Saison de plantation:</label>
+                            <select id="io-planting-season" name="planting_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-growing-season">Saison de croissance:</label>
+                            <select id="io-growing-season" name="growing_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-harvest-season">Saison de récolte:</label>
+                            <select id="io-harvest-season" name="harvest_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="io-max-temp">Température maximale (°C):</label>
+                            <input type="number" id="io-max-temp" name="max_temp" step="0.1" min="-10" max="60">
+                        </div>
+                        <div class="form-group">
+                            <label for="io-min-temp">Température minimale (°C):</label>
+                            <input type="number" id="io-min-temp" name="min_temp" step="0.1" min="-20" max="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="io-precipitation">Précipitations précises (mm):</label>
+                            <input type="number" id="io-precipitation" name="precipitation" step="0.1" min="0" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="io-wind-speed">Vitesse du vent (m/s):</label>
+                            <input type="number" id="io-wind-speed" name="wind_speed" step="0.1" min="0" max="50">
+                        </div>
+                        <button type="submit" class="submit-btn">Obtenir des recommandations d'irrigation</button>
+                    </form>
+                    
+                    <!-- Résultats pour Optimisation d'Irrigation -->
+                    <div id="irrigation-optimization-results" class="results-container" style="display: none;">
+                        <h2>Résultats d'optimisation d'irrigation</h2>
+                        <div class="results-loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Calcul de l'irrigation optimale en cours...</p>
+                        </div>
+                        <div class="results-content" style="display: none;">
+                            <div class="main-recommendation">
+                                <h3>Méthode d'irrigation recommandée</h3>
+                                <div id="irrigation-optimization-main-result"></div>
+                            </div>
+                            <div class="comparison-results">
+                                <h3>Comparaison des méthodes</h3>
+                                <div id="irrigation-optimization-comparison"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Prédiction de Rendement -->
+                <div id="yield-prediction" class="option-content">
+                    <h2>Prédiction de Rendement</h2>
+                    <p class="model-description">Ce modèle vous aide à prédire le rendement potentiel de votre culture en fonction des conditions spécifiées.</p>
+                    <form id="yield-prediction-form">
+                        <div class="form-group">
+                            <label for="yp-crop">Culture:</label>
+                            <select id="yp-crop" name="crop" required>
+                                <option value="">Sélectionnez une culture</option>
+                                <option value="tomate">Tomate</option>
+                                <option value="pomme de terre">Pomme de terre</option>
+                                <option value="blé">Blé</option>
+                                <option value="maïs">Maïs</option>
+                                <option value="raisin">Raisin</option>
+                                <option value="pomme">Pomme</option>
+                                <option value="olive">Olive</option>
+                                <option value="piment">Piment</option>
+                                <option value="agrumes">Agrumes</option>
+                                <option value="oignon">Oignon</option>
+                                <option value="carotte">Carotte</option>
+                                <option value="pastèque">Pastèque</option>
+                                <option value="melon">Melon</option>
+                                <option value="concombre">Concombre</option>
+                                <option value="aubergine">Aubergine</option>
+                                <option value="banana">Banane</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-soil-n">Niveau d'azote N (kg/ha):</label>
+                            <input type="number" id="yp-soil-n" name="soil_n" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-soil-p">Niveau de phosphore P (kg/ha):</label>
+                            <input type="number" id="yp-soil-p" name="soil_p" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-soil-k">Niveau de potassium K (kg/ha):</label>
+                            <input type="number" id="yp-soil-k" name="soil_k" step="0.1" min="0" max="500" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-temperature">Température (°C):</label>
+                            <input type="number" id="yp-temperature" name="temperature" step="0.1" min="-10" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-humidity">Humidité (%):</label>
+                            <input type="number" id="yp-humidity" name="humidity" step="0.1" min="0" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-ph">pH du sol:</label>
+                            <input type="number" id="yp-ph" name="ph" step="0.1" min="0" max="14" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-rainfall">Précipitations (mm):</label>
+                            <input type="number" id="yp-rainfall" name="rainfall" step="0.1" min="0" max="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-irrigation">Méthode d'irrigation:</label>
+                            <select id="yp-irrigation" name="irrigation" required>
+                                <option value="">Sélectionnez une méthode</option>
+                                <option value="Drip">Goutte à goutte</option>
+                                <option value="Sprinkler">Aspersion</option>
+                                <option value="Flood">Inondation</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-fertilizer-type">Type d'engrais:</label>
+                            <select id="yp-fertilizer-type" name="fertilizer_type" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="Urea">Urée</option>
+                                <option value="DAP">Phosphate diammonique (DAP)</option>
+                                <option value="NPK">NPK standard</option>
+                                <option value="Potash">Potasse</option>
+                                <option value="Compost">Compost organique</option>
+                                <option value="Manure">Fumier</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-planting-season">Saison de plantation:</label>
+                            <select id="yp-planting-season" name="planting_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-growing-season">Saison de croissance:</label>
+                            <select id="yp-growing-season" name="growing_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-harvest-season">Saison de récolte:</label>
+                            <select id="yp-harvest-season" name="harvest_season" required>
+                                <option value="">Sélectionnez une saison</option>
+                                <option value="spring">Printemps</option>
+                                <option value="summer">Été</option>
+                                <option value="autumn">Automne</option>
+                                <option value="winter">Hiver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-area">Surface (ha):</label>
+                            <input type="number" id="yp-area" name="area" step="0.1" min="0" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-fertilizer-amount">Quantité d'engrais (kg):</label>
+                            <input type="number" id="yp-fertilizer-amount" name="fertilizer_amount" step="0.1" min="0" max="5000">
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-pesticide-amount">Quantité de pesticide (kg):</label>
+                            <input type="number" id="yp-pesticide-amount" name="pesticide_amount" step="0.1" min="0" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-max-temp">Température maximale (°C):</label>
+                            <input type="number" id="yp-max-temp" name="max_temp" step="0.1" min="-10" max="60">
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-min-temp">Température minimale (°C):</label>
+                            <input type="number" id="yp-min-temp" name="min_temp" step="0.1" min="-20" max="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="yp-wind-speed">Vitesse du vent (m/s):</label>
+                            <input type="number" id="yp-wind-speed" name="wind_speed" step="0.1" min="0" max="50">
+                        </div>
+                        <button type="submit" class="submit-btn">Prédire le rendement</button>
+                    </form>
+                    
+                    <!-- Résultats pour Prédiction de Rendement -->
+                    <div id="yield-prediction-results" class="results-container" style="display: none;">
+                        <h2>Résultats de la prédiction de rendement</h2>
+                        <div class="results-loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Calcul du rendement prévu en cours...</p>
+                        </div>
+                        <div class="results-content" style="display: none;">
+                            <div class="main-recommendation">
+                                <h3>Rendement prédit</h3>
+                                <div id="yield-prediction-main-result"></div>
+                            </div>
+                            <div class="yield-analysis">
+                                <h3>Analyse du rendement</h3>
+                                <div id="yield-prediction-analysis"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>Système de recommandation agricole basé sur RAG (Retrieval Augmented Generation)</p>
+        </footer>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="ml_models.js"></script>
+</body>
+</html> 
