@@ -1,80 +1,128 @@
-# FarmWise
+# FarmWise - Agricultural Recommendation System
 
-## Overview
-FarmWise is a machine learning and deep learning-based agricultural recommendation system. It provides data-driven insights to help farmers optimize crop selection, yield, fertilizer use, irrigation, pesticide application, and water management. Additionally, it includes plant disease identification and treatment recommendations, along with land and farmer segmentation.
+## Project Overview
+FarmWise is an intelligent agricultural recommendation system that helps farmers make data-driven decisions about crop selection, irrigation methods, and seasonal planning. The system uses machine learning techniques and balanced recommendation approaches to provide personalized suggestions based on multiple factors including soil conditions, climate, and geographical location.
+
+## Project Structure
+```
+├── Datasets/
+│   └── crop_datasets/
+│       ├── crop_data_ready_V1.csv
+│       ├── crop_data_ready_V2.csv
+│       ├── crop_data_ready_V4.csv
+│       ├── crop_data_ready_V5.csv
+│       ├── crop_data_ready_V6.csv
+│       ├── crop_data_ready_V7.csv
+│       ├── crop_data_ready_V8.csv
+│       └── README.md
+├── Deployment/
+│   ├── Crop/
+│   │   └── README.md
+│   └── template.html
+├── Models/
+│   └── Crop/
+│       ├── model.pkl
+│       └── README.md
+└── Notebooks/
+    └── Recommendation/
+        ├── Recommandation_1_0.ipynb
+        ├── Recommandation_2_0.ipynb
+        ├── Recommandation_3_0.ipynb
+        ├── Recommandation_4_0.ipynb
+        ├── Recommandation_5_0.ipynb
+        ├── Recommandation_6_0.ipynb
+        └── README.md
+```
 
 ## Features
-### 1. Recommendation System
-- **Crop Recommendation**: Suggests the best crops to plant based on soil conditions, weather, and historical data.
-  - Dataset: [Crop Recommendation Dataset - Kaggle](https://www.kaggle.com/datasets/imtkaggleteam/agriculture-dataset-karnatak)
 
-- **Yield Recommendation**: Maximizes production by analyzing past trends and external factors.
-  - Datasets:
-    - [Agriculture Dataset - Karnataka](https://www.kaggle.com/datasets/imtkaggleteam/agriculture-dataset-karnataka)
-    - [Crop Yield Dataset](https://www.kaggle.com/datasets/govindaramsriram/crop-yield-of-a-farm)
+### 1. Multi-Factor Recommendation System
+- Crop recommendations based on soil and environmental conditions
+- Season-appropriate crop suggestions
+- Irrigation method optimization
+- Geographic-specific recommendations
+- Case-by-case analysis for balanced suggestions
 
-- **Fertilizer Recommendation**: Provides optimized fertilizer recommendations.
-  - Model: Fertilizer Recommendation using TensorFlow
+### 2. Data Processing
+- Comprehensive soil parameter analysis (N, P, K, pH)
+- Environmental condition tracking
+- Seasonal pattern recognition
+- Regional agricultural data integration
+- Multiple dataset versions with progressive improvements
 
-- **Irrigation Recommendation**: Helps determine optimal irrigation schedules and amounts.
-  - Datasets:
-    - [Agriculture Dataset - Karnataka](https://www.kaggle.com/datasets/imtkaggleteam/agriculture-dataset-karnataka)
-    - [Irrigation Scheduling Dataset](https://www.kaggle.com/datasets/pusainstitute/cropirrigationscheduling)
-
-- **Pesticide Use Recommendation**: Predicts optimal pesticide application for better crop protection.
-  - Datasets:
-    - [Agridata Pesticides](https://catalog.agridata.tn/fr/dataset/pesticides)
-    - [Pesticide Use Dataset - Kaggle](https://www.kaggle.com/datasets/rushikeshhiray/pesticide-use-overtime)
-
-- **Water Usage Analysis**: Monitors water resources and suggests efficient usage strategies.
-  - Datasets:
-    - [Pluviometry Data](https://catalog.agridata.tn/fr/dataset/pluviometriques-journalieres-observees)
-    - [Water Resource Data by Region](https://catalog.agridata.tn/fr/dataset/repartition-des-ressources-en-eaux-selon-la-nappe-moyenne)
-    - [Stress Hydrique](https://catalog.agridata.tn/fr/dataset/niveau-de-stress-hydrique)
-
-### 2. Plant Disease Identification & Treatment
-- **Plant Disease Detection**: Uses deep learning models to identify plant diseases from images.
-  - Datasets:
-    - [Plant Disease Classification - Kaggle](http://kaggle.com/code/vad13irt/plant-disease-classification)
-    - [Plant Disease Dataset - Kaggle](https://www.kaggle.com/datasets/emmarex/plantdisease)
-    - [PlantDoc Dataset](https://github.com/pratikkayal/PlantDoc-Dataset)
-    - [Plant Disease - Roboflow](https://universe.roboflow.com/learning-eri4b/plant-disease-tmyq8)
-  
-- **Treatment Recommendation**: Suggests best treatment practices for identified plant diseases.
-
-### 3. Segmentation
-- **Farmer Segmentation**: Groups farmers based on their land use, production patterns, and financial status.
-- **Land Segmentation**: Uses machine learning techniques for land use classification and analysis.
+### 3. Model Implementation
+- Crop-specific model implementations
+- Cosine similarity-based recommendations
+- Balanced recommendation algorithms
+- Multiple recommendation approaches:
+  - Crop-based
+  - Season-based
+  - Irrigation-based
+  - Mixed recommendations
 
 ## Technology Stack
-- **Machine Learning Models**: Decision Tree, Random Forest, TensorFlow models
-- **Deep Learning Models**: Convolutional Neural Networks (CNNs) for plant disease classification
-- **Deployment**: Streamlit API for user-friendly interaction
-- **Data Storage**: Kaggle datasets, public agricultural databases
+- **Python** - Core programming language
+- **Pandas & NumPy** - Data processing
+- **Scikit-learn** - Machine learning implementations
+- **Streamlit** - Web interface deployment
+- **Jupyter Notebooks** - Development and analysis
 
-## Installation
+## Installation & Usage
+
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/farmwise.git
-   cd farmwise
-   ```
-2. Create a virtual environment:
-   ```bash
-   conda create --name farmwise_env python=3.8
-   conda activate farmwise_env
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Run the application:
-   ```bash
-   streamlit run app.py
-   ```
+```bash
+git clone <repository-url>
+cd FarmWise
+```
 
-## Contribution
-Contributions are welcome! Feel free to submit issues and pull requests to improve FarmWise.
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the application:
+```bash
+streamlit run Deployment/Crop/app.py
+```
+
+## Development Process
+The development process is documented in the Notebooks/Recommendation directory:
+
+1. Initial Data Exploration (Recommandation_1_0.ipynb)
+   - Data preprocessing and initial cleaning
+   - Basic feature analysis
+
+2. Enhanced Data Processing (Recommandation_2_0.ipynb)
+   - Advanced feature engineering
+   - Data cleaning improvements
+
+3. Model Development (Recommandation_3_0.ipynb)
+   - Initial model implementation
+   - Basic recommendation system setup
+
+4. System Optimization (Recommandation_4_0.ipynb)
+   - Model performance improvements
+   - Algorithm refinement
+
+5. Final Implementation (Recommandation_5_0.ipynb)
+   - System integration
+   - Performance optimization
+
+6. Testing and Validation (Recommandation_6_0.ipynb)
+   - System evaluation
+   - Final testing and validation
+
+## Dataset Versions
+The system uses progressively improved datasets (V1 through V8) with enhancements in:
+- Data cleaning
+- Feature engineering
+- Seasonal information
+- Irrigation data
+- Geographic coverage
+
+## Contributors
+- List of contributors
 
 ## License
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
