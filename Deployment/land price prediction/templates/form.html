@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FarmWise - Prédiction prix terrain</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #2e7d32;
+      --secondary: #81c784;
+      --accent: #ff8f00;
+      --light: #f1f8e9;
+      --dark: #1b5e20;
+    }
+    body {
+      background-color: var(--light);
+      color: #333;
+    }
+    .navbar {
+      background-color: var(--primary);
+    }
+    .card {
+      border: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .form-label {
+      font-weight: 500;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+    .btn-primary:hover {
+      background-color: var(--dark);
+      border-color: var(--dark);
+    }
+    .farm-header {
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80');
+      background-size: cover;
+      color: white;
+      padding: 3rem 0;
+      margin-bottom: 2rem;
+    }
+    .footer {
+      background-color: var(--dark);
+      color: white;
+      padding: 1rem 0;
+      margin-top: 2rem;
+    }
+    .feature-icon {
+      font-size: 2rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .error-message {
+      color: #dc3545;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">
+        <i class="fas fa-leaf me-2"></i>FarmWise
+      </a>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <header class="farm-header text-center">
+    <div class="container">
+      <h1><i class="fas fa-tractor me-2"></i>Estimation du prix des terrains</h1>
+      <p class="lead">Calculez la valeur de votre terrain avec notre technologie d'intelligence artificielle</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <h2 class="card-title text-center mb-4">
+              <i class="fas fa-calculator me-2"></i>Saisissez les caractéristiques du terrain
+            </h2>
+            
+            {% if error %}
+            <div class="error-message">
+              <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </div>
+            {% endif %}
+            
+            <form action="/predict/" method="post" class="needs-validation" novalidate>
+              <div class="row g-3">
+                <!-- Région -->
+                <div class="col-md-6">
+                  <label class="form-label">Région (code)</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                    <input type="number" class="form-control" name="region_encoded" min="0" max="173" required>
+                    <div class="invalid-feedback">
+                      Saisissez le code de la région (voir la liste fournie)
+                    </div>
+                  </div>
+                  <small class="form-text text-muted">
+                    <a href="/static/regions_liste.html" target="_blank">Voir la liste des codes régions</a>
+                  </small>
+                </div>
+                
+                <!-- Surface -->
+                <div class="col-md-6">
+                  <label class="form-label">Surface (m²)</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-ruler-combined"></i></span>
+                    <input type="number" class="form-control" name="surface_m2" step="0.01" min="0" required>
+                    <div class="invalid-feedback">
+                      La surface est requise et doit être positive
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Proximité plage</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="proximiteplage" value="1">
+                    <label class="form-check-label">À proximité d'une plage</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Titre Foncier</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="titre_foncier" value="1">
+                    <label class="form-check-label">Dispose d'un titre foncier</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Eau disponible</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="eau_disponible" value="1">
+                    <label class="form-check-label">Accès à l'eau</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Électricité</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="electricite" value="1">
+                    <label class="form-check-label">Accès à l'électricité</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Clôture</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="cloture" value="1">
+                    <label class="form-check-label">Terrain clôturé</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Nombre d'arbres</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tree"></i></span>
+                    <input type="number" class="form-control" name="nb_arbres" min="0" required>
+                    <div class="invalid-feedback">
+                      Ce champ est requis
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Type de culture</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-seedling"></i></span>
+                    <select class="form-select" name="typede_culture" required>
+                      <option value="" selected disabled>Choisir un type</option>
+                      {% for c in cultures %}
+                        <option value="{{ c.TypedeCulture }}">{{ c.description }}</option>
+                      {% endfor %}
+                    </select>
+                    <div class="invalid-feedback">
+                      Veuillez sélectionner un type de culture
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Irrigation</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="irrigation" value="1">
+                    <label class="form-check-label">Système d'irrigation</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Bâtiment</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="batiment" value="1">
+                    <label class="form-check-label">Présence de bâtiment</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label">Accès route</label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" name="route" value="1">
+                    <label class="form-check-label">Accès à une route</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                  <i class="fas fa-calculator me-2"></i>Calculer le prix
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer text-center mt-5">
+    <div class="container">
+      <p><i class="fas fa-leaf me-2"></i>FarmWise - Estimation de prix de terrains agricoles © 2023</p>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Form validation -->
+  <script>
+    // JavaScript pour validation du formulaire
+    (() => {
+      'use strict'
+      const forms = document.querySelectorAll('.needs-validation')
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    })()
+    
+    // Convertir les checkboxes non cochées en valeur 0
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+          const hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = checkbox.name;
+          hiddenInput.value = '0';
+          checkbox.parentNode.appendChild(hiddenInput);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
