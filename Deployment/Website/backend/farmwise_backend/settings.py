@@ -138,3 +138,6 @@ CORS_ALLOWED_ORIGINS = [
     # Add your production frontend URL here when deployed
     # "https://your-frontend-domain.com",
 ]
+
+# Disable automatic slash appending to prevent POST redirect issues
+APPEND_SLASH = False

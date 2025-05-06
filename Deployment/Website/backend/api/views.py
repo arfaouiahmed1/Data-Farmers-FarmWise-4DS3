@@ -17,19 +17,47 @@ import os # Add os import
 from django.conf import settings # Add settings import
 
 from ultralytics import YOLO
+import torch
+import torchvision.transforms as transforms
+from torchvision.models import resnet9 # Or your specific ResNet9 import if custom
 
 # --- Configuration ---
 # Use a relative path based on the Django project's BASE_DIR
 # Assuming BASE_DIR points to the 'backend' directory
 MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Farm Boundaries/yolov8l-seg.pt'))
+# Path for the weed detection model
+WEED_MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Weed Detection/PIDS_weed_detection.pt'))
+# Path for the disease detection model
+DISEASE_MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Disease Detection/diseases_model_fixed.pt'))
+
 # Load the model (consider loading it once globally if performance is critical)
 # For simplicity here, loading per request. Optimize later if needed.
 try:
     model = YOLO(MODEL_PATH)
-    print(f"Successfully loaded model from {MODEL_PATH}")
+    print(f"Successfully loaded farm boundary model from {MODEL_PATH}")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    print(f"Error loading farm boundary model: {e}")
     model = None # Handle cases where the model fails to load
+
+# Load the weed detection model
+try:
+    weed_model = YOLO(WEED_MODEL_PATH)
+    print(f"Successfully loaded weed detection model from {WEED_MODEL_PATH}")
+except Exception as e:
+    print(f"Error loading weed detection model: {e}")
+    weed_model = None # Handle cases where the weed model fails to load
+
+# Load the disease detection model
+try:
+    disease_model = torch.load(DISEASE_MODEL_PATH, map_location=torch.device('cpu')) # Load on CPU
+    disease_model.eval()  # Set the model to evaluation mode
+    print(f"Successfully loaded disease detection model from {DISEASE_MODEL_PATH}")
+except Exception as e:
+    print(f"Error loading disease detection model: {e}")
+    disease_model = None
+
+# Define disease classes
+DISEASE_CLASSES = ['Pepper,_bell___healthy', 'Orange___Haunglongbing_(Citrus_greening)', 'Apple___Apple_scab', 'Tomato___Target_Spot', 'Peach___healthy', 'Grape___Black_rot', 'Apple___healthy', 'Tomato___healthy', 'Tomato___Septoria_leaf_spot', 'Raspberry___healthy', 'Squash___Powdery_mildew', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Strawberry___healthy', 'Potato___Early_blight', 'Potato___Late_blight', 'Peach___Bacterial_spot', 'Potato___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Pepper,_bell___Bacterial_spot', 'Blueberry___healthy', 'Cherry_(including_sour)___healthy', 'Apple___Cedar_apple_rust', 'Strawberry___Leaf_scorch', 'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot', 'Tomato___Early_blight', 'Tomato___Spider_mites Two-spotted_spider_mite', 'Corn_(maize)___healthy', 'Tomato___Leaf_Mold', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 'Corn_(maize)___Common_rust_', 'Tomato___Bacterial_spot', 'Corn_(maize)___Northern_Leaf_Blight', 'Grape___healthy', 'Apple___Black_rot', 'Grape___Esca_(Black_Measles)', 'Soybean___healthy', 'Tomato___Tomato_mosaic_virus', 'Tomato___Late_blight']
 
 # --- Helper Function: Pixel Coordinates to Geo Coordinates ---
 # IMPORTANT: This is a simplified linear interpolation assuming a flat Earth projection
@@ -83,7 +111,7 @@ class SegmentMapView(View):
 
     def post(self, request, *args, **kwargs):
         if not model:
-             return JsonResponse({'error': 'Model not loaded'}, status=500)
+             return JsonResponse({'error': 'Farm boundary model not loaded'}, status=500)
 
         try:
             data = json.loads(request.body)
@@ -153,7 +181,7 @@ def detect_farm_boundaries_view(request):
         return JsonResponse({'error': 'Only POST method allowed'}, status=405)
     
     if not model:
-        return JsonResponse({'error': 'Model not loaded. Check server logs.'}, status=500)
+        return JsonResponse({'error': 'Farm boundary model not loaded. Check server logs.'}, status=500)
 
     try:
         data = json.loads(request.body)
@@ -311,3 +339,180 @@ def detect_farm_boundaries_view(request):
         import traceback
         traceback.print_exc() # Print full traceback for debugging
         return JsonResponse({'error': 'Internal server error.'}, status=500)
+
+# --- New View for Weed Detection ---
+@csrf_exempt
+def detect_weeds_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
+    if not weed_model:
+        return JsonResponse({'error': 'Weed detection model not loaded. Check server logs.'}, status=500)
+
+    try:
+        # Parse request data
+        data = json.loads(request.body)
+        image_base64 = data.get('image_base64')
+
+        if not image_base64:
+            return JsonResponse({'error': 'Missing image_base64'}, status=400)
+
+        # Decode Image
+        try:
+            # Handle various image_base64 formats (with or without data:image prefix)
+            if ',' in image_base64:
+                header, encoded = image_base64.split(',', 1)
+            else:
+                encoded = image_base64
+                
+            image_data = base64.b64decode(encoded)
+            image = Image.open(io.BytesIO(image_data)).convert('RGB')
+            img_np = np.array(image)
+            img_height, img_width, _ = img_np.shape
+            print(f"Decoded image for weed detection: {img_width}x{img_height}")
+        except Exception as img_err:
+            print(f"Error decoding image for weed detection: {img_err}")
+            traceback.print_exc()
+            return JsonResponse({'error': f'Failed to decode image data: {str(img_err)}'}, status=400)
+
+        # Perform Inference with error handling
+        print("Running weed detection model inference...")
+        try:
+            # Use similar parameters as farm boundaries for consistency
+            results = weed_model.predict(source=img_np, save=False, conf=0.25, iou=0.45)
+            print(f"Weed detection inference complete. Results: {len(results) if results else 0}")
+        except Exception as pred_err:
+            print(f"Error during weed model prediction: {pred_err}")
+            traceback.print_exc()
+            return JsonResponse({'error': f'Error during weed model prediction: {str(pred_err)}'}, status=500)
+
+        # Process Results
+        detected_weeds = []
+        
+        try:
+            # Check if results exist and contain masks
+            if not results or not results[0].masks:
+                print("No weed masks detected in results.")
+                return JsonResponse({'detected_weeds': []})
+            
+            # Process each mask/detection
+            print(f"Detected {len(results[0].masks)} weed masks.")
+            
+            # Check if model has class names
+            names = results[0].names if hasattr(results[0], 'names') else {}
+            print(f"Model class names: {names}")
+            
+            # Process detections
+            for i in range(len(results[0].masks.xy)):
+                try:
+                    # Get mask polygon
+                    mask_xy = results[0].masks.xy[i]
+                    pixel_polygon = mask_xy.astype(int).tolist()
+                    
+                    if len(pixel_polygon) < 3:  # Need at least 3 points for a polygon
+                        print(f"Skipping mask {i}: not enough points ({len(pixel_polygon)})")
+                        continue
+                    
+                    # Get classification info if available
+                    class_id = -1
+                    confidence = 0.0
+                    
+                    if results[0].boxes and i < len(results[0].boxes):
+                        box = results[0].boxes[i]
+                        class_id = int(box.cls.item()) if hasattr(box, 'cls') else -1
+                        confidence = float(box.conf.item()) if hasattr(box, 'conf') else 0.0
+                    
+                    # Get class name
+                    class_name = names.get(class_id, "Unknown") if class_id >= 0 else "Unknown"
+                    
+                    # Simple polygon smoothing (similar to farm boundaries)
+                    # Reshape for approxPolyDP: (N, 1, 2)
+                    if len(pixel_polygon) > 10:  # Only smooth if enough points
+                        contour = np.array(pixel_polygon).reshape((-1, 1, 2)).astype(np.int32)
+                        epsilon = 0.01 * cv2.arcLength(contour, True)
+                        smoothed_contour = cv2.approxPolyDP(contour, epsilon, True)
+                        pixel_polygon = smoothed_contour.reshape((-1, 2)).tolist()
+                    
+                    # Add to detected weeds
+                    detected_weeds.append({
+                        'id': i,
+                        'class_name': class_name,
+                        'confidence': round(confidence, 2),
+                        'polygon_pixels': pixel_polygon
+                    })
+                    
+                except Exception as detection_err:
+                    print(f"Error processing detection {i}: {detection_err}")
+                    continue  # Skip this detection but continue with others
+            
+            return JsonResponse({'detected_weeds': detected_weeds})
+            
+        except Exception as process_err:
+            print(f"Error processing results: {process_err}")
+            traceback.print_exc()
+            return JsonResponse({'error': f'Error processing detection results: {str(process_err)}'}, status=500)
+
+    except json.JSONDecodeError as json_err:
+        return JsonResponse({'error': f'Invalid JSON payload: {str(json_err)}'}, status=400)
+    except Exception as e:
+        print(f"Unhandled error in detect_weeds_view: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Internal server error during weed detection: {str(e)}'}, status=500)
+
+# --- New View for Disease Detection ---
+@method_decorator(csrf_exempt, name='dispatch')
+class DetectDiseaseView(View):
+    # Define the image transformations
+    preprocess = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    def post(self, request, *args, **kwargs):
+        if not disease_model:
+            return JsonResponse({'error': 'Disease detection model not loaded. Check server logs.'}, status=500)
+
+        try:
+            if not request.FILES.get('image'):
+                return JsonResponse({'error': 'Missing image file'}, status=400)
+            
+            image_file = request.FILES['image']
+            
+            # Open image with PIL
+            try:
+                img = Image.open(image_file).convert('RGB')
+            except Exception as img_err:
+                print(f"Error opening image: {img_err}")
+                return JsonResponse({'error': 'Invalid image file'}, status=400)
+
+            # Preprocess the image and prepare it for the model
+            img_t = self.preprocess(img)
+            batch_t = torch.unsqueeze(img_t, 0) # Create a mini-batch as expected by the model
+
+            # Make a prediction
+            with torch.no_grad(): # important for inference to disable gradient calculation
+                out = disease_model(batch_t)
+            
+            # Get the predicted class index
+            _, index = torch.max(out, 1)
+            predicted_class_idx = index[0].item()
+            
+            # Get the class name
+            predicted_class_name = DISEASE_CLASSES[predicted_class_idx]
+            
+            # Get probabilities (softmax)
+            probabilities = torch.nn.functional.softmax(out, dim=1)[0]
+            confidence_score = probabilities[predicted_class_idx].item()
+
+            return JsonResponse({
+                'predicted_class': predicted_class_name,
+                'confidence': confidence_score,
+                'class_index': predicted_class_idx
+            })
+
+        except Exception as e:
+            print(f"Error during disease detection: {e}") # Log the error server-side
+            return JsonResponse({'error': 'Internal server error during disease detection.'}, status=500)
