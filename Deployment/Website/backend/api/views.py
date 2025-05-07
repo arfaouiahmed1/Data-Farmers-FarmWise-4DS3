@@ -15,6 +15,7 @@ import json
 import math # Import math for calculations
 import os # Add os import
 from django.conf import settings # Add settings import
+import csv # Import CSV module
 
 from ultralytics import YOLO
 import torch
@@ -22,6 +23,24 @@ import torch.nn as nn # Ensure nn is imported
 import torch.nn.functional as F # Ensure F is imported
 import torchvision.transforms as transforms
 # from torchvision.models import resnet9 # Or your specific ResNet9 import if custom -- THIS LINE IS THE ISSUE
+
+# Import for Google Generative AI
+import google.generativeai as genai
+from dotenv import load_dotenv
+import re
+import random
+import uuid
+import time
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure the Google API key
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+else:
+    print("GOOGLE_API_KEY not found in .env file. Please set it up.")
 
 # --- Model Definitions from Notebook ---
 def accuracy(outputs, labels):
@@ -545,72 +564,625 @@ def detect_weeds_view(request):
 class DetectDiseaseView(View):
     # Define the image transformations with larger input size to prevent dimension issues
     preprocess = transforms.Compose([
-        transforms.Resize(512),  # Resize to a larger size to accommodate MaxPool2d(4) operations
-        transforms.CenterCrop(448),  # Crop to ensure divisibility by 4*4*4 = 64
+        transforms.Resize(256), # Resize to 256x256
+        transforms.CenterCrop(224), # Crop to 224x224 from center
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Standard normalization for ImageNet models
     ])
 
     def post(self, request, *args, **kwargs):
-        if not disease_model:
-            return JsonResponse({'error': 'Disease detection model not loaded. Check server logs.'}, status=500)
+        if not disease_model: # Check if model loaded
+            return JsonResponse({'error': 'Disease detection model not loaded or failed to initialize.'}, status=500)
 
-        try:
-            if not request.FILES.get('image'):
-                return JsonResponse({'error': 'Missing image file'}, status=400)
-            
+        if request.method == 'POST' and request.FILES.get('image'):
             image_file = request.FILES['image']
             
-            # Open image with PIL
             try:
+                # Open the image using Pillow
                 img = Image.open(image_file).convert('RGB')
-                print(f"Original image dimensions: {img.width}x{img.height}")
-            except Exception as img_err:
-                print(f"Error opening image: {img_err}")
-                return JsonResponse({'error': 'Invalid image file'}, status=400)
+                
+                # Preprocess the image
+                img_tensor = self.preprocess(img)
+                img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension
 
-            # Preprocess the image and prepare it for the model
+                # Make prediction
+                with torch.no_grad():
+                    outputs = disease_model(img_tensor) # Use the loaded model instance
+                    _, predicted_idx = torch.max(outputs, 1)
+                    predicted_class = DISEASE_CLASSES[predicted_idx.item()]
+                    
+                    # Get confidence score
+                    probabilities = F.softmax(outputs, dim=1)
+                    confidence = probabilities[0][predicted_idx.item()].item()
+
+                return JsonResponse({
+                    'predicted_class': predicted_class,
+                    'confidence': confidence
+                })
+
+            except Exception as e:
+                print(f"Error processing disease detection: {e}")
+                return JsonResponse({'error': f'Error processing image: {str(e)}'}, status=500)
+        
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TreatmentChatView(View):
+    _knowledge_base_cache = None # Cache for the loaded knowledge base
+    _conversation_context_cache = {} # Add cache for conversation contexts
+    _topic_embeddings_cache = {} # Cache for topic-specific embeddings
+
+    SYSTEM_INSTRUCTION = (
+        "You are FarmWise AI, a friendly and practical agricultural assistant for farmers and gardeners."
+        "\n\n"
+        "YOUR ROLE AND VOICE:"
+        "\n"
+        "1. IDENTITY: You are a knowledgeable but casual farming assistant. Use conversational language that sounds natural and engaging. Be conversational, friendly and direct while still being informative. Never start responses with phrases like \"Here's some helpful information about...\" or other formulaic openings."
+        "\n"
+        "2. OUTPUT FORMAT: Write in a casual, conversational style as if chatting with a friend who's a farmer. Use short paragraphs and occasional bullet points. Vary your response style and always sound natural. Feel free to ask follow-up questions when appropriate."
+        "\n"
+        "3. CONVERSATION STYLE: Be friendly, practical, and conversational. Use a natural, flowing tone that builds rapport. Avoid academic or formal language. Use contractions and casual phrasing like \"you'll want to\" rather than \"it is recommended that one should\"."
+        "\n\n"
+        "HOW TO HANDLE DIFFERENT QUESTION TYPES:"
+        "\n"
+        "1. PLANT DISEASES & WEEDS: This is your primary strength."
+        "\n"
+        "   - USING PROVIDED CONTEXT: When knowledge base information is provided, use it as your primary source for answering, but COMPLETELY rewrite it in your own conversational style. Add your own insights and organize the information in a user-friendly way. Never say \"According to the information\" or reference the knowledge base."
+        "\n"
+        "   - FOLLOW-UP QUESTIONS: When the user asks a follow-up question, stay on the same topic and provide more specific details about your previous answer. DO NOT go searching for new information unrelated to the previous topic."
+        "\n"
+        "   - FORMATTING DISEASE/WEED ADVICE: Structure your responses in a conversational way, covering identification, treatment options, and prevention strategies naturally without formal headers."
+        "\n"
+        "2. SYMPTOM QUESTIONS: If a farmer describes symptoms without naming a disease, suggest possibilities in a casual way and mention the Disease Detection tool: \"That sounds like it could be X. You might want to try our Disease Detection feature to confirm - just upload a photo in the app.\""
+        "\n"
+        "3. TREATMENT AMOUNTS/TIMING: Be conversational but precise about application rates: \"You'll want about X amount per plant - a bit more or less is usually fine, but always check the product label.\""
+        "\n"
+        "4. NON-RAG RESPONSES: If no relevant context is provided but the question is agricultural, provide a general answer in a casual, helpful tone."
+        "\n\n"
+        "CONVERSATION HISTORY & CONTEXT:"
+        "\n"
+        "1. MEMORY: Use the conversation history naturally. If a farmer mentioned a crop or problem earlier, remember this context."
+        "\n"
+        "2. VARIATIONS: Provide slight variations in your responses if a farmer asks similar questions, while maintaining consistency in the core advice."
+        "\n\n"
+        "SAFETY CONSIDERATIONS:"
+        "\n"
+        "1. For chemical treatments, casually mention safety precautions: \"Just make sure to wear gloves when applying this, and keep it away from waterways.\""
+        "\n"
+        "2. When relevant, mention both organic and conventional options in a balanced way."
+        "\n"
+        "3. CRITICAL: When a user asks about plant nutrient deficiencies, provide ONLY information about those nutrient deficiencies, NOT about unrelated diseases."
+    )
+
+    def _extract_topic_from_message(self, message):
+        """Extract the main agricultural topic from a message."""
+        # Extract crops, nutrients, diseases or key agricultural concepts
+        crops = ['corn', 'wheat', 'soybean', 'rice', 'potato', 'tomato', 'apple', 'citrus', 'barley', 'oats']
+        nutrients = ['nitrogen', 'phosphorus', 'potassium', 'calcium', 'magnesium', 'sulfur', 'zinc', 'iron', 'manganese', 'boron']
+        problems = ['deficiency', 'excess', 'disease', 'pest', 'weed', 'fungus', 'mold', 'rot', 'blight', 'mildew']
+        
+        message_lower = message.lower()
+        
+        # First check for nutrient deficiencies as a specific category
+        for nutrient in nutrients:
+            if nutrient in message_lower and 'deficiency' in message_lower:
+                return f"{nutrient} deficiency"
+        
+        # Check for crop + problem combinations
+        for crop in crops:
+            if crop in message_lower:
+                for problem in problems:
+                    if problem in message_lower:
+                        return f"{crop} {problem}"
+                return crop  # If just the crop is mentioned
+        
+        # Check for standalone problems
+        for problem in problems:
+            if problem in message_lower:
+                return problem
+        
+        # Extract nouns as fallback
+        words = message.split()
+        if len(words) >= 2:
+            return " ".join(words[:2])  # Return first two words as topic
+        return message[:20]  # Or truncated message
+            
+    def _load_knowledge_bases(self): 
+        if TreatmentChatView._knowledge_base_cache is not None:
+            return TreatmentChatView._knowledge_base_cache
+
+        knowledge_documents = []
+        
+        # --- Load Disease CSV ---
+        disease_csv_path = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Datasets/Treatment Dataset/cleaned_plant_diseases.csv'))
+        try:
+            with open(disease_csv_path, mode='r', encoding='utf-8') as file:
+                reader = csv.reader(file, delimiter=';')
+                header = next(reader) # Skip header
+                for i, row in enumerate(reader):
+                    if len(row) == 2:
+                        name = row[0].strip()
+                        content = row[1].strip()
+                        keywords = [kw.strip().lower() for kw in name.split()] + ["treatment", "control", "disease"]
+                        knowledge_documents.append({
+                            "id": f"disease_doc_{i}",
+                            "name": name,
+                            "content": content,
+                            "keywords": list(set(keywords)),
+                            "type": "disease"
+                        })
+            print(f"Successfully loaded {len(knowledge_documents)} disease documents.")
+        except FileNotFoundError:
+            print(f"Error: Disease CSV file not found at {disease_csv_path}")
+        except Exception as e:
+            print(f"Error loading disease CSV: {e}")
+
+        # --- Load Weed CSV ---
+        weed_csv_path = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Datasets/Treatment Dataset/weed_treatments.csv'))
+        initial_weed_doc_count = len(knowledge_documents)
+        try:
+            with open(weed_csv_path, mode='r', encoding='utf-8') as file:
+                reader = csv.reader(file, delimiter=';')
+                header = next(reader) # Skip header
+                for i, row in enumerate(reader):
+                    if len(row) >= 2: # Expecting at least Name and Treatment
+                        name = row[0].strip()
+                        content = row[1].strip()
+                        # Description and Impact can be part of the content or keywords
+                        description = row[2].strip() if len(row) > 2 else ""
+                        impact = row[3].strip() if len(row) > 3 else ""
+                        full_content = f"{content} Description: {description} Impact: {impact}".strip()
+                        
+                        keywords = [kw.strip().lower() for kw in name.split()] + ["weed", "control", "treatment", "herbicide"]
+                        knowledge_documents.append({
+                            "id": f"weed_doc_{i}",
+                            "name": name,
+                            "content": full_content,
+                            "keywords": list(set(keywords)),
+                            "type": "weed"
+                        })
+            print(f"Successfully loaded {len(knowledge_documents) - initial_weed_doc_count} weed documents.")
+        except FileNotFoundError:
+            print(f"Error: Weed CSV file not found at {weed_csv_path}")
+        except Exception as e:
+            print(f"Error loading weed CSV: {e}")
+            
+        # Fallback if no documents loaded
+        if not knowledge_documents:
+            print("No knowledge documents loaded. Using default general advice.")
+            knowledge_documents = [{
+                "id": "default_doc",
+                "name": "General Agricultural Advice",
+                "content": "For agricultural advice, please specify if you are asking about a plant disease or a weed. For plant diseases, good practices include removing infected parts, ensuring air circulation, and using appropriate treatments. For weeds, control methods include manual removal, mulching, and selective herbicides. Always consult local experts for specific recommendations.",
+                "keywords": ["treatment", "control", "manage", "prevent", "disease", "plant", "care", "weed", "agriculture"],
+                "type": "general"
+            }]
+
+        TreatmentChatView._knowledge_base_cache = knowledge_documents
+        return knowledge_documents
+
+    @property
+    def knowledge_documents(self):
+        return self._load_knowledge_bases() # Updated call
+
+    def _retrieve_relevant_documents(self, query, top_k=3, topic_hints=None):
+        """Enhanced document retrieval that considers topic context and handles nutrient deficiencies."""
+        query_lower = query.lower()
+        
+        # Special handling for nutrient deficiency questions
+        if any(nutrient in query_lower for nutrient in ['nitrogen', 'phosphorus', 'potassium']) and 'deficiency' in query_lower:
+            # For nutrient deficiency questions, we should focus on nutritional issues, not diseases
+            results = []
+            # First try to find exact matches for the nutrient deficiency
+            for doc in self.knowledge_documents:
+                content_lower = doc['content'].lower()
+                if (('nitrogen' in query_lower and 'nitrogen' in content_lower) or
+                    ('phosphorus' in query_lower and 'phosphorus' in content_lower) or
+                    ('potassium' in query_lower and 'potassium' in content_lower)) and 'deficiency' in content_lower:
+                    results.append(doc)
+            
+            # If we found specific nutrient deficiency documents, return those
+            if results:
+                return results[:top_k]
+            
+            # Otherwise, look for general nutritional documents
+            filtered_docs = [
+                doc for doc in self.knowledge_documents
+                if any(term in doc['content'].lower() for term in 
+                      ['fertilizer', 'nutrition', 'nutrient', 'deficiency', 'fertility'])
+            ]
+            
+            if filtered_docs:
+                return filtered_docs[:top_k]
+        
+        # Existing document retrieval logic with keywords
+        keywords = [word.lower() for word in query.split() if len(word) > 3]
+        
+        # If we have topic hints, add those keywords to improve retrieval
+        if topic_hints:
+            keywords.extend([word.lower() for word in topic_hints.split() if len(word) > 3])
+        
+        results = []
+        for doc in self.knowledge_documents:
+            # Calculate keyword matches
+            content_lower = doc['content'].lower()
+            name_lower = doc['name'].lower()
+            
+            keyword_score = sum(
+                3 if keyword in name_lower else
+                1 if keyword in content_lower else 0
+                for keyword in keywords
+            )
+            
+            if keyword_score > 0:
+                results.append((doc, keyword_score))
+        
+        # Sort by score (descending)
+        results.sort(key=lambda x: x[1], reverse=True)
+        
+        # Return top-k documents or fewer if not enough matches
+        return [doc for doc, _ in results[:top_k]] if results else []
+
+    def post(self, request, *args, **kwargs):
+        if not GOOGLE_API_KEY:
+            return JsonResponse({'error': 'Google API Key not configured on server.'}, status=500)
+
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', "").strip()
+            history = data.get('history', [])
+            session_id = data.get('session_id', str(uuid.uuid4()))  # Add session tracking
+
+            if not user_message:
+                return JsonResponse({'error': 'Missing message in request'}, status=400)
+
+            # Store the current conversation context with more detailed information
+            conversation_context = self._conversation_context_cache.get(session_id, {
+                'last_topic': None,
+                'last_query': None,
+                'last_response': None,
+                'query_count': 0,
+                'relevant_documents': []
+            })
+            
+            conversation_context['query_count'] += 1
+            
+            current_turn_user_entry = {"role": "user", "parts": [user_message]}
+
+            # Skip further processing for non-agricultural queries
+            if not self._is_agricultural_topic(user_message) and conversation_context['query_count'] > 1:
+                print(f"❌ Query rejected as non-agricultural: '{user_message}'")
+                ai_response_text = "I focus on farming topics. What agricultural question can I help with today?"
+                current_turn_model_entry = {"role": "model", "parts": [ai_response_text]}
+                history.append(current_turn_user_entry)
+                history.append(current_turn_model_entry)
+                
+                return JsonResponse({
+                    'ai_response': ai_response_text, 
+                    'history': history,
+                    'session_id': session_id
+                })
+
+            # Improved follow-up detection
+            is_follow_up = self._is_follow_up_question(user_message, conversation_context)
+            
+            # Log the follow-up detection more clearly
+            if is_follow_up and conversation_context['last_topic']:
+                print(f"Detected follow-up question: '{user_message}'. Using previous context about '{conversation_context['last_topic']}'")
+                
+                # For simple clarifications, use the previous topic's retrieval context
+                if conversation_context['relevant_documents']:
+                    relevant_documents = conversation_context['relevant_documents']
+                    topic_desc = conversation_context['last_topic']
+                    
+                    # For follow-ups, create a natural and more subtle continuation prompt
+                    if "deficiency" in topic_desc.lower() and conversation_context['last_query']:
+                        enhanced_user_message = f"""This is a follow-up to our conversation about {topic_desc}.
+
+Question: {user_message}
+
+Please continue the discussion about {topic_desc}."""
+                    else:
+                        enhanced_user_message = f"""This is related to our previous chat about {topic_desc}.
+
+Question: {user_message}"""
+                else:
+                    # If we don't have previous documents, do a new search with the last topic
+                    topic_hints = conversation_context['last_topic']
+                    relevant_documents = self._retrieve_relevant_documents(
+                        conversation_context['last_topic'],
+                        top_k=3, 
+                        topic_hints=topic_hints
+                    )
+                    enhanced_user_message = f"This relates to {conversation_context['last_topic']}. Question: {user_message}"
+            else:
+                # Extract the main topic from the query to store for future context
+                extracted_topic = self._extract_topic_from_message(user_message)
+                
+                # For new questions, find relevant documents
+                relevant_documents = self._retrieve_relevant_documents(user_message, top_k=3)
+                enhanced_user_message = user_message
+                
+                # Update the conversation context with this new topic
+                conversation_context['last_topic'] = extracted_topic
+
+            # Update the conversation context
+            conversation_context['last_query'] = user_message
+            conversation_context['relevant_documents'] = relevant_documents
+            self._conversation_context_cache[session_id] = conversation_context
+            
+            # Format the retrieved context into a readable string for the model prompt
+            retrieved_context_str = ""
+            for doc in relevant_documents:
+                doc_name = doc['name']
+                doc_content = doc['content']
+                retrieved_context_str += f"Information about {doc_name}:\n{doc_content}\n\n"
+            
+            # Create a cleaner, more natural prompt for Gemini
+            if is_follow_up:
+                prompt_for_this_turn = f'''The user is asking a follow-up question: {user_message}
+
+This relates to the previous topic: {conversation_context['last_topic']}
+
+Relevant information:
+{retrieved_context_str}
+
+Respond in a friendly, conversational tone. Continue the natural flow of the conversation without using formulaic phrases like "Here's some helpful information about..." or "Based on the information...".'''
+            elif retrieved_context_str:
+                prompt_for_this_turn = f'''The user asks: {user_message}
+
+Relevant information:
+{retrieved_context_str}
+
+Respond in a friendly, conversational tone without using formulaic phrases like "Here's some helpful information about..." or "Based on the information...". Just talk naturally about the topic, integrating the information in a casual, helpful way as if chatting with a friend who's a farmer.'''
+            else:
+                # No RAG context, still keep it natural
+                prompt_for_this_turn = f'''The user asks: {user_message}
+
+Respond in a friendly, conversational tone as if you're chatting with a farmer friend. Provide practical advice in a casual way.'''
+            
+            current_turn_user_entry["parts"] = [prompt_for_this_turn] 
+            history.append(current_turn_user_entry)
+
+            model_to_use = "gemini-2.0-flash"
+            
+            ai_response_text = None
             try:
-                img_t = self.preprocess(img)
-                print(f"Preprocessed tensor shape: {img_t.shape}")
-                batch_t = torch.unsqueeze(img_t, 0) # Create a mini-batch as expected by the model
-                print(f"Batch tensor shape: {batch_t.shape}")
-            except Exception as preprocess_err:
-                print(f"Error during preprocessing: {preprocess_err}")
-                import traceback
-                traceback.print_exc()
-                return JsonResponse({'error': f'Image preprocessing failed: {str(preprocess_err)}'}, status=500)
+                gemini_model = genai.GenerativeModel(
+                    model_name=model_to_use,
+                    safety_settings=[
+                        {"category": "HARM_CATEGORY_HARMFUL_CONTENT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+                    ],
+                    system_instruction=self.SYSTEM_INSTRUCTION
+                )
+                chat_session = gemini_model.start_chat(history=history[:-1] if len(history) > 1 else []) 
+                generation_config = genai.types.GenerationConfig(temperature=0.7, top_p=0.92, top_k=45, max_output_tokens=800)
+                
+                # Log the prompt we're sending to Gemini for debugging
+                print(f"Sending to Gemini 2.0 Flash - User query: '{user_message}'")
+                print(f"Is follow-up: {is_follow_up}")
+                print(f"History entries: {len(history)} entries")
+                if retrieved_context_str:
+                    print(f"Retrieved RAG context length: {len(retrieved_context_str)} chars")
+                else:
+                    print("No RAG context retrieved")
+                
+                # Send message to Gemini
+                response = chat_session.send_message(history[-1]["parts"], generation_config=generation_config)
+                
+                if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+                    ai_response_text = "".join(part.text for part in response.candidates[0].content.parts).strip()
+                    print(f"Received valid response from Gemini ({len(ai_response_text)} chars)")
+                    # Store the response in context for future reference
+                    conversation_context['last_response'] = ai_response_text
+                    self._conversation_context_cache[session_id] = conversation_context
+                else: 
+                    print("❌ Gemini returned empty or blocked response")
+                    
+                    block_reason_msg = "Response was empty or content generation was stopped."
+                    finish_reason_name = "UNKNOWN"
+                    if response.candidates and response.candidates[0].finish_reason:
+                        finish_reason_name = response.candidates[0].finish_reason.name
+                    
+                    prompt_feedback_block_reason = None
+                    if hasattr(response, 'prompt_feedback') and response.prompt_feedback and response.prompt_feedback.block_reason:
+                        prompt_feedback_block_reason = response.prompt_feedback.block_reason.name
+                        block_reason_msg = f"Blocked due to: {response.prompt_feedback.block_reason_message or prompt_feedback_block_reason}."
+                    elif finish_reason_name != "STOP" and finish_reason_name != "MAX_TOKENS":
+                        block_reason_msg = f"Content generation stopped due to: {finish_reason_name}."
+                    
+                    print(f"Gemini API issue: {block_reason_msg} For user message (pre-RAG): '{user_message}'")
+                    
+                    # Create a more natural fallback response instead of template-based ones
+                    if retrieved_context_str:
+                        # With fallback text but still maintaining a natural tone
+                        ai_response_text = "I know a bit about this topic! " + self._create_natural_fallback_response(retrieved_context_str, user_message)
+                    else:
+                        # Generic fallback with no context
+                        ai_response_text = "I'd love to help with your question about farming. Could you give me a bit more detail so I can provide better advice?"
 
-            # Make a prediction
-            try:
-                with torch.no_grad(): # important for inference to disable gradient calculation
-                    out = disease_model(batch_t)
-                print(f"Model output shape: {out.shape}")
-            except Exception as model_err:
-                print(f"Error during model inference: {model_err}")
-                import traceback
-                traceback.print_exc()
-                return JsonResponse({'error': f'Model inference failed: {str(model_err)}'}, status=500)
-            
-            # Get the predicted class index
-            _, index = torch.max(out, 1)
-            predicted_class_idx = index[0].item()
-            
-            # Get the class name
-            predicted_class_name = DISEASE_CLASSES[predicted_class_idx]
-            
-            # Get probabilities (softmax)
-            probabilities = torch.nn.functional.softmax(out, dim=1)[0]
-            confidence_score = probabilities[predicted_class_idx].item()
+            except Exception as e:
+                print(f"Gemini API call exception: {str(e)} for user message: '{user_message}'")
+                
+                if retrieved_context_str:
+                     # More natural fallback with context
+                     ai_response_text = self._create_natural_fallback_response(retrieved_context_str, user_message)
+                else:
+                    ai_response_text = "I'd like to help with your farming question. Could you give me a bit more detail about what you're dealing with?"
 
+            if not ai_response_text: 
+                ai_response_text = "Sorry about that! My system had a hiccup. Could you try asking again? I really want to help with your farming question."
+
+            # Store the response in the conversation history
+            history.append({"role": "model", "parts": [ai_response_text]})
+            
+            # Return the response with session_id for continuity
             return JsonResponse({
-                'predicted_class': predicted_class_name,
-                'confidence': confidence_score,
-                'class_index': predicted_class_idx
+                'ai_response': ai_response_text, 
+                'history': history,
+                'session_id': session_id
             })
 
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
         except Exception as e:
-            print(f"Error during disease detection: {e}") # Log the error server-side
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'error': f'Internal server error during disease detection: {str(e)}'}, status=500)
+            print(f"Critical error in TreatmentChatView: {e}") 
+            history_to_return = data.get('history', []) if 'data' in locals() else []
+            if 'user_message' in locals() and not any(entry.get("role") == "user" and user_message in entry.get("parts", []) for entry in history_to_return):
+                history_to_return.append({"role": "user", "parts": [user_message if 'user_message' in locals() else "Unknown query due to error"]})
+            
+            critical_fallback = "Sorry! I'm having a technical issue right now. Mind trying again in a moment? If it keeps happening, a quick refresh might fix things."
+            history_to_return.append({"role": "model", "parts": [critical_fallback]})
+            return JsonResponse({
+                'ai_response': critical_fallback,
+                'history': history_to_return
+            }, status=500)
+    
+    def _create_natural_fallback_response(self, context_str, query):
+        """Creates a more natural-sounding response from RAG context when the model fails."""
+        # Extract key sentences from the context
+        all_sentences = re.split(r'[.!?]', context_str)
+        relevant_sentences = [s.strip() for s in all_sentences if len(s.strip()) > 20 and len(s.strip()) < 150]
+        
+        # Take a subset of sentences
+        if len(relevant_sentences) > 5:
+            # Use time-based but deterministic selection to add variety
+            seed = int(time.time()) % 1000
+            # Select sentences with different patterns based on the seed
+            if seed % 3 == 0:
+                selected_sentences = relevant_sentences[::3][:3]  # Every 3rd sentence
+            elif seed % 3 == 1:
+                selected_sentences = relevant_sentences[1::3][:3]  # Start with 2nd, then every 3rd
+            else:
+                selected_sentences = relevant_sentences[2::3][:3]  # Start with 3rd, then every 3rd
+        else:
+            selected_sentences = relevant_sentences[:3]
+        
+        # Create conversation starters that don't sound formulaic
+        starters = [
+            f"For {query.split()[0]} {query.split()[1] if len(query.split()) > 1 else ''}, ",
+            "Let me share what I know. ",
+            "I can help with that! ",
+            "Great question. ",
+            "I've got some tips for you. ",
+            "This is something I know about. ",
+            ""  # Sometimes no starter
+        ]
+        
+        starter = starters[seed % len(starters)]
+        
+        # Join sentences with appropriate transitions
+        transitions = ["", "Also, ", "Plus, ", "And ", "Remember that ", "One thing to note: "]
+        response = starter
+        
+        for i, sentence in enumerate(selected_sentences[:3]):
+            if i > 0:
+                response += transitions[(seed + i) % len(transitions)]
+            response += sentence + ". "
+            
+        # Add a follow-up question or suggestion
+        follow_ups = [
+            "Does that help with what you were asking?",
+            "Anything specific about this you'd like to know more about?",
+            "Let me know if you need more specific advice.",
+            "What's your situation like?",
+            ""  # Sometimes no follow-up
+        ]
+        
+        if seed % 4 != 0:  # 75% chance to add a follow-up
+            response += follow_ups[(seed + 2) % len(follow_ups)]
+            
+        return response
+
+    # Improved helper method for follow-up detection
+    def _is_follow_up_question(self, text, context):
+        """Enhanced detection of follow-up questions with more precise patterns."""
+        text = text.lower().strip()
+        
+        # Very short messages are almost always follow-ups
+        if len(text.split()) <= 3:
+            # Most definitive follow-up phrases
+            strong_follow_up_phrases = [
+                "why", "how", "what about", "can you", "tell me more", 
+                "are you sure", "really", "explain", "elaborate",
+                "details", "examples", "is that", "that's", "?", "??", "???"
+            ]
+            
+            # Check for these strong patterns
+            for phrase in strong_follow_up_phrases:
+                if phrase in text or text.endswith('?'):
+                    return True
+        
+        # Slightly longer but still clear follow-ups
+        if len(text.split()) <= 6:
+            medium_follow_up_phrases = [
+                "why is that", "how does that", "what does that", 
+                "can you explain", "tell me why", "how can i",
+                "what should i", "is there more", "anything else",
+                "i don't understand", "that doesn't", "that seems",
+                "really", "are you certain", "are u sure"
+            ]
+            for phrase in medium_follow_up_phrases:
+                if phrase in text:
+                    return True
+                
+        # Check for reference to previous content
+        if context.get('last_topic') and context.get('last_topic').lower() in text:
+            return True
+            
+        return False
+        
+    def _is_agricultural_topic(self, text):
+        """Improved version of is_agricultural_topic_strict to handle follow-ups better."""
+        # First, check for identity questions which are handled separately
+        identity_keywords = ['who are you', 'what is your name', 'your name', 'what can you do']
+        if any(kw in text for kw in identity_keywords):
+            return True
+
+        # Non-agricultural terms that indicate the query is off-topic
+        non_agri_terms = ['batman', 'superhero', 'movie', 'game', 'politics', 'celebrity', 'computer']
+        if any(term in text for term in non_agri_terms):
+            return False
+
+        # Common agricultural terms - expanded list
+        agricultural_terms = [
+            # Basic farming terms
+            'plant', 'crop', 'farm', 'soil', 'seed', 'disease', 'pest', 'weed', 
+            'treatment', 'fertilizer', 'irrigation', 'agriculture', 'farming', 
+            'harvest', 'cultivat', 'nutrient', 'fungus', 'insecticide', 'herbicide',
+            'grow', 'garden', 'plant', 'field', 'spray', 'organic', 'chemical',
+            
+            # Common crops and plants
+            'apple', 'corn', 'maize', 'wheat', 'rice', 'soy', 'bean', 'potato',
+            'tomato', 'cucumber', 'pepper', 'onion', 'garlic', 'carrot',
+            'lettuce', 'cabbage', 'broccoli', 'spinach', 'grape', 'vine',
+            'orange', 'lemon', 'citrus', 'strawberr', 'raspberr', 'blueberr',
+            'blackberr', 'melon', 'watermelon', 'squash', 'pumpkin',
+            
+            # Common diseases and pests
+            'blight', 'rust', 'mildew', 'powdery', 'downy', 'rot', 'wilt',
+            'spot', 'scab', 'mold', 'mould', 'mosaic', 'virus',
+            'bacterial', 'fungal', 'fungus', 'insect', 'mite', 'aphid'
+        ]
+        
+        # Very short texts (like "why?", "how?") should be allowed through
+        # as they're likely follow-ups
+        if len(text.split()) <= 3:
+            return True
+            
+        # Check for common agricultural terms
+        if any(term in text for term in agricultural_terms):
+            return True
+            
+        # Check for follow-up patterns (questions, clarifications)
+        if text.endswith('?') and len(text) < 30:
+            return True
+            
+        # If we're not sure, allow the message as it might be a simple follow-up
+        if len(text) < 15:
+            return True
+            
+        return False

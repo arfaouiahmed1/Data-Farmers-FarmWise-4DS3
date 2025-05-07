@@ -1,41 +1,56 @@
 /* Styles moved from AdvisorPage.module.css */
 
+/* Chat container styles */
 .chatContainer {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    /* Let the modal control the height, use max-height for non-fullscreen */
-    height: 100%; /* Fill the modal body */
-    /* max-height: 70vh; Remove or adjust max-height if it conflicts with fullscreen */
+    height: 100%;
+    border-radius: var(--mantine-radius-md);
+    background-color: var(--mantine-color-body);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-/* Optional: Specific styles for fullscreen if needed */
-/* .chatContainer.fullScreen {
+.fullScreen {
     max-height: none;
-} */
+    height: 100vh;
+    border-radius: 0;
+}
 
+/* Chat header */
+.chatHeader {
+    padding: var(--mantine-spacing-md);
+    border-bottom: 1px solid var(--mantine-color-gray-2);
+    background-color: var(--mantine-color-white);
+    position: relative;
+    z-index: 10;
+
+    [data-mantine-color-scheme="dark"] & {
+        background-color: var(--mantine-color-dark-7);
+        border-bottom-color: var(--mantine-color-dark-4);
+    }
+}
+
+/* Main content area */
 .scrollArea {
     flex-grow: 1;
-    /* Ensure it has a basis to calculate flex-grow from */
-    min-height: 100px; 
-    /* Add some padding if needed, although Stack provides it */
-    /* padding: var(--mantine-spacing-md); */
+    min-height: 200px;
+    position: relative;
+    scroll-behavior: smooth;
 }
 
-.inputArea {
-    border-top: 1px solid var(--mantine-color-default-border);
-    padding: var(--mantine-spacing-md);
-    flex-shrink: 0;
+.messagesContainer {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: var(--mantine-spacing-xl);
 }
 
-.textInput {
-    flex-grow: 1;
-}
-
-/* Message Bubble Styles */
-.messageBubble {
-    max-width: 85%; /* Allow slightly wider bubbles in modal */
-    word-wrap: break-word;
+/* Message styling */
+.aiMessageContainer, .userMessageContainer {
+    width: 100%;
+    margin-bottom: var(--mantine-spacing-md);
 }
 
 .userMessageGroup {
@@ -44,6 +59,173 @@
 
 .aiMessageGroup {
     justify-content: flex-start;
+}
+
+.messageContentBox {
+    max-width: 85%;
+    border-radius: var(--mantine-radius-md);
+    background-color: var(--mantine-color-gray-0);
+    padding: var(--mantine-spacing-md);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease;
+    
+    [data-mantine-color-scheme="dark"] & {
+        background-color: var(--mantine-color-dark-6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+}
+
+.userMessageGroup .messageContentBox {
+    background-color: var(--mantine-color-blue-0);
+    margin-left: auto;
+    
+    [data-mantine-color-scheme="dark"] & {
+        background-color: var(--mantine-color-blue-9);
+    }
+}
+
+.messageHeader {
+    margin-bottom: var(--mantine-spacing-xs);
+}
+
+.senderName {
+    color: var(--mantine-color-gray-7);
+    
+    [data-mantine-color-scheme="dark"] & {
+        color: var(--mantine-color-gray-3);
+    }
+}
+
+.timestamp {
+    font-size: 10px;
+    color: var(--mantine-color-gray-5);
+}
+
+.messageText {
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--mantine-color-gray-8);
+    
+    [data-mantine-color-scheme="dark"] & {
+        color: var(--mantine-color-gray-3);
+    }
+}
+
+.userMessageGroup .messageText {
+    color: var(--mantine-color-gray-8);
+    
+    [data-mantine-color-scheme="dark"] & {
+        color: var(--mantine-color-white);
+    }
+}
+
+.messageMenuButton {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.messageContentBox:hover .messageMenuButton {
+    opacity: 1;
+}
+
+.expansionButton {
+    margin-top: var(--mantine-spacing-xs);
+    color: var(--mantine-color-blue-6);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    
+    &:hover {
+        color: var(--mantine-color-blue-8);
+        text-decoration: underline;
+    }
+}
+
+.messageAvatar {
+    margin-top: var(--mantine-spacing-xs);
+}
+
+.typingIndicatorBox {
+    background-color: var(--mantine-color-gray-0);
+    padding: var(--mantine-spacing-md);
+    border-radius: var(--mantine-radius-md);
+    min-width: 100px;
+    
+    [data-mantine-color-scheme="dark"] & {
+        background-color: var(--mantine-color-dark-6);
+    }
+}
+
+/* Input area */
+.inputArea {
+    border-top: 1px solid var(--mantine-color-gray-2);
+    padding: var(--mantine-spacing-md);
+    background-color: var(--mantine-color-white);
+    position: relative;
+    z-index: 5;
+    
+    [data-mantine-color-scheme="dark"] & {
+        background-color: var(--mantine-color-dark-7);
+        border-top-color: var(--mantine-color-dark-4);
+    }
+}
+
+.inputGroup {
+    position: relative;
+}
+
+.textInput {
+    flex-grow: 1;
+}
+
+.textInput input {
+    border-radius: 25px;
+    padding-right: 90px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    
+    &:focus {
+        box-shadow: 0 0 0 2px var(--mantine-color-blue-2);
+    }
+    
+    [data-mantine-color-scheme="dark"] & {
+        background-color: var(--mantine-color-dark-6);
+        border-color: var(--mantine-color-dark-4);
+        
+        &:focus {
+            box-shadow: 0 0 0 2px var(--mantine-color-blue-8);
+        }
+    }
+}
+
+/* Suggested prompts */
+.suggestedPromptsContainer {
+    margin-bottom: var(--mantine-spacing-md);
+    align-items: center;
+}
+
+/* Scroll to bottom button */
+.scrollToBottomButton {
+    position: absolute;
+    bottom: 100px;
+    right: 20px;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        opacity: 1;
+        transform: translateY(-2px);
+    }
+}
+
+/* Message Bubble Styles */
+.messageBubble {
+    max-width: 85%; /* Allow slightly wider bubbles in modal */
+    word-wrap: break-word;
 }
 
 .userBubble {

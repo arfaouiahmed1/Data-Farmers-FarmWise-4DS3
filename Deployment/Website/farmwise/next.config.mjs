@@ -35,6 +35,15 @@ export default withBundleAnalyzer({
         source: '/detect-weeds/',
         destination: 'http://localhost:8000/api/detect-weeds/',
       },
+      // Add treatment chat API endpoint
+      {
+        source: '/api/chat-treatment',
+        destination: 'http://localhost:8000/api/chat-treatment/',
+      },
+      {
+        source: '/api/chat-treatment/',
+        destination: 'http://localhost:8000/api/chat-treatment/',
+      },
     ];
   },
 });

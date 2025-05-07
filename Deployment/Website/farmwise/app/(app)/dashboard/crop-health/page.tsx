@@ -40,6 +40,7 @@ import { Dropzone, IMAGE_MIME_TYPE, FileWithPath } from '@mantine/dropzone';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import { AreaChart } from '@mantine/charts';
+import { AiChatInterface } from '@/components/AiChat/AiChatInterface';
 
 // Dynamically import FarmHealthMap, disabling SSR
 const FarmHealthMap = dynamic(
@@ -1605,138 +1606,374 @@ interface ChatMessage {
 }
 
 const TreatmentChat: React.FC = () => {
+    const theme = useMantineTheme(); // Get theme for colors
+    const { colorScheme } = useMantineColorScheme(); // For dark/light mode adjustments
+
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { id: 0, sender: 'ai', text: 'Hello! I can suggest treatments for crop health issues. How can I help you today?' }
+        { id: 1, sender: 'ai', text: 'Hello! I am FarmWise AI, powered by Gemini 2.0 Flash. I can help with crop treatment recommendations. Ask me about specific plant diseases like "How to treat apple scab?" or "What are the best treatments for powdery mildew on crops?"' }
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isAiTyping, setIsAiTyping] = useState(false);
-    const messageEndRef = useRef<HTMLDivElement>(null);
+    const viewport = useRef<HTMLDivElement>(null); // For ScrollArea
+    const [mounted, setMounted] = useState(false);
+    
+    // Example treatment topics to suggest to users
+    const exampleTopics = [
+        "How to treat powdery mildew on crops?",
+        "What's the best treatment for apple scab?",
+        "How to manage rust on wheat?",
+        "Best practices for treating leaf spot diseases",
+        "How to prevent blight in tomatoes?"
+    ];
+
+    // Only apply color scheme after client-side hydration to prevent mismatch
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const scrollToBottom = () => {
-        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
     };
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+    
+    // Suggest an example topic to the user
+    const suggestTopic = (topic: string) => {
+        setInputValue(topic);
+    };
 
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!inputValue.trim() || isAiTyping) return;
 
+        // Check for problematic content and non-agricultural topics
+        const lowercaseInput = inputValue.toLowerCase();
+        
+        // Words/phrases that indicate non-agricultural topics
+        const nonAgricultureTerms = [
+            'batman', 'superhero', 'movie', 'game', 'play', 'sport', 'football', 'basketball',
+            'politics', 'election', 'president', 'minister', 'government', 'vote',
+            'celebrity', 'actor', 'actress', 'singer', 'song', 'film', 'tv show',
+            'recipe', 'cook', 'bake', 'dessert', 'dinner', 'breakfast', 'lunch',
+            'car', 'vehicle', 'drive', 'flying', 'airplane', 'travel',
+            'computer', 'programming', 'code', 'software', 'hardware',
+            'weapon', 'gun', 'bomb', 'kill', 'attack', 'violence'
+        ];
+        
+        // Words/phrases that indicate agricultural topics
+        const agricultureTerms = [
+            'plant', 'crop', 'farm', 'agriculture', 'soil', 'seed', 'grow', 'harvest',
+            'disease', 'pest', 'fungus', 'bacteria', 'virus', 'infection',
+            'fertilizer', 'nutrient', 'irrigation', 'water', 'drought', 'rain',
+            'weed', 'herbicide', 'pesticide', 'organic', 'treatment',
+            'leaf', 'root', 'stem', 'flower', 'fruit', 'vegetable',
+            'wheat', 'corn', 'rice', 'barley', 'soybean', 'potato',
+            'tomato', 'apple', 'orange', 'banana', 'grape', 'strawberry',
+            'blight', 'rust', 'mildew', 'rot', 'spot', 'mold', 'scab'
+        ];
+        
+        // Check if the input contains non-agricultural terms
+        const containsNonAgricultureTerm = nonAgricultureTerms.some(term => 
+            lowercaseInput.includes(term) || 
+            // Check for exact matches to avoid false positives
+            lowercaseInput.split(/\s+/).includes(term)
+        );
+        
+        // Check if the input contains agricultural terms
+        const containsAgricultureTerm = agricultureTerms.some(term => 
+            lowercaseInput.includes(term) || 
+            lowercaseInput.split(/\s+/).includes(term)
+        );
+        
+        // Block if it contains non-agricultural terms or doesn't contain agricultural terms
+        // but make an exception for short/generic questions
+        const isOffTopic = (containsNonAgricultureTerm || (!containsAgricultureTerm && lowercaseInput.length > 15));
+        
+        // Potentially harmful content list from before
+        const potentiallyBlockedTerms = [
+            'harmful', 'dangerous', 'illegal', 'weapon', 'violence', 'suicide', 'attack',
+            'bomb', 'kill', 'hurt', 'offensive', 'sexually explicit'
+        ];
+        
+        const containsBlockedTerm = potentiallyBlockedTerms.some(term => lowercaseInput.includes(term));
+        
         const userMessage: ChatMessage = {
-            id: messages.length,
+            id: Date.now(),
             sender: 'user',
             text: inputValue
         };
 
-        setMessages([...messages, userMessage]);
+        setMessages(prevMessages => [...prevMessages, userMessage]);
+        const currentInput = inputValue;
         setInputValue('');
         setIsAiTyping(true);
 
-        // Simulate AI response delay
-        setTimeout(() => {
-            const aiResponse = generateAiResponse(userMessage.text);
+        // If the message is off-topic or contains harmful content
+        if (isOffTopic || containsBlockedTerm) {
+            setTimeout(() => {
+                setMessages(prevMessages => [
+                    ...prevMessages,
+                    { 
+                        id: Date.now() + 1, 
+                        sender: 'ai', 
+                        text: "I'm sorry, I can only assist with agricultural topics, particularly about crop treatments, diseases, and farming practices. Please ask a question related to plant health, crop management, or agricultural practices."
+                    }
+                ]);
+                setIsAiTyping(false);
+            }, 1000);
+            return;
+        }
+
+        try {
+            // Use API endpoint without trailing slash to match Django URL pattern
+            const response = await fetch('/api/chat-treatment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: currentInput })
+            });
+
+            if (!response.ok) {
+                let errorMessage = "There was an issue connecting to the treatment advisor service.";
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) {
+                        errorMessage = errorData.error;
+                    }
+                } catch (e) {
+                    console.error("Failed to parse error response:", e);
+                }
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+            const aiResponseText = data.ai_response || "Sorry, I couldn't get a meaningful response.";
+
             setMessages(prevMessages => [
                 ...prevMessages,
-                { id: prevMessages.length, sender: 'ai', text: aiResponse }
+                { id: Date.now() + 1, sender: 'ai', text: aiResponseText }
             ]);
+
+        } catch (error) {
+            console.error("Error sending message to backend:", error);
+            
+            let friendlyErrorMessage = "I'm sorry, I encountered an issue processing your request. Please try a different question about crop treatments.";
+            if (error instanceof Error) {
+                // Don't expose raw error messages to users, use a friendly message
+                if (error.message.includes('GOOGLE_API_KEY')) {
+                    friendlyErrorMessage = "The AI treatment advisor is currently unavailable. Please try again later.";
+                }
+            }
+            
+            setMessages(prevMessages => [
+                ...prevMessages,
+                { id: Date.now() + 1, sender: 'ai', text: friendlyErrorMessage }
+            ]);
+        } finally {
             setIsAiTyping(false);
-        }, 1500);
+        }
     };
 
-    const generateAiResponse = (userText: string): string => {
-        // Simple rule-based responses
-        const lowerText = userText.toLowerCase();
-        
-        if (lowerText.includes('septoria') || lowerText.includes('leaf blotch')) {
-            return "For Septoria Leaf Blotch, I recommend applying a fungicide containing propiconazole or azoxystrobin. Apply at the first sign of disease, and repeat as needed following the product's instructions. Ensure good air circulation by proper plant spacing and avoid overhead irrigation.";
-        }
-        
-        if (lowerText.includes('rust') || lowerText.includes('yellow rust')) {
-            return "For Yellow Rust, apply a triazole or strobilurin fungicide as soon as symptoms appear. Resistant cultivars are the most effective control measure for the next growing season. Monitor your crop regularly especially during humid conditions.";
-        }
-        
-        if (lowerText.includes('powdery mildew')) {
-            return "For Powdery Mildew, apply sulfur-based fungicides or potassium bicarbonate as organic options. Chemical fungicides with active ingredients like trifloxystrobin or myclobutanil are also effective. Apply at first sign of infection and ensure good air circulation between plants.";
-        }
-        
-        if (lowerText.includes('aphid')) {
-            return "For aphid infestations, you can use insecticidal soaps or neem oil for organic control. For stronger options, consider systemic insecticides containing imidacloprid or acetamiprid. Encourage beneficial insects like ladybugs and lacewings that naturally prey on aphids.";
-        }
-        
-        if (lowerText.includes('weed') || lowerText.includes('pigweed') || lowerText.includes('amaranth')) {
-            return "For Redroot Pigweed (Amaranthus retroflexus), apply pre-emergence herbicides containing pendimethalin or S-metolachlor. For post-emergence control, herbicides with active ingredients like glyphosate (in resistant crops), 2,4-D, or dicamba are effective. Always follow the recommended application rates and timing.";
-        }
-        
-        if (lowerText.includes('irrigation') || lowerText.includes('water')) {
-            return "For optimal irrigation, I recommend monitoring soil moisture levels with sensors or the finger test. Most crops require 1-1.5 inches of water per week during growing season. Water deeply and infrequently to encourage deep root growth. Consider drip irrigation to reduce water usage and minimize leaf wetness that can promote disease.";
-        }
-        
-        if (lowerText.includes('fertiliz') || lowerText.includes('nutri')) {
-            return "For fertilization, I recommend soil testing first to determine exact needs. For general guidance, apply balanced NPK fertilizer before planting, then nitrogen-focused fertilizers during growth stages. Consider foliar micronutrient sprays if deficiency symptoms appear. Organic options include compost, manure, and cover crops.";
-        }
-        
-        // Default response for unknown queries
-        return "I understand you're asking about crop treatments. Could you provide more specific information about the issue you're facing? For example, what crop are you growing, what symptoms are you seeing, or what pests/diseases have you identified?";
+    // Avatar for AI
+    const AiAvatar = () => (
+        <Avatar radius="xl" size="sm" color={theme.primaryColor} variant="filled">
+            <IconMessageChatbot size="0.8rem" />
+        </Avatar>
+    );
+
+    // Default styles (light mode)
+    const defaultPaperStyle = {
+        height: '70vh', 
+        display: 'flex', 
+        flexDirection: 'column' as const,
+        backgroundColor: theme.white,
     };
+
+    const defaultDividerStyle = {
+        borderTop: `1px solid ${theme.colors.gray[3]}`, 
+        paddingTop: theme.spacing.md
+    };
+
+    // Apply color scheme only after mounting to prevent hydration mismatch
+    const paperStyle = mounted ? {
+        ...defaultPaperStyle,
+        backgroundColor: colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
+    } : defaultPaperStyle;
+
+    const groupDividerStyle = mounted ? {
+        ...defaultDividerStyle,
+        borderTop: `1px solid ${colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[3]}`,
+    } : defaultDividerStyle;
+
+    // Helper function to get message style after mounting
+    const getMessageStyle = (sender: 'user' | 'ai') => {
+        if (!mounted) {
+            return {
+                backgroundColor: sender === 'user' ? theme.colors[theme.primaryColor][5] : theme.white,
+                color: sender === 'user' ? theme.white : theme.black,
+                borderTopLeftRadius: sender === 'ai' ? rem(4) : 'lg',
+                borderTopRightRadius: sender === 'user' ? rem(4) : 'lg',
+            };
+        }
+
+        return {
+            backgroundColor: sender === 'user' 
+                ? (colorScheme === 'dark' ? theme.colors[theme.primaryColor][8] : theme.colors[theme.primaryColor][5]) 
+                : (colorScheme === 'dark' ? theme.colors.dark[6] : theme.white),
+            color: sender === 'user' 
+                ? theme.white 
+                : (colorScheme === 'dark' ? theme.colors.dark[0] : theme.black),
+            borderTopLeftRadius: sender === 'ai' ? rem(4) : 'lg',
+            borderTopRightRadius: sender === 'user' ? rem(4) : 'lg',
+        };
+    };
+
+    // Get text color based on color scheme
+    const getTextColor = (isUser: boolean) => {
+        if (!mounted) {
+            return isUser ? theme.white : theme.colors.gray[7];
+        }
+        return isUser 
+            ? theme.white 
+            : colorScheme === 'dark' ? theme.colors.gray[4] : theme.colors.gray[7];
+    };
+
+    // Get title color based on mounting state and color scheme
+    const titleColor = mounted 
+        ? (colorScheme === 'dark' ? theme.colors.gray[3] : theme.colors.gray[8])
+        : theme.colors.gray[8];
 
     return (
-        <Paper withBorder shadow="md" radius="md" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '60vh' }}>
-            <ScrollArea flex={1} p="md">
-                <Stack>
+        <Paper 
+            shadow="md" 
+            radius="lg" 
+            p="lg"
+            withBorder 
+            style={paperStyle}
+        >
+            <Title order={4} mb="md" c={titleColor}>
+                <Group gap="xs">
+                    <ThemeIcon size="lg" radius="md" variant="gradient" gradient={{ from: theme.primaryColor, to: 'cyan' }}>
+                        <IconMessageChatbot size={20}/>
+                    </ThemeIcon>
+                    AI Treatment Advisor (Gemini 2.0 Flash)
+                </Group>
+            </Title>
+            <Text size="sm" c="dimmed" mb="md">
+                Powered by Google's advanced Gemini 2.0 Flash model for more dynamic and helpful responses.
+            </Text>
+
+            <ScrollArea viewportRef={viewport} style={{ flex: 1, marginBottom: theme.spacing.md }} type="auto">
+                <Stack gap="lg" p="xs">
                     {messages.map((message) => (
-                        <Paper
+                        <Box
                             key={message.id}
-                            withBorder
-                            radius="md"
-                            p="sm"
                             style={{
                                 alignSelf: message.sender === 'user' ? 'flex-end' : 'flex-start',
                                 maxWidth: '80%',
-                                backgroundColor: message.sender === 'user' ? 'var(--mantine-color-blue-0)' : 'white'
                             }}
                         >
-                            {message.sender === 'ai' && (
-                                <Group align="center" mb={4}>
-                                    <Avatar radius="xl" size="sm" color="green">AI</Avatar>
-                                    <Text size="sm" fw={500}>Treatment Assistant</Text>
-                                </Group>
-                            )}
-                            <Text>{message.text}</Text>
+                            <Paper
+                                shadow="sm"
+                                radius="lg"
+                                p="md"
+                                withBorder={message.sender === 'ai'}
+                                style={getMessageStyle(message.sender)}
+                            >
+                                {message.sender === 'ai' && (
+                                    <Group gap="xs" mb={rem(5)}>
+                                        <AiAvatar />
+                                        <Text size="sm" fw={500} c={getTextColor(false)}>
+                                            FarmWise AI
+                                        </Text>
+                                    </Group>
+                                )}
+                                <Text style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                                    {message.text}
+                                </Text>
                             </Paper>
+                        </Box>
                     ))}
                      {isAiTyping && (
-                        <Paper
-                            withBorder
-                            radius="md"
-                            p="sm"
-                            style={{ alignSelf: 'flex-start', maxWidth: '80%' }}
-                        >
-                            <Group align="center" mb={4}>
-                                <Avatar radius="xl" size="sm" color="green">AI</Avatar>
-                                <Text size="sm" fw={500}>Treatment Assistant</Text>
-                            </Group>
-                            <Group gap="xs">
-                                <Loader size="xs" />
-                                <Text size="sm">Typing a response...</Text>
-                            </Group>
-                             </Paper>
+                        <Box style={{ alignSelf: 'flex-start', maxWidth: '80%' }}>
+                            <Paper
+                                shadow="sm"
+                                radius="lg"
+                                p="md"
+                                withBorder
+                                style={getMessageStyle('ai')}
+                            >
+                                <Group gap="xs" mb={rem(5)}>
+                                    <AiAvatar />
+                                    <Text size="sm" fw={500} c={getTextColor(false)}>
+                                        FarmWise AI
+                                    </Text>
+                                </Group>
+                                <Group gap="xs" align="center">
+                                    <Loader size="sm" color={theme.primaryColor} />
+                                    <Text size="sm" c="dimmed">Typing...</Text>
+                                </Group>
+                            </Paper>
+                        </Box>
                      )}
-                    <div ref={messageEndRef} />
                 </Stack>
             </ScrollArea>
-            <Group gap="xs" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
+            
+            {/* Add suggested topics */}
+            {messages.length < 3 && (
+                <Paper withBorder p="xs" mb="md" radius="md" style={{ backgroundColor: colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0] }}>
+                    <Text size="xs" c="dimmed" mb="xs">Suggested topics:</Text>
+                    <Group gap="xs" wrap="wrap">
+                        {exampleTopics.map((topic, index) => (
+                            <Button
+                                key={index}
+                                variant="light"
+                                size="xs"
+                                color={theme.primaryColor}
+                                onClick={() => suggestTopic(topic)}
+                            >
+                                {topic}
+                            </Button>
+                        ))}
+                    </Group>
+                </Paper>
+            )}
+            
+            <Group gap="md" style={groupDividerStyle}>
                 <TextInput
-                    placeholder="Ask about treatments..."
+                    placeholder="Ask about treatments... e.g., 'How to treat apple scab?'"
                     style={{ flexGrow: 1 }}
                     value={inputValue}
                     onChange={(event) => setInputValue(event.currentTarget.value)}
-                    onKeyDown={(event) => event.key === 'Enter' && handleSendMessage()}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                            event.preventDefault(); // Prevent newline on Enter
+                            handleSendMessage();
+                        }
+                    }}
                     disabled={isAiTyping}
+                    radius="xl"
+                    rightSectionWidth={rem(42)}
+                    rightSectionProps={{ style: { pointerEvents: 'all' } }} // Ensure button is clickable
+                    rightSection={
+                        isAiTyping ? (
+                            <Loader size="xs" color={theme.primaryColor} />
+                        ) : (
+                            <ActionIcon 
+                                onClick={handleSendMessage} 
+                                disabled={!inputValue.trim() || isAiTyping} 
+                                size={32} 
+                                radius="xl" 
+                                color={theme.primaryColor} 
+                                variant="filled"
+                            >
+                                <IconSend size={rem(18)} />
+                            </ActionIcon>
+                        )
+                    }
                 />
-                <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isAiTyping} loading={isAiTyping}>
-                    <IconSend size={18} />
-                </Button>
             </Group>
         </Paper>
     );
@@ -1790,7 +2027,9 @@ export default function CropHealthPage() {
             </Tabs.Panel>
 
             <Tabs.Panel value="chat" pt="lg">
-                 <TreatmentChat />
+                <Paper withBorder shadow="md" radius="md" p={0}>
+                    <AiChatInterface isFullScreen={false} />
+                </Paper>
             </Tabs.Panel>
         </Tabs>
 
