@@ -455,7 +455,7 @@ export default function LandDetailPage() {
                         
                         <Divider my="md" />
                         
-                        <Group justify="space-between" p="sm" style={{ backgroundColor: isPriceGood ? 'rgba(0, 180, 0, 0.05)' : 'rgba(255, 0, 0, 0.05)' }} radius="md">
+                        <Group justify="space-between" p="sm" style={{ backgroundColor: isPriceGood ? 'rgba(0, 180, 0, 0.05)' : 'rgba(255, 0, 0, 0.05)', borderRadius: 'var(--mantine-radius-md)' }}>
                           <Group>
                             <ActionIcon 
                               color={isPriceGood ? "green" : "red"} 
