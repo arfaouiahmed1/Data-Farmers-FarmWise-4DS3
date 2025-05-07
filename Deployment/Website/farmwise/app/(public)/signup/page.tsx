@@ -123,8 +123,16 @@ export default function SignupPage() {
   // Check username availability when debounced username changes
   useEffect(() => {
     const checkUsername = async () => {
-      if (debouncedUsername.length < 3) {
+      // Clear previous states if username is empty
+      if (!debouncedUsername || debouncedUsername.length === 0) {
         setUsernameChecked(false);
+        setUsernameExists(false);
+        return;
+      }
+      
+      // Set checked but invalid if too short
+      if (debouncedUsername.length < 3) {
+        setUsernameChecked(true);
         setUsernameExists(false);
         return;
       }
@@ -147,12 +155,21 @@ export default function SignupPage() {
   // Check email when debounced email changes
   useEffect(() => {
     const checkEmail = async () => {
+      // Clear previous states if email is empty
+      if (!debouncedEmail || debouncedEmail.length === 0) {
+        setEmailChecked(false);
+        setEmailExists(false);
+        setEmailValidation({ isValid: true, isDisposable: false, feedback: '' });
+        return;
+      }
+      
       // First, validate the email format
       const validation = validateEmail(debouncedEmail);
       setEmailValidation(validation);
       
+      // Don't check with server if format is invalid
       if (!validation.isValid || debouncedEmail.length < 5) {
-        setEmailChecked(false);
+        setEmailChecked(true);
         setEmailExists(false);
         return;
       }
@@ -168,6 +185,11 @@ export default function SignupPage() {
         setIsCheckingEmail(false);
       }
     };
+    
+    // Don't wait for debounce if email is clearly invalid
+    if (debouncedEmail && !isValidEmail(debouncedEmail)) {
+      setEmailValidation(validateEmail(debouncedEmail));
+    }
     
     checkEmail();
   }, [debouncedEmail]);
@@ -262,6 +284,26 @@ export default function SignupPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Get appropriate error message for email field
+  const getEmailErrorMessage = () => {
+    if (email.length === 0) return null;
+    
+    if (!emailValidation.isValid) return 'Invalid email format';
+    if (emailValidation.isDisposable) return 'Please use a permanent email address';
+    if (emailChecked && emailExists) return 'Email already registered';
+    
+    return null;
+  };
+
+  // Get appropriate error message for username field
+  const getUsernameErrorMessage = () => {
+    if (username.length === 0) return null;
+    if (username.length < 3) return 'Username must be at least 3 characters';
+    if (usernameChecked && usernameExists) return 'Username already taken';
+    
+    return null;
   };
 
   return (
@@ -388,7 +430,7 @@ export default function SignupPage() {
                     placeholder="your_username"
                     value={username}
                     onChange={(e) => setUsername(e.currentTarget.value)}
-                    error={usernameExists && usernameChecked ? 'Username already taken' : null}
+                    error={getUsernameErrorMessage()}
                     radius="md"
                     className={classes.input}
                     leftSection={
@@ -433,12 +475,7 @@ export default function SignupPage() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.currentTarget.value)}
-                    error={
-                      emailChecked && !emailValidation.isValid ? 'Invalid email format' :
-                      emailChecked && emailValidation.isDisposable ? 'Please use a permanent email address' :
-                      emailChecked && emailExists ? 'Email already registered' :
-                      null
-                    }
+                    error={getEmailErrorMessage()}
                     radius="md"
                     className={classes.input}
                     leftSection={
@@ -578,6 +615,19 @@ export default function SignupPage() {
                     loading={isSubmitting}
                     className={classes.button}
                     rightSection={<IconArrowRight size={18} />}
+                    disabled={
+                      isSubmitting || 
+                      usernameExists || 
+                      emailExists || 
+                      !emailValidation.isValid || 
+                      emailValidation.isDisposable ||
+                      !passwordValidation.isValid || 
+                      password !== confirmPassword ||
+                      !password ||
+                      !username ||
+                      !email ||
+                      !termsAccepted
+                    }
                   >
                     Create account
                   </Button>

@@ -33,11 +33,11 @@ export default function PasswordStrengthIndicator({ passwordValidation }: Passwo
       </Box>
       
       {feedback.length > 0 && (
-        <Text size="xs" c="dimmed">
+        <Box>
           {feedback.map((item, index) => (
-            <div key={index}>• {item}</div>
+            <Text component="div" size="xs" c="dimmed" key={index} mb={4}>• {item}</Text>
           ))}
-        </Text>
+        </Box>
       )}
     </Stack>
   );

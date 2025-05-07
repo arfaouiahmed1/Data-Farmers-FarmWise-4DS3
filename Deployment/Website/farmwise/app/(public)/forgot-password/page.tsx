@@ -18,11 +18,12 @@ import {
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IconArrowLeft, IconCheck, IconAlertCircle, IconAt, IconKey, IconArrowRight } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormEvent } from 'react';
 import authService from '../../api/auth';
 import classes from './ForgotPasswordPage.module.css';
+import { isValidEmail } from '@/app/utils/emailUtils';
 
 // Animation variants
 const containerVariant = {
@@ -72,13 +73,42 @@ export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [emailValidation, setEmailValidation] = useState({ isValid: true, feedback: '' });
   const router = useRouter();
+
+  // Update email validation on change
+  useEffect(() => {
+    // Skip validation if email is empty
+    if (!email || email.length === 0) {
+      setEmailValidation({ isValid: true, feedback: '' });
+      return;
+    }
+    
+    // Validate email format
+    const isValid = isValidEmail(email);
+    setEmailValidation({ 
+      isValid, 
+      feedback: isValid ? '' : 'Please enter a valid email address' 
+    });
+  }, [email]);
+  
+  // Get appropriate error message for email field
+  const getEmailErrorMessage = () => {
+    if (email.length === 0) return null;
+    if (!emailValidation.isValid) return emailValidation.feedback;
+    return null;
+  };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!email) {
       setError('Please enter your email address');
+      return;
+    }
+
+    if (!emailValidation.isValid) {
+      setError(emailValidation.feedback);
       return;
     }
 
@@ -183,7 +213,7 @@ export default function ForgotPasswordPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.currentTarget.value)}
-                    error={error && !email ? 'Email is required' : null}
+                    error={getEmailErrorMessage()}
                     radius="md"
                     className={classes.input}
                     leftSection={
@@ -208,6 +238,7 @@ export default function ForgotPasswordPage() {
                       loading={isSubmitting}
                       radius="md"
                       rightSection={<IconArrowRight size={18} />}
+                      disabled={isSubmitting || !email || !emailValidation.isValid}
                     >
                       Reset password
                     </Button>

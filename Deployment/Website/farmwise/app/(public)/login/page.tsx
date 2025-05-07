@@ -115,12 +115,20 @@ export default function LoginPage() {
         return;
       }
       
+      // Determine if input is an email
+      const isEmail = debouncedIdentity.includes('@');
+      
+      // If it looks like an email but is invalid, don't check with server
+      if (isEmail && !isValidEmail(debouncedIdentity)) {
+        setIdentityChecked(true);
+        setIdentityExists(false);
+        return;
+      }
+      
       setIsCheckingIdentity(true);
       
       try {
         // Check if it's an email or username based on current login method or content
-        const isEmail = loginMethod === 'email' || (loginMethod === 'username' && debouncedIdentity.includes('@') && isValidEmail(debouncedIdentity));
-        
         if (isEmail) {
           const result = await authService.checkEmail(debouncedIdentity);
           setIdentityExists(result.exists);
@@ -138,7 +146,22 @@ export default function LoginPage() {
     };
     
     checkIdentity();
-  }, [debouncedIdentity, loginMethod]);
+  }, [debouncedIdentity]);
+  
+  // Get appropriate error message for identity field
+  const getIdentityErrorMessage = () => {
+    if (usernameOrEmail.length === 0) return '';
+    if (usernameOrEmail.length > 0 && usernameOrEmail.length < 3) return 'Too short (minimum 3 characters)';
+    
+    if (usernameOrEmail.includes('@')) {
+      if (!isValidEmail(usernameOrEmail)) return 'Invalid email format';
+      if (identityChecked && !identityExists) return 'Email not found';
+    } else {
+      if (identityChecked && !identityExists) return 'Username not found';
+    }
+    
+    return '';
+  };
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -304,6 +327,7 @@ export default function LoginPage() {
                     }
                     radius="md"
                     className={classes.input}
+                    error={getIdentityErrorMessage()}
                   />
                 </motion.div>
                 
@@ -343,6 +367,12 @@ export default function LoginPage() {
                     rightSection={<IconArrowRight size={18} />}
                     className={classes.button}
                     mt="md"
+                    disabled={
+                      isSubmitting || 
+                      (usernameOrEmail.length >= 3 && !identityExists && identityChecked) ||
+                      !usernameOrEmail ||
+                      !password
+                    }
                   >
                     Sign in
                   </Button>
