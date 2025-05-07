@@ -29,9 +29,12 @@ import {
     Tooltip,
     useMantineTheme,
     Collapse,
-    useMantineColorScheme
+    useMantineColorScheme,
+    Divider,
+    List,
+    Center
 } from '@mantine/core';
-import { IconPlant2, IconInfoCircle, IconBug, IconLeaf, IconMessageChatbot, IconUpload, IconPhoto, IconX, IconSend, IconCalendar, IconTrendingUp, IconChartBar, IconMapPin, IconPlayerPlay, IconPlayerPause, IconArrowsMaximize, IconArrowRight } from '@tabler/icons-react';
+import { IconPlant2, IconInfoCircle, IconBug, IconLeaf, IconMessageChatbot, IconUpload, IconPhoto, IconX, IconSend, IconCalendar, IconTrendingUp, IconChartBar, IconMapPin, IconPlayerPlay, IconPlayerPause, IconArrowsMaximize, IconArrowRight, IconCheck, IconMedicineSyrup, IconShieldCheck, IconAlertTriangle } from '@tabler/icons-react';
 import styles from './CropHealthPage.module.css';
 import { Dropzone, IMAGE_MIME_TYPE, FileWithPath } from '@mantine/dropzone';
 import dynamic from 'next/dynamic';
@@ -974,25 +977,56 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
     if (!uploadedImageDetails.url) {
         return (
             <Paper p="xl" radius="md" shadow="xs" withBorder>
-                <Dropzone
-                    onDrop={handleDrop}
-                    accept={IMAGE_MIME_TYPE}
-                    h={300}
-                    styles={{
-                        root: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s ease' },
-                    }}
-                >
-                    <Group justify="center" gap="xl" mih={220} style={{ pointerEvents: 'none' }}>
-                        <Dropzone.Accept><ThemeIcon color="blue" variant="light" size={60} radius="xl"><IconUpload stroke={1.5} size={30}/></ThemeIcon></Dropzone.Accept>
-                        <Dropzone.Reject><ThemeIcon color="red" variant="light" size={60} radius="xl"><IconX stroke={1.5} size={30}/></ThemeIcon></Dropzone.Reject>
-                        <Dropzone.Idle><ThemeIcon color="gray" variant="light" size={60} radius="xl"><IconPhoto stroke={1.5} size={30}/></ThemeIcon></Dropzone.Idle>
-                        <Stack align="center" gap={5}>
-                            <Text size="xl" fw={500}>Drag image here or click to select</Text>
-                            <Text size="sm" c="dimmed">Upload a clear photo for {type === 'weed' ? 'weed identification' : 'disease detection'}.</Text>
-                            <Text size="xs" c="dimmed" mt="xs">Max file size: 5MB. Supported formats: JPEG, PNG.</Text>
-                        </Stack>
-                    </Group>
-                </Dropzone>
+                <Stack>
+                    <Title order={4} mb="md">
+                        <Group gap="xs">
+                            <ThemeIcon size="md" variant={type === 'weed' ? "gradient" : "light"} 
+                                gradient={type === 'weed' ? { from: 'green', to: 'lime', deg: 105 } : undefined}
+                                color={type === 'disease' ? "blue" : undefined}>
+                                {type === 'weed' ? <IconLeaf size={16} /> : <IconBug size={16} />}
+                            </ThemeIcon>
+                            Upload Image for {type === 'weed' ? 'Weed Identification' : 'Disease Detection'}
+                        </Group>
+                    </Title>
+                    <Text c="dimmed" size="sm" mb="md">
+                        Upload a clear photo for analysis. Our AI will identify {type === 'weed' ? 'weeds' : 'diseases'} in your crops.
+                    </Text>
+                    <Dropzone
+                        onDrop={handleDrop}
+                        accept={IMAGE_MIME_TYPE}
+                        className={type === 'weed' ? styles.weedDropzone : styles.diseaseDropzone}
+                    >
+                        <Group justify="center" gap="xl" mih={220} style={{ pointerEvents: 'none' }}>
+                            <Dropzone.Accept>
+                                <ThemeIcon color={type === 'weed' ? "green" : "blue"} variant="light" size={60} radius="xl">
+                                    <IconUpload stroke={1.5} size={30}/>
+                                </ThemeIcon>
+                            </Dropzone.Accept>
+                            <Dropzone.Reject>
+                                <ThemeIcon color="red" variant="light" size={60} radius="xl">
+                                    <IconX stroke={1.5} size={30}/>
+                                </ThemeIcon>
+                            </Dropzone.Reject>
+                            <Dropzone.Idle>
+                                <ThemeIcon 
+                                    color={type === 'weed' ? "green" : "blue"} 
+                                    variant="light" 
+                                    size={60} 
+                                    radius="xl"
+                                >
+                                    {type === 'weed' ? <IconLeaf stroke={1.5} size={30}/> : <IconBug stroke={1.5} size={30}/>}
+                                </ThemeIcon>
+                            </Dropzone.Idle>
+                            <Stack align="center" gap={5}>
+                                <Text size="xl" fw={500}>Drag image here or click to select</Text>
+                                <Text size="sm" c="dimmed">
+                                    Upload a clear photo for {type === 'weed' ? 'weed identification' : 'disease detection'}.
+                                </Text>
+                                <Text size="xs" c="dimmed" mt="xs">Max file size: 5MB. Supported formats: JPEG, PNG.</Text>
+                            </Stack>
+                        </Group>
+                    </Dropzone>
+                </Stack>
             </Paper>
         );
     }
@@ -1001,9 +1035,17 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
     if (analyzing) {
         return (
             <Paper withBorder p="xl" radius="md" shadow="xs" style={{ minHeight: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <Loader size="xl" variant="bars" />
-                <Title order={3} mt="lg">Analyzing Image for {type === 'weed' ? 'Weeds' : 'Diseases'}</Title>
-                <Text c="dimmed" size="sm" mt={5}>Our AI is meticulously scanning your image. Please wait a moment.</Text>
+                <Loader 
+                    size="xl" 
+                    variant="bars" 
+                    color={type === 'weed' ? 'green' : 'blue'} 
+                />
+                <Title order={3} mt="lg">
+                    Analyzing Image for {type === 'weed' ? 'Weeds' : 'Diseases'}
+                </Title>
+                <Text c="dimmed" size="sm" mt={5}>
+                    Our AI is meticulously scanning your image. Please wait a moment.
+                </Text>
                 {uploadedImageDetails.url && (
                     <Box mt="lg" style={{ width: '100%', maxWidth: '300px', opacity: 0.5 }}>
                          <Image src={uploadedImageDetails.url} radius="md" alt="Analyzing image" fit="contain" />
@@ -1019,9 +1061,19 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
         if (analysisError) {
             return (
                 <Paper withBorder p="xl" radius="md" shadow="xs">
-                    <Alert title="Analysis Error" color="red" icon={<IconInfoCircle />} radius="md">
+                    <Alert 
+                        title="Analysis Error" 
+                        color="red" 
+                        icon={<IconInfoCircle />} 
+                        radius="md"
+                    >
                         <Text mb="sm">{analysisError}</Text>
-                        <Button onClick={resetAnalysisState} variant="light" color="red" mt="md">
+                        <Button 
+                            onClick={resetAnalysisState} 
+                            variant="light" 
+                            color="red" 
+                            mt="md"
+                        >
                             Try Another Image
                         </Button>
                     </Alert>
@@ -1034,7 +1086,7 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
             // 3b. Weed: No Detections
             if (detections.length === 0) {
                 return (
-                    <Paper withBorder p="xl" radius="md" shadow="xs" style={{ textAlign: 'center' }}>
+                    <Paper withBorder p="xl" radius="md" shadow="sm" style={{ textAlign: 'center' }}>
                         <ThemeIcon size={80} radius="xl" variant="light" color="green" mx="auto" mb="lg">
                             <IconPlant2 size={40} />
                         </ThemeIcon>
@@ -1042,214 +1094,458 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
                         <Text c="dimmed" mb="xl" size="sm">
                             {result || 'Our analysis indicates the area is clear of common weeds. Great job!'}
                         </Text>
-                        <Button onClick={resetAnalysisState} leftSection={<IconUpload size={18}/>}>
+                        <Button 
+                            onClick={resetAnalysisState} 
+                            leftSection={<IconUpload size={18}/>}
+                            variant="light"
+                            color="green"
+                        >
                             Analyze Another Image
                         </Button>
                     </Paper>
                 );
             }
 
-            // 3c. Weed: Detections Found - Main Layout
+            // 3c. Weed: Detections Found - Enhanced Layout
             return (
-                <Paper withBorder p="lg" radius="md" shadow="xs">
-                    <Grid gutter="lg">
-                        <Grid.Col span={{ base: 12, lg: 7 }}>
+                <Paper withBorder p="xl" radius="md" shadow="sm">
+                    <Grid gutter="xl">
+                        <Grid.Col span={{ base: 12, md: 6 }}>
                             <Stack>
-                                <Group justify="space-between" align="center" mb="xs">
-                                   <Title order={4}><IconPhoto size={20} style={{verticalAlign: 'middle', marginRight: rem(8)}}/>Analyzed Image</Title>
-                                    <Tooltip label="Detections are highlighted on the image." position="top-end" withArrow>
-                                        <ActionIcon variant="subtle" color="gray"><IconInfoCircle/></ActionIcon>
-                                    </Tooltip>
+                                <Group gap="xs">
+                                    <ThemeIcon variant="gradient" gradient={{ from: 'green', to: 'lime', deg: 105 }} size="md">
+                                        <IconPhoto size={16} />
+                                    </ThemeIcon>
+                                    <Title order={4}>Analyzed Image</Title>
                                 </Group>
-                                <Paper withBorder radius="md" p="xs" style={{ position: 'relative', backgroundColor: theme.colors.dark[8] }}>
-                                    <Box style={{ position: 'relative', height: rem(450) /* Consistent height */ }}>
+                                
+                                <Paper withBorder radius="md" p="xs" style={{ 
+                                    position: 'relative', 
+                                    backgroundColor: colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0],
+                                    border: `1px solid ${theme.colors.green[colorScheme === 'dark' ? 8 : 3]}`,
+                                    minHeight: 350
+                                }}>
+                                    <Box style={{ position: 'relative', height: 350 }}>
                                         <Image
                                             src={uploadedImageDetails.url!}
                                             alt="Uploaded weed image"
                                             h="100%" w="100%" fit="contain" radius="sm"
-                                            style={{ position: 'absolute', top: 0, left: 0, opacity: 0.1, zIndex: 0 }}
+                                            style={{ position: 'absolute', top: 0, left: 0, opacity: 0.15, zIndex: 0 }}
                                         />
                                         <canvas
                                             ref={canvasRef}
-                                            style={{ display: 'block', borderRadius: 'var(--mantine-radius-sm)', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}
+                                            style={{ 
+                                                display: 'block', 
+                                                borderRadius: theme.radius.sm, 
+                                                position: 'absolute', 
+                                                top: 0, 
+                                                left: 0, 
+                                                width: '100%', 
+                                                height: '100%', 
+                                                zIndex: 1 
+                                            }}
                                         />
                                     </Box>
                                 </Paper>
-                                <Group justify="flex-end" mt="sm">
-                                    <Button variant="outline" onClick={resetAnalysisState} leftSection={<IconPhoto size={18}/>}>
-                                        Analyze Another Image
-                                    </Button>
-                                </Group>
+                                
+                                <Paper withBorder p="md" radius="md" shadow="xs" bg={colorScheme === 'dark' ? theme.colors.dark[6] : theme.white}>
+                                    <Stack gap="md">
+                                        <Group justify="space-between">
+                                            <Group gap="xs">
+                                                <ThemeIcon variant="light" size="md" color="green">
+                                                    <IconInfoCircle size={16} />
+                                                </ThemeIcon>
+                                                <Text fw={600} size="sm">Detection Summary</Text>
+                                            </Group>
+                                            <Badge size="lg" radius="sm" color="green" variant="filled">
+                                                {detections.length} {detections.length === 1 ? 'Weed' : 'Weeds'}
+                                            </Badge>
+                                        </Group>
+                                        
+                                        <Divider />
+                                        
+                                        <Group justify="space-between">
+                                            <Text size="sm" fw={500}>Analysis Date:</Text>
+                                            <Text size="sm">{new Date().toLocaleDateString()}</Text>
+                                        </Group>
+                                        
+                                        {selectedWeed && (
+                                            <>
+                                                <Divider />
+                                                <Group justify="space-between" wrap="nowrap">
+                                                    <Text size="sm" fw={500}>Selected Weed:</Text>
+                                                    <Badge 
+                                                        size="md" 
+                                                        radius="sm" 
+                                                        color={getColorNameForClass(selectedWeed.class_name)}
+                                                    >
+                                                        {selectedWeed.class_name.charAt(0).toUpperCase() + selectedWeed.class_name.slice(1)}
+                                                    </Badge>
+                                                </Group>
+                                            </>
+                                        )}
+                                    </Stack>
+                                </Paper>
+                                
+                                <Button
+                                    onClick={resetAnalysisState}
+                                    leftSection={<IconUpload size={18}/>}
+                                    variant="light"
+                                    color="green"
+                                    fullWidth
+                                    mt="sm"
+                                >
+                                    Analyze Another Image
+                                </Button>
                             </Stack>
                         </Grid.Col>
 
-                        <Grid.Col span={{ base: 12, lg: 5 }}>
-                            <Stack h="100%">
-                                <Title order={4} mb="xs"><IconLeaf size={20} style={{verticalAlign: 'middle', marginRight: rem(8)}}/>Detected Weeds ({detections.length})</Title>
-                                <ScrollArea h={rem(200)} type="auto" offsetScrollbars="y" style={{border: `1px solid ${theme.colors.gray[3]}`, borderRadius: theme.radius.sm}}>
-                                    <Stack gap="xs" p="xs">
-                                        {detections.map((weed, index) => {
-                                            const weedColorName = getColorNameForClass(weed.class_name);
-                                            const weedColor = theme.colors[weedColorName][colorScheme === 'dark' ? 4 : 6];
-                                            return (
-                                            <Paper
-                                                key={index}
-                                                withBorder={selectedWeed !== weed}
-                                                p="sm"
-                                                radius="sm"
-                                                onClick={() => setSelectedWeed(weed)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s ease',
-                                                    borderLeft: `4px solid ${weedColor}`,
-                                                    boxShadow: selectedWeed === weed ? theme.shadows.md : theme.shadows.xs,
-                                                    transform: selectedWeed === weed ? 'scale(1.02)' : 'scale(1)',
-                                                    backgroundColor: selectedWeed === weed 
-                                                                     ? (colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[0]) 
-                                                                     : (colorScheme === 'dark' ? theme.colors.dark[6] : theme.white),
+                        <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Card shadow="md" radius="md" withBorder padding={0} style={{ overflow: 'hidden', height: '100%' }}>
+                                <Card.Section 
+                                    p="md"
+                                    style={{ 
+                                        backgroundColor: theme.colors.green[colorScheme === 'dark' ? 8 : 6],
+                                        borderBottom: `1px solid ${theme.colors.green[colorScheme === 'dark' ? 7 : 5]}`,
+                                    }}
+                                >
+                                    <Group justify="space-between">
+                                        <Group gap="sm">
+                                            <ThemeIcon 
+                                                size={48} 
+                                                radius="xl" 
+                                                variant="filled"
+                                                style={{ 
+                                                    backgroundColor: theme.colors.green[colorScheme === 'dark' ? 6 : 2],
+                                                    border: `2px solid ${theme.colors.green[colorScheme === 'dark' ? 2 : 7]}`
                                                 }}
-                                                component="button"
-                                                className={styles.weedListItem}
                                             >
-                                                <Group justify="space-between">
-                                                    <Text fw={selectedWeed === weed ? 700 : 500} size="sm" c={selectedWeed === weed ? theme.colors[weedColorName][colorScheme === 'dark' ? 3:7] : undefined}>
-                                                        {weed.class_name.charAt(0).toUpperCase() + weed.class_name.slice(1)}
-                                                    </Text>
-                                                </Group>
-                                            </Paper>
-                                        );
-                                        })}
-                                    </Stack>
-                                </ScrollArea>
+                                                <IconLeaf size={26} style={{ color: theme.colors.green[colorScheme === 'dark' ? 2 : 7] }} />
+                                            </ThemeIcon>
+                                            <Stack gap={0}>
+                                                <Text fw={700} size="xl" c="white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                                                    Weed Detection Results
+                                                </Text>
+                                                <Text c="white" opacity={0.9} size="sm">
+                                                    {detections.length} {detections.length === 1 ? 'species' : 'species'} identified
+                                                </Text>
+                                            </Stack>
+                                        </Group>
+                                    </Group>
+                                </Card.Section>
+                                
+                                <Stack p="md" gap="md" style={{ height: 'calc(100% - 90px)', overflow: 'hidden' }}>
+                                    <Tabs defaultValue="list" style={{ height: '100%' }}>
+                                        <Tabs.List grow>
+                                            <Tabs.Tab 
+                                                value="list" 
+                                                leftSection={<IconLeaf size={16} />}
+                                            >
+                                                Detected Weeds
+                                            </Tabs.Tab>
+                                            <Tabs.Tab 
+                                                value="details" 
+                                                leftSection={<IconInfoCircle size={16} />}
+                                                disabled={!selectedWeed}
+                                            >
+                                                Weed Details
+                                            </Tabs.Tab>
+                                        </Tabs.List>
 
-                                <Box mt="md" style={{ flexGrow: 1 }}>
-                                <Collapse in={!!selectedWeed} transitionDuration={300}>
-                                    {selectedWeed && (() => {
-                                        const selectedWeedColorName = getColorNameForClass(selectedWeed.class_name);
-                                        const headerBgColor = theme.colors[selectedWeedColorName][colorScheme === 'dark' ? 8 : 6];
-                                        const iconColor = theme.colors[selectedWeedColorName][colorScheme === 'dark' ? 2 : 7];
-                                        const iconBgColor = theme.colors[selectedWeedColorName][colorScheme === 'dark' ? 6 : 1];
-
-                                        return (
-                                            <Card shadow="md" padding={0} radius="md" withBorder style={{ overflow: 'hidden', height: '100%' }}>
-                                                <Card.Section
-                                                    style={{ backgroundColor: headerBgColor, borderBottom: `1px solid ${theme.colors[selectedWeedColorName][colorScheme === 'dark' ? 7 : 5]}` }}
-                                                    p="md"
-                                                >
-                                                    <Group justify="space-between">
-                                                        <Group gap="sm">
-                                                            <ThemeIcon
-                                                                size={48}
-                                                                radius="xl"
-                                                                variant="filled"
-                                                                style={{ backgroundColor: iconBgColor, border:`2px solid ${iconColor}`}}
+                                        <Tabs.Panel value="list" pt="md" style={{ height: 'calc(100% - 36px)' }}>
+                                            <ScrollArea h="100%" type="auto" offsetScrollbars="y">
+                                                <Stack gap="xs">
+                                                    {detections.map((weed, index) => {
+                                                        const weedColorName = getColorNameForClass(weed.class_name);
+                                                        const weedColor = theme.colors[weedColorName][colorScheme === 'dark' ? 4 : 6];
+                                                        const confidencePercent = (weed.confidence * 100).toFixed(1);
+                                                        const confidenceLevel = weed.confidence > 0.85 
+                                                            ? "High" 
+                                                            : weed.confidence > 0.7 
+                                                                ? "Medium" 
+                                                                : "Low";
+                                                        
+                                                        return (
+                                                            <Paper
+                                                                key={index}
+                                                                withBorder
+                                                                p="md"
+                                                                radius="md"
+                                                                onClick={() => setSelectedWeed(weed)}
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.2s ease',
+                                                                    borderLeft: `4px solid ${weedColor}`,
+                                                                    boxShadow: selectedWeed === weed ? theme.shadows.md : 'none',
+                                                                    transform: selectedWeed === weed ? 'scale(1.02)' : 'scale(1)',
+                                                                    backgroundColor: selectedWeed === weed 
+                                                                        ? (colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[0]) 
+                                                                        : (colorScheme === 'dark' ? theme.colors.dark[6] : theme.white),
+                                                                }}
                                                             >
-                                                                <IconLeaf size={26} style={{color: iconColor }} />
-                                                            </ThemeIcon>
-                                                            <Stack gap={0}>
-                                                                <Title order={4} c="white" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.3)'}}>
-                                                                    {selectedWeed.class_name.charAt(0).toUpperCase() + selectedWeed.class_name.slice(1)}
-                                                                </Title>
-                                                            </Stack>
-                                                        </Group>
-                                                    </Group>
-                                                </Card.Section>
-                                                <ScrollArea h={rem(220)} p="md">
-                                                <Stack gap="sm">
-                                                    <Box>
-                                                        <Text fw={700} size="sm" mb={2}>Description:</Text>
-                                                        <Text size="xs" c="dimmed">
-                                                            {weedInfoDB[selectedWeed.class_name]?.description || 'A competitive weed species...'}
-                                                        </Text>
-                                                    </Box>
-                                                     <Box>
-                                                        <Text fw={700} size="sm" mt="xs" mb={2}>Impact on Crops:</Text>
-                                                        <Text size="xs" c="dimmed">
-                                                            {weedInfoDB[selectedWeed.class_name]?.impact || 'Competes with crops...'}
-                                                        </Text>
-                                                    </Box>
-                                                    <Box>
-                                                        <Text fw={700} size="sm" mt="xs" mb={2}>Recommended Control:</Text>
-                                                        <Text size="xs" c="dimmed">
-                                                            {weedInfoDB[selectedWeed.class_name]?.control || 'Implement integrated weed management...'}
-                                                        </Text>
-                                                    </Box>
+                                                                <Group justify="space-between" wrap="nowrap">
+                                                                    <Group wrap="nowrap">
+                                                                        <ThemeIcon 
+                                                                            color={weedColorName} 
+                                                                            variant="light" 
+                                                                            size="lg" 
+                                                                            radius="md"
+                                                                        >
+                                                                            <IconLeaf size={18} />
+                                                                        </ThemeIcon>
+                                                                        <div>
+                                                                            <Text fw={600} size="sm">
+                                                                                {weed.class_name.charAt(0).toUpperCase() + weed.class_name.slice(1)}
+                                                                            </Text>
+                                                                            <Group gap={4}>
+                                                                                <Text size="xs" c="dimmed">Confidence:</Text>
+                                                                                <Text size="xs" fw={500} c={
+                                                                                    weed.confidence > 0.85 
+                                                                                        ? theme.colors.green[colorScheme === 'dark' ? 4 : 7]
+                                                                                        : weed.confidence > 0.7 
+                                                                                            ? theme.colors.blue[colorScheme === 'dark' ? 4 : 7]
+                                                                                            : theme.colors.gray[colorScheme === 'dark' ? 4 : 7]
+                                                                                }>
+                                                                                    {confidencePercent}%
+                                                                                </Text>
+                                                                            </Group>
+                                                                        </div>
+                                                                    </Group>
+                                                                    <Badge 
+                                                                        color={
+                                                                            weed.confidence > 0.85 
+                                                                                ? "green" 
+                                                                                : weed.confidence > 0.7 
+                                                                                    ? "blue" 
+                                                                                    : "gray"
+                                                                        }
+                                                                    >
+                                                                        {confidenceLevel}
+                                                                    </Badge>
+                                                                </Group>
+                                                            </Paper>
+                                                        );
+                                                    })}
                                                 </Stack>
-                                                </ScrollArea>
-                                            </Card>
-                                        );
-                                    })()}
-                                </Collapse>
-                                </Box>
-                            </Stack>
+                                            </ScrollArea>
+                                        </Tabs.Panel>
+
+                                        <Tabs.Panel value="details" pt="md" style={{ height: 'calc(100% - 36px)' }}>
+                                            {selectedWeed && (() => {
+                                                const weedColorName = getColorNameForClass(selectedWeed.class_name);
+                                                const formattedWeedName = selectedWeed.class_name.charAt(0).toUpperCase() + selectedWeed.class_name.slice(1);
+                                                
+                                                // Get weed info
+                                                const weedInfo = weedInfoDB[selectedWeed.class_name] || {
+                                                    description: 'Information not available for this species.',
+                                                    control: 'Consult with local agricultural experts for control methods.',
+                                                    impact: 'Impact assessment not available for this species.'
+                                                };
+
+                                                return (
+                                                    <ScrollArea h="100%" type="auto" offsetScrollbars="y">
+                                                        <Stack gap="md">
+                                                            <Paper withBorder p="md" radius="md" bg={colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0]}>
+                                                                <Group gap="sm">
+                                                                    <ThemeIcon 
+                                                                        size="xl" 
+                                                                        radius="md" 
+                                                                        color={weedColorName}
+                                                                        variant="light"
+                                                                    >
+                                                                        <IconLeaf size={24} />
+                                                                    </ThemeIcon>
+                                                                    <div>
+                                                                        <Text fw={700} size="lg">{formattedWeedName}</Text>
+                                                                        <Text size="xs" c="dimmed">
+                                                                            Confidence: {(selectedWeed.confidence * 100).toFixed(1)}%
+                                                                        </Text>
+                                                                    </div>
+                                                                </Group>
+                                                            </Paper>
+                                                            
+                                                            <Stack gap="lg">
+                                                                <Stack gap="xs">
+                                                                    <Group gap="xs">
+                                                                        <ThemeIcon size="sm" radius="xl" color={weedColorName} variant="light">
+                                                                            <IconInfoCircle size={14} />
+                                                                        </ThemeIcon>
+                                                                        <Text fw={700} size="sm">Description</Text>
+                                                                    </Group>
+                                                                    <Text size="sm">{weedInfo.description}</Text>
+                                                                </Stack>
+                                                                
+                                                                <Stack gap="xs">
+                                                                    <Group gap="xs">
+                                                                        <ThemeIcon size="sm" radius="xl" color="orange" variant="light">
+                                                                            <IconAlertTriangle size={14} />
+                                                                        </ThemeIcon>
+                                                                        <Text fw={700} size="sm">Impact on Crops</Text>
+                                                                    </Group>
+                                                                    <Text size="sm">{weedInfo.impact}</Text>
+                                                                </Stack>
+                                                                
+                                                                <Stack gap="xs">
+                                                                    <Group gap="xs">
+                                                                        <ThemeIcon size="sm" radius="xl" color="blue" variant="light">
+                                                                            <IconMedicineSyrup size={14} />
+                                                                        </ThemeIcon>
+                                                                        <Text fw={700} size="sm">Recommended Control</Text>
+                                                                    </Group>
+                                                                    <Text size="sm">{weedInfo.control}</Text>
+                                                                </Stack>
+                                                                
+                                                                <Alert icon={<IconInfoCircle size={16} />} title="Management Note" color="gray" variant="light">
+                                                                    <Text size="xs" c="dimmed">
+                                                                        For optimal results, implement integrated weed management strategies combining chemical, mechanical, and cultural control methods.
+                                                                    </Text>
+                                                                </Alert>
+                                                            </Stack>
+                                                        </Stack>
+                                                    </ScrollArea>
+                                                );
+                                            })()}
+                                        </Tabs.Panel>
+                                    </Tabs>
+                                </Stack>
+                            </Card>
                         </Grid.Col>
                     </Grid>
                 </Paper>
             );
-        } else if (type === 'disease') {
-             // 3d. Disease: Result (No specific "no disease" visual, relies on 'result' string)
-            if (result) { // If there's any result string from the mock
-                const isLikelyNoDisease = result.toLowerCase().includes("no significant disease symptoms detected");
-                const cardColor = isLikelyNoDisease ? "green" : "blue";
-                const cardIcon = isLikelyNoDisease ? <IconPlant2 size={28} /> : <IconBug size={28} />;
-                
-                return (
-                    <Paper withBorder p="xl" radius="md" shadow="xs">
-                        <Grid gutter="lg">
-                            <Grid.Col span={{ base: 12, md: 7 }}>
-                                <Stack>
-                                     <Title order={4} mb="xs"><IconPhoto size={20} style={{verticalAlign: 'middle', marginRight: rem(8)}}/>Analyzed Image</Title>
-                                     <Paper withBorder radius="md" p="xs" style={{ backgroundColor: theme.colors.dark[8] }}>
-                                        <Image src={uploadedImageDetails.url!} alt="Uploaded disease image" fit="contain" h={rem(350)} radius="sm"/>
-                                     </Paper>
-                                </Stack>
-                            </Grid.Col>
-                             <Grid.Col span={{ base: 12, md: 5 }}>
-                                <Card shadow="md" padding="lg" radius="md" withBorder h="100%">
-                                    <Card.Section 
-                                        style={{ backgroundColor: theme.colors[cardColor][colorScheme === 'dark' ? 8 : 6] }} 
-                                        p="md"
-                                    >
-                                        <Group justify="space-between">
-                                            <Group gap="sm">
-                                                <ThemeIcon 
-                                                    size={48} radius="xl" variant="filled"
-                                                    style={{ backgroundColor: theme.colors[cardColor][colorScheme === 'dark' ? 6:1], border: `2px solid ${theme.colors[cardColor][colorScheme === 'dark' ? 2:7]}`}}
-                                                >
-                                                    {React.cloneElement(cardIcon, { style: { color: theme.colors[cardColor][colorScheme === 'dark' ? 2:7]}})}
-                                                </ThemeIcon>
-                                                <Stack gap={0}>
-                                                    <Text fw={700} size="lg" c="white">
-                                                        Disease Analysis Result
-                                                    </Text>
-                                                     {isLikelyNoDisease && (
-                                                        <Text c={theme.colors[cardColor][0]} opacity={0.9} size="xs">
-                                                            All Clear!
-                                                        </Text>
-                                                     )}
-                                                </Stack>
-                                            </Group>
-                                        </Group>
-                                    </Card.Section>
-                                    <ScrollArea h={rem(250)} mt="md">
-                                        <Text size="sm" lh="md" style={{whiteSpace: 'pre-line'}}>{result}</Text>
-                                    </ScrollArea>
-                                </Card>
-                            </Grid.Col>
-                        </Grid>
-                        <Group justify="center" mt="xl">
-                            <Button onClick={resetAnalysisState} leftSection={<IconUpload size={18}/>} variant="light">
-                                Analyze Another Image
-                            </Button>
-                        </Group>
-                    </Paper>
-                );
-            }
-             // If no result string and no error (should ideally not happen with current mock, but good fallback)
+        }
+        else if (type === 'disease') {
+            // Disease Detection Results UI
             return (
-                <Paper withBorder p="xl" radius="md" shadow="xs" style={{ textAlign: 'center' }}>
-                     <Title order={4} c="dimmed">Analysis complete, but no specific details were returned.</Title>
-                     <Button onClick={resetAnalysisState} mt="lg">Analyze Another</Button>
+                <Paper withBorder p="xl" radius="md" shadow="sm">
+                    <Grid gutter="xl">
+                        <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Stack>
+                                <Group gap="xs">
+                                    <ThemeIcon variant="gradient" gradient={{ from: 'blue', to: 'cyan', deg: 105 }} size="md">
+                                        <IconPhoto size={16} />
+                                    </ThemeIcon>
+                                    <Title order={4}>Analyzed Image</Title>
+                                </Group>
+                                
+                                <Paper withBorder radius="md" p="xs" style={{ 
+                                    backgroundColor: colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0],
+                                    border: `1px solid ${theme.colors.blue[colorScheme === 'dark' ? 8 : 3]}`,
+                                    minHeight: 350
+                                }}>
+                                    <Image 
+                                        src={uploadedImageDetails.url!} 
+                                        alt="Plant disease analysis" 
+                                        height={350}
+                                        fit="contain"
+                                        radius="sm" 
+                                    />
+                                </Paper>
+                                
+                                <Button
+                                    onClick={resetAnalysisState}
+                                    leftSection={<IconUpload size={18}/>}
+                                    variant="light"
+                                    color="blue"
+                                    fullWidth
+                                    mt="sm"
+                                >
+                                    Analyze Another Image
+                                </Button>
+                            </Stack>
+                        </Grid.Col>
+
+                        <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Card shadow="md" radius="md" withBorder padding={0} style={{ overflow: 'hidden', height: '100%' }}>
+                                <Card.Section 
+                                    p="md"
+                                    style={{ 
+                                        backgroundColor: theme.colors.blue[colorScheme === 'dark' ? 8 : 6],
+                                        borderBottom: `1px solid ${theme.colors.blue[colorScheme === 'dark' ? 7 : 5]}`,
+                                    }}
+                                >
+                                    <Group justify="space-between">
+                                        <Group gap="sm">
+                                            <ThemeIcon 
+                                                size={48} 
+                                                radius="xl" 
+                                                variant="filled"
+                                                style={{ 
+                                                    backgroundColor: theme.colors.blue[colorScheme === 'dark' ? 6 : 2],
+                                                    border: `2px solid ${theme.colors.blue[colorScheme === 'dark' ? 2 : 7]}`
+                                                }}
+                                            >
+                                                <IconBug size={26} style={{ color: theme.colors.blue[colorScheme === 'dark' ? 2 : 7] }} />
+                                            </ThemeIcon>
+                                            <Stack gap={0}>
+                                                <Text fw={700} size="xl" c="white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                                                    Disease Detection Results
+                                                </Text>
+                                                <Text c="white" opacity={0.9} size="sm">
+                                                    Analysis completed {new Date().toLocaleDateString()}
+                                                </Text>
+                                            </Stack>
+                                        </Group>
+                                    </Group>
+                                </Card.Section>
+                                
+                                <Stack p="xl" gap="md">
+                                    {result && (
+                                        <>
+                                            <Alert 
+                                                color={result.includes('healthy') ? 'green' : 'red'} 
+                                                icon={result.includes('healthy') ? <IconShieldCheck size={18} /> : <IconAlertTriangle size={18} />}
+                                                title={result.includes('healthy') ? "Healthy Plant Detected" : "Disease Detected"} 
+                                                radius="md"
+                                            >
+                                                <Text size="sm">{result}</Text>
+                                            </Alert>
+                                            
+                                            <Paper withBorder p="md" radius="md" bg={colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[0]}>
+                                                <Group justify="space-between" mb="xs">
+                                                    <Text fw={600} size="sm">Analysis Summary</Text>
+                                                    <Badge 
+                                                        size="lg" 
+                                                        radius="sm" 
+                                                        color={result.includes('healthy') ? 'green' : 'red'}
+                                                    >
+                                                        {result.includes('healthy') ? 'Healthy' : 'Disease Present'}
+                                                    </Badge>
+                                                </Group>
+                                                
+                                                <Divider mb="md" />
+                                                
+                                                {!result.includes('healthy') && (
+                                                    <>
+                                                        <Stack gap="md">
+                                                            <Box>
+                                                                <Text size="sm" fw={500} c="dimmed">Recommendations:</Text>
+                                                                <List size="sm" mt="xs">
+                                                                    <List.Item>Isolate affected plants to prevent spread</List.Item>
+                                                                    <List.Item>Remove and destroy severely infected plant parts</List.Item>
+                                                                    <List.Item>Consider appropriate fungicide or treatment application</List.Item>
+                                                                    <List.Item>Improve air circulation around plants</List.Item>
+                                                                    <List.Item>Monitor other plants for early symptoms</List.Item>
+                                                                </List>
+                                                            </Box>
+                                                            
+                                                            <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
+                                                                <Text size="xs">For targeted treatment advice, visit the Treatment Chat tab with details about the detected disease.</Text>
+                                                            </Alert>
+                                                        </Stack>
+                                                    </>
+                                                )}
+                                                
+                                                {result.includes('healthy') && (
+                                                    <Text size="sm">Keep up with your current plant care practices. Continue regular monitoring for any changes in plant health.</Text>
+                                                )}
+                                            </Paper>
+                                        </>
+                                    )}
+                                </Stack>
+                            </Card>
+                        </Grid.Col>
+                    </Grid>
                 </Paper>
             );
         }
@@ -1261,7 +1557,16 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
     return (
         <Paper withBorder p="xl" radius="md" shadow="sm">
             <Stack align="center" gap="lg">
-                 <Title order={3} ta="center">Image Ready for {type === 'weed' ? 'Weed' : 'Disease'} Analysis</Title>
+                <Title order={3} ta="center">
+                    <Group gap="xs" justify="center">
+                        <ThemeIcon size="md" variant={type === 'weed' ? "gradient" : "light"} 
+                            gradient={type === 'weed' ? { from: 'green', to: 'lime', deg: 105 } : undefined}
+                            color={type === 'disease' ? "blue" : undefined}>
+                            {type === 'weed' ? <IconLeaf size={16} /> : <IconBug size={16} />}
+                        </ThemeIcon>
+                        Image Ready for {type === 'weed' ? 'Weed' : 'Disease'} Analysis
+                    </Group>
+                </Title>
                 <Paper withBorder radius="md" p="xs" w="100%" maw={500} shadow="sm">
                     <Image src={uploadedImageDetails.url!} alt={`Uploaded ${type} image`} fit="contain" h={300} radius="sm" />
                 </Paper>

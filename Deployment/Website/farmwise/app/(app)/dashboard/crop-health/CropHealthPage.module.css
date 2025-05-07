@@ -40,3 +40,88 @@
   transform: translate3d(0, -5px, 20px);
   filter: drop-shadow(5px 10px 10px rgba(0, 0, 0, 0.5));
 }
+
+.weedListItem {
+  all: unset;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+/* Add new styles for dropzones */
+.weedDropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border-style: dashed;
+  border-width: 2px;
+  border-color: var(--mantine-color-green-4);
+  height: 300px;
+}
+
+.diseaseDropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border-style: dashed;
+  border-width: 2px;
+  border-color: var(--mantine-color-blue-4);
+  height: 300px;
+}
+
+/* Additional utility classes to replace deprecated Mantine props */
+.spaceBetween {
+  display: flex;
+  justify-content: space-between;
+}
+
+.nowrap {
+  flex-wrap: nowrap;
+}
+
+.gapXs {
+  gap: var(--mantine-spacing-xs);
+}
+
+.gapSm {
+  gap: var(--mantine-spacing-sm);
+}
+
+.gapMd {
+  gap: var(--mantine-spacing-md);
+}
+
+.gapLg {
+  gap: var(--mantine-spacing-lg);
+}
+
+.gapXl {
+  gap: var(--mantine-spacing-xl);
+}
+
+/* Image analysis canvas container */
+.canvasContainer {
+  position: relative;
+  height: 350px;
+}
+
+.imageAnalysisWrapper {
+  position: relative;
+  min-height: 350px;
+  background-color: var(--mantine-color-gray-light);
+}
+
+.resultCard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.weedTabContent {
+  height: calc(100% - 36px);
+  overflow: hidden;
+}
