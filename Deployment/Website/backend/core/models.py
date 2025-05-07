@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+import numpy as np
 
 # Create your models here.
 
@@ -20,9 +22,314 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
+    onboarding_completed = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+    
+    @property
+    def is_farmer(self):
+        return self.user_type == 'FARMER'
+    
+    @property
+    def is_admin(self):
+        return self.user_type == 'ADMIN'
+
+class Farmer(models.Model):
+    profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='farmer_profile', 
+                                   limit_choices_to={'user_type': 'FARMER'})
+    farming_experience_years = models.PositiveIntegerField(default=0)
+    specialization = models.CharField(max_length=100, blank=True, null=True)
+    certification = models.CharField(max_length=100, blank=True, null=True)
+    equipment_owned = models.TextField(blank=True, null=True)
+    preferred_crops = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Farmer: {self.profile.user.username}"
+
+class Admin(models.Model):
+    profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='admin_profile', 
+                                   limit_choices_to={'user_type': 'ADMIN'})
+    role = models.CharField(max_length=100, blank=True, null=True)
+    department = models.CharField(max_length=100, blank=True, null=True)
+    permissions_level = models.CharField(max_length=50, default='standard')
+    is_super_admin = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Admin: {self.profile.user.username}"
+
+class Farm(models.Model):
+    FARM_SIZE_CHOICES = [
+        ('S', 'Small'),
+        ('M', 'Medium'),
+        ('L', 'Large'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    owner = models.ForeignKey(
+        Farmer, 
+        on_delete=models.CASCADE, 
+        related_name='farms'
+    )
+    address = models.TextField(blank=True, null=True)
+    location_address = models.TextField(blank=True, null=True)  # Optional text address
+    description = models.TextField(blank=True, null=True)
+    size_hectares = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    size_category = models.CharField(max_length=1, choices=FARM_SIZE_CHOICES, blank=True, null=True)  # Can be derived or set
+    boundary_geojson = models.JSONField(blank=True, null=True)
+    
+    # Soil parameters
+    soil_nitrogen = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # N value in PPM
+    soil_phosphorus = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # P value in PPM
+    soil_potassium = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # K value in PPM
+    soil_ph = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)  # pH value (0-14)
+    
+    # Farm valuation
+    estimated_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # Farm estimated price
+    price_last_updated = models.DateTimeField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.owner.profile.user.username})"
+    
+    def calculate_estimated_price(self):
+        """Calculate and update the farm's estimated price"""
+        if not self.size_hectares:
+            return None
+        
+        # Base price per hectare (adjust based on your specific requirements)
+        base_price_per_hectare = 5000  # Base price in currency units
+        
+        # Adjust based on soil quality
+        soil_quality_multiplier = 1.0
+        if self.soil_ph and self.soil_nitrogen and self.soil_phosphorus and self.soil_potassium:
+            # Simple algorithm - can be refined based on agronomic knowledge
+            if 6.0 <= self.soil_ph <= 7.5:  # Optimal pH range
+                soil_quality_multiplier *= 1.2
+            
+            # Adjust based on NPK values (simplified)
+            if self.soil_nitrogen > 50:  # Good nitrogen level
+                soil_quality_multiplier *= 1.1
+            if self.soil_phosphorus > 30:  # Good phosphorus level
+                soil_quality_multiplier *= 1.1
+            if self.soil_potassium > 150:  # Good potassium level
+                soil_quality_multiplier *= 1.1
+        
+        # Calculate price
+        price = float(self.size_hectares) * base_price_per_hectare * soil_quality_multiplier
+        
+        # Update the model
+        self.estimated_price = price
+        self.price_last_updated = timezone.now()
+        self.save(update_fields=['estimated_price', 'price_last_updated'])
+        
+        return self.estimated_price
+
+class Weather(models.Model):
+    WEATHER_CONDITIONS = [
+        ('SUNNY', 'Sunny'),
+        ('CLOUDY', 'Cloudy'),
+        ('PARTLY_CLOUDY', 'Partly Cloudy'),
+        ('RAINY', 'Rainy'),
+        ('STORMY', 'Stormy'),
+        ('SNOWY', 'Snowy'),
+        ('FOGGY', 'Foggy'),
+        ('WINDY', 'Windy'),
+    ]
+    
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='weather_records')
+    date = models.DateField()
+    condition = models.CharField(max_length=20, choices=WEATHER_CONDITIONS)
+    temperature_max = models.DecimalField(max_digits=5, decimal_places=2)  # in Celsius
+    temperature_min = models.DecimalField(max_digits=5, decimal_places=2)  # in Celsius
+    humidity = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # in percentage
+    precipitation = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # in mm
+    wind_speed = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # in km/h
+    forecast_data = models.JSONField(blank=True, null=True)  # For additional weather data
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['farm', 'date']
+        
+    def __str__(self):
+        return f"Weather for {self.farm.name} on {self.date}"
+
+class Crop(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    # Add other relevant fields like optimal conditions, etc.
+
+    def __str__(self):
+        return self.name
+
+class FarmCrop(models.Model):
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='farm_crops')
+    crop = models.ForeignKey(Crop, on_delete=models.PROTECT, related_name='crop_plantings')  # Protect Crop from deletion if used
+    planting_date = models.DateField(blank=True, null=True)
+    expected_harvest_date = models.DateField(blank=True, null=True)
+    area_planted_hectares = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Yield prediction fields
+    predicted_yield = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # in tons or appropriate unit
+    yield_prediction_date = models.DateTimeField(blank=True, null=True)
+    yield_confidence = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # confidence level 0-100%
+
+    def __str__(self):
+        return f"{self.crop.name} on {self.farm.name}"
+    
+    def predict_yield(self):
+        """Calculate and update the predicted yield for this crop planting"""
+        if not self.area_planted_hectares or not self.farm or not self.crop:
+            return None
+        
+        # Base yield per hectare (this would be based on historical data or crop type)
+        base_yield_per_hectare = 4.5  # Example value in tons/hectare
+        
+        # Get weather data if available
+        recent_weather = Weather.objects.filter(
+            farm=self.farm,
+            date__gte=(timezone.now().date() - timezone.timedelta(days=30))
+        ).order_by('-date')
+        
+        # Adjust yield based on soil conditions
+        soil_multiplier = 1.0
+        if self.farm.soil_ph and self.farm.soil_nitrogen and self.farm.soil_phosphorus and self.farm.soil_potassium:
+            # Example simple adjustment based on soil parameters
+            if 6.0 <= self.farm.soil_ph <= 7.5:  # Optimal pH range
+                soil_multiplier *= 1.15
+            else:
+                soil_multiplier *= 0.9
+                
+            # NPK adjustments (simplified)
+            if self.farm.soil_nitrogen > 50:
+                soil_multiplier *= 1.1
+            if self.farm.soil_phosphorus > 30:
+                soil_multiplier *= 1.05
+            if self.farm.soil_potassium > 150:
+                soil_multiplier *= 1.05
+        
+        # Weather adjustment (simplified example)
+        weather_multiplier = 1.0
+        if recent_weather.exists():
+            avg_temp_max = recent_weather.aggregate(models.Avg('temperature_max'))['temperature_max__avg']
+            avg_rain = recent_weather.aggregate(models.Avg('precipitation'))['precipitation__avg']
+            
+            # Simple adjustments based on weather
+            if avg_temp_max and avg_temp_max > 30:  # Too hot
+                weather_multiplier *= 0.9
+            elif avg_temp_max and avg_temp_max < 10:  # Too cold
+                weather_multiplier *= 0.85
+                
+            if avg_rain and avg_rain < 5:  # Too dry
+                weather_multiplier *= 0.8
+            elif avg_rain and avg_rain > 50:  # Too wet
+                weather_multiplier *= 0.85
+        
+        # Calculate final predicted yield
+        predicted_yield = float(self.area_planted_hectares) * base_yield_per_hectare * soil_multiplier * weather_multiplier
+        
+        # Set confidence level based on available data
+        confidence = 70.0  # Base confidence
+        if not recent_weather.exists():
+            confidence -= 20  # Lower confidence without weather data
+        if not (self.farm.soil_ph and self.farm.soil_nitrogen):
+            confidence -= 15  # Lower confidence without soil data
+            
+        # Update the model
+        self.predicted_yield = round(predicted_yield, 2)
+        self.yield_prediction_date = timezone.now()
+        self.yield_confidence = confidence
+        self.save(update_fields=['predicted_yield', 'yield_prediction_date', 'yield_confidence'])
+        
+        return self.predicted_yield
+
+class Recommendation(models.Model):
+    RECOMMENDATION_TYPES = [
+        ('YIELD', 'Yield Prediction'),
+        ('FERTILIZER', 'Fertilizer Usage'),
+        ('WATER', 'Water Usage'),
+        ('CROP', 'Crop Suggestion'),
+        ('WEATHER', 'Weather Forecast Info'),
+        # Add more types as needed
+    ]
+    farm_crop = models.ForeignKey(FarmCrop, on_delete=models.CASCADE, related_name='recommendations', null=True, blank=True)  # Link to specific planting
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='recommendations', null=True, blank=True)  # Or link to the whole farm
+    recommendation_type = models.CharField(max_length=20, choices=RECOMMENDATION_TYPES)
+    details = models.JSONField()  # Flexible field to store recommendation data (values, text, etc.)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        target = self.farm_crop if self.farm_crop else self.farm
+        return f"{self.get_recommendation_type_display()} for {target}"
+
+class DetectedWeed(models.Model):
+    name = models.CharField(max_length=100)
+    scientific_name = models.CharField(max_length=150, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    treatment_methods = models.TextField(blank=True, null=True)
+    risk_level = models.CharField(max_length=20, choices=[
+        ('LOW', 'Low Risk'),
+        ('MEDIUM', 'Medium Risk'),
+        ('HIGH', 'High Risk'),
+    ], default='MEDIUM')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name
+
+class Scan(models.Model):
+    SCAN_TYPES = [
+        ('DISEASE', 'Disease Detection'),
+        ('WEED', 'Weed Detection'),
+    ]
+    farm_crop = models.ForeignKey(FarmCrop, on_delete=models.CASCADE, related_name='scans', null=True, blank=True)  # Link to specific planting
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='scans', null=True, blank=True)  # Or link to the whole farm
+    scan_type = models.CharField(max_length=10, choices=SCAN_TYPES)
+    image = models.ImageField(upload_to='scans/')  # Requires Pillow library: pip install Pillow
+    detection_results = models.JSONField(blank=True, null=True)  # Store bounding boxes, classifications
+    treatment_suggestion = models.TextField(blank=True, null=True)
+    scanned_at = models.DateTimeField(auto_now_add=True)
+    
+    # For weed detection scans
+    detected_weeds = models.ManyToManyField(DetectedWeed, blank=True, related_name='scans')
+    weed_coverage_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+
+    def __str__(self):
+        target = self.farm_crop if self.farm_crop else self.farm
+        return f"{self.get_scan_type_display()} for {target} at {self.scanned_at}"
+    
+    def process_weed_detection(self):
+        """Process the scan for weed detection and link to DetectedWeed objects"""
+        if self.scan_type != 'WEED' or not self.detection_results:
+            return False
+        
+        # Calculate weed coverage from detection results
+        # This is a simplified example - actual implementation would depend on your detection_results structure
+        total_area = 0
+        weed_area = 0
+        
+        if isinstance(self.detection_results, dict) and 'boxes' in self.detection_results:
+            total_area = self.detection_results.get('image_area', 100)
+            for box in self.detection_results.get('boxes', []):
+                weed_area += box.get('area', 0)
+        
+        if total_area > 0:
+            self.weed_coverage_percentage = (weed_area / total_area) * 100
+        
+        # Link detected weeds
+        if isinstance(self.detection_results, dict) and 'classes' in self.detection_results:
+            for weed_class in self.detection_results.get('classes', []):
+                weed_name = weed_class.get('name')
+                if weed_name:
+                    weed, created = DetectedWeed.objects.get_or_create(name=weed_name)
+                    self.detected_weeds.add(weed)
+        
+        self.save()
+        return True
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -34,3 +341,20 @@ def create_user_profile(sender, instance, created, **kwargs):
 def save_user_profile(sender, instance, **kwargs):
     """Save UserProfile whenever a User is saved"""
     instance.profile.save()
+
+@receiver(post_save, sender=UserProfile)
+def create_role_specific_profile(sender, instance, created, **kwargs):
+    """Create specific profile based on user type"""
+    # Only create the role-specific profile if it doesn't exist yet
+    if instance.is_farmer and not hasattr(instance, 'farmer_profile'):
+        Farmer.objects.create(profile=instance)
+    elif instance.is_admin and not hasattr(instance, 'admin_profile'):
+        Admin.objects.create(profile=instance)
+
+@receiver(post_save, sender=UserProfile)
+def save_role_specific_profile(sender, instance, **kwargs):
+    """Save role-specific profile when UserProfile is saved"""
+    if instance.is_farmer and hasattr(instance, 'farmer_profile'):
+        instance.farmer_profile.save()
+    elif instance.is_admin and hasattr(instance, 'admin_profile'):
+        instance.admin_profile.save()

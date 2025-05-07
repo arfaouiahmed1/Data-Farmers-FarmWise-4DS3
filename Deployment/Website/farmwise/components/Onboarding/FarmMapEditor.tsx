@@ -25,13 +25,14 @@ type PolygonGeoJsonFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPoly
 interface FarmMapEditorProps {
   center: LatLngExpression;
   zoom: number;
-  boundary: PolygonGeoJsonFeature | null; // Currently edited/selected boundary
-  setBoundary: (boundary: PolygonGeoJsonFeature | null) => void;
+  boundary?: PolygonGeoJsonFeature | null; // Renamed from initialBoundary for profile page
+  setBoundary?: (boundary: PolygonGeoJsonFeature | null) => void; // Optional for readonly mode
   detectedBoundaries?: PolygonGeoJsonFeature[]; // Optional array of detected boundaries
   onBoundarySelect?: (boundary: PolygonGeoJsonFeature) => void; // Callback when a detected boundary is clicked
   setMapInstance?: (map: Map) => void; // Callback to pass map instance up
   editableBoundaryKey?: number | string; // Key to force GeoJSON layer remount when boundary changes
   hideAttribution?: boolean; // Whether to hide the attribution text
+  readOnly?: boolean; // Whether the map is readonly (no editing)
 }
 
 // Internal component to handle Geoman integration and loading external GeoJSON
@@ -42,7 +43,7 @@ const GeomanIntegration = ({
     detectedBoundaries // Pass detected boundaries down
   }: {
     boundary: FarmMapEditorProps['boundary'];
-    setBoundary: FarmMapEditorProps['setBoundary'];
+    setBoundary: NonNullable<FarmMapEditorProps['setBoundary']>; // Ensure non-null
     editableBoundaryKey?: FarmMapEditorProps['editableBoundaryKey'];
     detectedBoundaries?: FarmMapEditorProps['detectedBoundaries']; // Add prop type
   }) => {
@@ -234,12 +235,13 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
     center,
     zoom,
     boundary,
-    setBoundary,
+    setBoundary = () => {}, // Default no-op function for readOnly mode
     detectedBoundaries = [], // Default to empty array
     onBoundarySelect,
     setMapInstance, // Accept the map instance setter
     editableBoundaryKey,
-    hideAttribution = false // Default to showing attribution
+    hideAttribution = false, // Default to showing attribution
+    readOnly = false // Default to editable
   }) => {
 
   const mapRef = useRef<Map>(null); // Ref for the map instance
@@ -259,6 +261,14 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
     weight: 2,
     opacity: 0.8,
     fillOpacity: 0.1,
+  };
+  
+  // Style for readonly boundaries
+  const readOnlyStyle = {
+    color: "#38a169", // Green
+    weight: 3,
+    opacity: 0.7,
+    fillOpacity: 0.2,
   };
 
   // Click handler for detected boundaries
@@ -285,26 +295,32 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
         detectRetina={true}
       />
       
-      {/* Geoman Controls and Editable Layer */}
-      <GeomanIntegration 
-         boundary={boundary} 
-         setBoundary={setBoundary} 
-         editableBoundaryKey={editableBoundaryKey} 
-         detectedBoundaries={detectedBoundaries} // Pass detected boundaries down
-      />
-
-      {/* Display Detected Boundaries (if any and boundary not yet selected) */}
-      {!boundary && detectedBoundaries.map((feat, index) => (
-          <GeoJSON
-            key={`detected-${index}`} // Use index or a feature ID if available
-            data={feat}
-            style={detectedStyle}
-            eventHandlers={{
-              click: () => onDetectedClick(feat),
-            }}
+      {/* For read-only mode, just show the boundary as a GeoJSON */}
+      {readOnly && boundary ? (
+        <GeoJSON data={boundary} style={readOnlyStyle} />
+      ) : (
+        <>
+          {/* Geoman Controls and Editable Layer (only in edit mode) */}
+          <GeomanIntegration 
+             boundary={boundary} 
+             setBoundary={setBoundary} 
+             editableBoundaryKey={editableBoundaryKey} 
+             detectedBoundaries={detectedBoundaries} // Pass detected boundaries down
           />
-      ))}
 
+          {/* Display Detected Boundaries (if any and boundary not yet selected) */}
+          {!boundary && detectedBoundaries.map((feat, index) => (
+              <GeoJSON
+                key={`detected-${index}`} // Use index or a feature ID if available
+                data={feat}
+                style={detectedStyle}
+                eventHandlers={{
+                  click: () => onDetectedClick(feat),
+                }}
+              />
+          ))}
+        </>
+      )}
     </MapContainer>
   );
 };

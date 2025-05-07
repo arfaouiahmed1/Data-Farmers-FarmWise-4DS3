@@ -156,7 +156,7 @@ export default function OnboardingPage() {
   };
   const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     console.log('Onboarding finished. Data:', {
       farmName,
       farmType,
@@ -164,8 +164,82 @@ export default function OnboardingPage() {
       farmerExperience,
       boundary: farmBoundary
     });
-    // TODO: Send onboarding data (including farmBoundary GeoJSON) to the backend API
-    router.push('/dashboard'); // Navigate to Dashboard after finish - fixed lowercase path
+
+    try {
+      // Get the token and backend URL from environment variables
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No authentication token found');
+        router.push('/login');
+        return;
+      }
+      
+      // Extract the area if available in the boundary properties
+      let sizeHectares = null;
+      if (farmBoundary?.properties?.area_hectares) {
+        sizeHectares = farmBoundary.properties.area_hectares;
+      }
+      
+      // First create the farm from onboarding data
+      const farmResponse = await fetch(`${backendUrl}/core/add-farm-from-onboarding/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
+        body: JSON.stringify({
+          farm_name: farmName,
+          // farm_type was removed from the Farm model, so don't send it
+          farm_address: farmAddress,
+          boundary: farmBoundary,
+          size_hectares: sizeHectares
+        })
+      });
+      
+      if (!farmResponse.ok) {
+        // Try to get the detailed error message from the response
+        let errorMessage = 'Failed to create farm';
+        try {
+          const errorData = await farmResponse.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (typeof errorData === 'object') {
+            // If error is an object with validation errors
+            errorMessage = JSON.stringify(errorData);
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        
+        console.error(`Farm creation error (${farmResponse.status}):`, errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      // Refresh user data in local storage to update onboarding status
+      await fetch(`${backendUrl}/core/profile/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+      }).then(res => res.json())
+        .then(userData => {
+          localStorage.setItem('user', JSON.stringify(userData));
+        });
+
+      // Navigate to Dashboard after finish
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      // Uncomment this to show an error notification instead of navigating away
+      // setDetectionError(error instanceof Error ? error.message : "Failed to create farm");
+      
+      // Still navigate to dashboard even if there's an error completing onboarding
+      router.push('/dashboard');
+    }
   };
 
   const handleDetectFarms = useCallback(async () => {

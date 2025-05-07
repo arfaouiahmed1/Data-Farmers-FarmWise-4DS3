@@ -9,6 +9,7 @@ import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import React from 'react';
 import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
 import { theme } from '../theme'; // Corrected import path
+import { AuthRedirect } from '../components/Shell/AuthRedirect';
 // ClientShell import is no longer needed here directly
 // import { ClientShell } from '../components/Shell/ClientShell';
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <AuthRedirect />
         <MantineProvider theme={theme} defaultColorScheme="auto">
           {/* ClientShell is removed from here */}
           {children}

@@ -60,6 +60,7 @@ export interface UserData {
     profile_image: string | null;
     date_joined: string;
     last_updated: string;
+    onboarding_completed: boolean;
   };
   date_joined: string;
   is_active: boolean;
@@ -68,6 +69,7 @@ export interface UserData {
 export interface AuthResponse {
   user: UserData;
   token: string;
+  onboarding_required: boolean;
 }
 
 // Authentication services
@@ -76,10 +78,22 @@ export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await api.post('/core/login/', credentials);
     
-    // Store token in localStorage
+    // Validate and store token and user data
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Make sure we have valid user data with profile
+      if (response.data.user && response.data.user.profile) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      } else {
+        // If user data is missing or incomplete, fetch it directly
+        try {
+          const userData = await this.getProfile();
+          localStorage.setItem('user', JSON.stringify(userData));
+        } catch (err) {
+          console.error('Failed to fetch user profile after login:', err);
+        }
+      }
     }
     
     return response.data;
@@ -89,10 +103,22 @@ export const authService = {
   async register(data: SignupData): Promise<AuthResponse> {
     const response = await api.post('/core/register/', data);
     
-    // Store token in localStorage
+    // Validate and store token and user data
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Make sure we have valid user data with profile
+      if (response.data.user && response.data.user.profile) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      } else {
+        // If user data is missing or incomplete, fetch it directly
+        try {
+          const userData = await this.getProfile();
+          localStorage.setItem('user', JSON.stringify(userData));
+        } catch (err) {
+          console.error('Failed to fetch user profile after registration:', err);
+        }
+      }
     }
     
     return response.data;
@@ -118,8 +144,81 @@ export const authService = {
   
   // Get current user profile
   async getProfile(): Promise<UserData> {
-    const response = await api.get('/core/profile/');
+    try {
+      const response = await api.get('/core/profile/');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching user profile:', error);
+      
+      // Check if we have cached user data to return instead
+      const cachedUserData = this.getCurrentUser();
+      if (cachedUserData) {
+        return cachedUserData;
+      }
+      
+      // If we get here, we have no cached data and the API call failed
+      if (error.response && error.response.status === 500) {
+        // Server error - likely an issue with the profile data
+        // Return a minimal user object to prevent UI errors
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            // Try to decode basic info from token
+            const tokenParts = token.split('.');
+            if (tokenParts.length === 3) {
+              const tokenPayload = JSON.parse(atob(tokenParts[1]));
+              if (tokenPayload.user_id) {
+                return {
+                  id: tokenPayload.user_id,
+                  username: 'user',
+                  email: '',
+                  first_name: 'User',
+                  last_name: '',
+                  profile: {
+                    user_type: 'FARMER',
+                    phone_number: null,
+                    address: null,
+                    bio: null,
+                    profile_image: null,
+                    date_joined: new Date().toISOString(),
+                    last_updated: new Date().toISOString(),
+                    onboarding_completed: false
+                  },
+                  date_joined: new Date().toISOString(),
+                  is_active: true
+                };
+              }
+            }
+          } catch (decodeErr) {
+            console.error('Error decoding token:', decodeErr);
+          }
+        }
+      }
+      
+      // If all else fails, throw the error to be handled by caller
+      throw error;
+    }
+  },
+  
+  // Complete onboarding
+  async completeOnboarding(): Promise<{ success: boolean }> {
+    const response = await api.put('/core/complete-onboarding/');
+    
+    // Update user in localStorage
+    await this.refreshUserData();
+    
     return response.data;
+  },
+  
+  // Refresh user data in localStorage
+  async refreshUserData(): Promise<void> {
+    try {
+      const userData = await this.getProfile();
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      // Don't throw - allow the UI to continue with whatever data we have
+    }
   },
   
   // Logout
@@ -133,6 +232,28 @@ export const authService = {
   // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!localStorage.getItem('token');
+  },
+  
+  // Check if user needs to complete onboarding
+  needsOnboarding(): boolean {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        return false;
+      }
+      
+      const user = JSON.parse(userStr) as UserData;
+      
+      // Safe access - check if profile exists and has onboarding_completed property
+      if (!user || !user.profile) {
+        return false;
+      }
+      
+      return user.profile.onboarding_completed === false;
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      return false;
+    }
   },
   
   // Get current user from localStorage

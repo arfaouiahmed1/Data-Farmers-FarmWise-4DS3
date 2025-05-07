@@ -22,7 +22,13 @@ import {
   ActionIcon,
   Affix,
   Button,
-  Modal
+  Modal,
+  CloseButton,
+  Paper,
+  Transition,
+  Notification,
+  Center,
+  List
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
@@ -60,6 +66,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
 import { AiChatInterface } from '../AiChat/AiChatInterface';
+import authService from '../../app/api/auth';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -85,6 +92,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const [userData, setUserData] = useState<any>(null);
+  // Add state for notifications
+  const [notifications, setNotifications] = useState([
+    { id: '1', title: 'Soil moisture below threshold', message: 'Field B requires irrigation soon', color: 'blue', date: new Date() },
+    { id: '2', title: 'Disease risk increased', message: 'High humidity levels detected in Field A', color: 'red', date: new Date(Date.now() - 86400000) }, // 1 day ago
+    { id: '3', title: 'Equipment maintenance due', message: 'Tractor #2 is due for regular maintenance', color: 'yellow', date: new Date(Date.now() - 172800000) }, // 2 days ago
+  ]);
+  const [notificationsMenuOpened, { open: openNotificationsMenu, close: closeNotificationsMenu }] = useDisclosure(false);
   
   // Set mounted to true once component is mounted (client-side only)
   useEffect(() => {
@@ -265,11 +280,78 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     </Group>
   );
 
+  // Load user data
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const fetchUserData = () => {
+      const user = authService.getCurrentUser();
+      if (user) {
+        setUserData(user);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!userData || !userData.first_name) return 'U';
+    
+    const first = userData.first_name.charAt(0);
+    const last = userData.last_name ? userData.last_name.charAt(0) : '';
+    return (first + last).toUpperCase();
+  };
+
+  // Get user type/role
+  const getUserRole = () => {
+    if (!userData || !userData.profile) return 'User';
+    
+    switch (userData.profile.user_type) {
+      case 'FARMER':
+        return 'Farmer';
+      case 'AGRONOMIST':
+        return 'Agronomist';
+      case 'ADMIN':
+        return 'Administrator';
+      default:
+        return userData.profile.user_type || 'User';
+    }
+  };
+
   const handleLogoutConfirm = () => {
     closeLogoutModal();
-    // Add actual logout logic here (e.g., clear tokens, API calls)
-    console.log("Logging out...");
-    router.push('/login'); // Redirect to login page
+    authService.logout();
+    // The redirect is handled in the authService
+  };
+
+  // Handle clearing a notification
+  const handleClearNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  };
+
+  // Handle clearing all notifications
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  // Format date for notifications
+  const formatNotificationDate = (date: Date) => {
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    
+    if (diffDays > 0) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+    } else {
+      return 'Just now';
+    }
   };
 
   return (
@@ -304,40 +386,88 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </Group>
 
           <Group>
-            <Badge color="red" variant="filled" radius="xl" size="lg">
-              <Group gap={6}>
-                <IconDroplet size={14} />
-                <Text size="xs">Irrigation Alert: 2 Days</Text>
-              </Group>
-            </Badge>
-
-            <Menu shadow="md" width={260} position="bottom-end">
+            <Menu shadow="md" width={320} position="bottom-end" closeOnItemClick={false} opened={notificationsMenuOpened} onChange={notificationsMenuOpened ? closeNotificationsMenu : openNotificationsMenu}>
               <Menu.Target>
-                <ActionIcon variant="subtle" radius="xl" size="lg" color="gray">
-                  <IconBell style={{ width: rem(20), height: rem(20) }} />
-                  <Box 
-                    pos="absolute" 
-                    top={3} 
-                    right={3} 
-                    w={10} 
-                    h={10} 
-                    bg="red" 
-                    style={{ borderRadius: '50%' }} 
-                  />
-                </ActionIcon>
+                <Tooltip label="Notifications" withArrow position="bottom">
+                  <ActionIcon variant="subtle" radius="xl" size="lg" color="gray">
+                    <IconBell style={{ width: rem(20), height: rem(20) }} />
+                    {notifications.length > 0 && (
+                      <Box 
+                        pos="absolute" 
+                        top={3} 
+                        right={3} 
+                        w={14} 
+                        h={14} 
+                        bg="red" 
+                        style={{ 
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {notifications.length}
+                      </Box>
+                    )}
+                  </ActionIcon>
+                </Tooltip>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>Notifications</Menu.Label>
-                <Menu.Item>
-                  <Text size="sm" fw={500}>Soil moisture below threshold</Text>
-                  <Text size="xs" c="dimmed">Field B requires irrigation soon</Text>
-                </Menu.Item>
-                <Menu.Item>
-                  <Text size="sm" fw={500}>Disease risk increased</Text>
-                  <Text size="xs" c="dimmed">High humidity levels detected in Field A</Text>
-                </Menu.Item>
+                <Box p="xs">
+                  <Group justify="space-between" mb="xs">
+                    <Text fw={600}>Notifications</Text>
+                    {notifications.length > 0 && (
+                      <Button 
+                        variant="subtle" 
+                        color="gray" 
+                        size="xs"
+                        onClick={handleClearAllNotifications}
+                      >
+                        Clear All
+                      </Button>
+                    )}
+                  </Group>
+                </Box>
+                
                 <Divider />
-                <Menu.Item>View all notifications</Menu.Item>
+                
+                <ScrollArea h={notifications.length > 0 ? 320 : 'auto'} scrollbarSize={6}>
+                  {notifications.length > 0 ? (
+                    <Stack gap={0}>
+                      {notifications.map((notification) => (
+                        <Box key={notification.id} p="xs" style={{ position: 'relative' }}>
+                          <Group justify="space-between" mb={4}>
+                            <Group>
+                              <Badge color={notification.color} size="sm" variant="filled" />
+                              <Text size="sm" fw={600}>{notification.title}</Text>
+                            </Group>
+                            <CloseButton 
+                              size="xs" 
+                              onClick={() => handleClearNotification(notification.id)}
+                              title="Clear notification"
+                              aria-label="Clear notification"
+                            />
+                          </Group>
+                          <Text size="xs" color="dimmed" ml={28}>{notification.message}</Text>
+                          <Text size="xs" color="dimmed" ta="right" mt={5} style={{ fontStyle: 'italic' }}>
+                            {formatNotificationDate(notification.date)}
+                          </Text>
+                          <Divider mt={8} />
+                        </Box>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Center p="xl">
+                      <Box ta="center" py={20}>
+                        <IconBell size={40} opacity={0.3} />
+                        <Text c="dimmed" size="sm" mt={10}>No notifications</Text>
+                      </Box>
+                    </Center>
+                  )}
+                </ScrollArea>
               </Menu.Dropdown>
             </Menu>
 
@@ -347,10 +477,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <Menu.Target>
                 <UnstyledButton>
                   <Group gap={8}>
-                    <Avatar color="green" radius="xl">JD</Avatar>
+                    <Avatar color="green" radius="xl">{getUserInitials()}</Avatar>
                     <Box style={{ flex: 1 }} visibleFrom="sm">
-                      <Text size="sm" fw={500}>John Doe</Text>
-                      <Text c="dimmed" size="xs">Farm Manager</Text>
+                      <Text size="sm" fw={500}>{userData?.first_name} {userData?.last_name || 'User'}</Text>
+                      <Text c="dimmed" size="xs">{getUserRole()}</Text>
                     </Box>
                   </Group>
                 </UnstyledButton>

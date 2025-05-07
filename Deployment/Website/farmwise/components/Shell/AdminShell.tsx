@@ -52,6 +52,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
+import authService from '../../app/api/auth';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -75,11 +76,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const [userData, setUserData] = useState<any>(null);
   
   // Set mounted to true once component is mounted (client-side only)
   useEffect(() => {
     setMounted(true);
   }, [pathname]);
+
+  // Load user data on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const fetchUserData = () => {
+      const user = authService.getCurrentUser();
+      if (user) {
+        setUserData(user);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
 
   // Default text color to use for server-side rendering
   const textColor = "green.7"; 
@@ -235,7 +251,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = () => {
-    router.push('/login');
+    authService.logout();
+    // Redirect is handled by authService
   };
 
   return (
@@ -313,14 +330,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <UnstyledButton>
                   <Group gap={10}>
                     <Avatar color="indigo" radius="xl">
-                      <IconUser size="1.2rem" />
+                      {userData?.first_name?.charAt(0) || 'A'}
                     </Avatar>
                     <div>
                       <Text size="sm" fw={500}>
-                        Admin User
+                        {userData?.first_name} {userData?.last_name || 'Admin'}
                       </Text>
                       <Text size="xs" c="dimmed">
-                        admin@farmwise.com
+                        {userData?.email || 'admin@farmwise.com'}
                       </Text>
                     </div>
                   </Group>

@@ -8,13 +8,28 @@ import {
   Text,
   Box,
   useMantineTheme,
+  Avatar,
+  Menu,
+  UnstyledButton,
+  Divider,
+  Modal,
+  CloseButton,
+  ScrollArea,
+  Stack,
+  Badge,
+  Center,
+  Tooltip,
+  ActionIcon
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import Link from 'next/link';
 import Image from 'next/image'; // Import the Next.js Image component
-import { usePathname } from 'next/navigation'; // Added usePathname hook
+import { usePathname, useRouter } from 'next/navigation'; // Added usePathname and useRouter hooks
+import { IconUser, IconSettings, IconLogout, IconInfoCircle, IconBell } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 // import { IconPlant2 } from '@tabler/icons-react'; // Remove this import
 import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
+import authService from '../../app/api/auth';
 import classes from './Header.module.css';
 
 const links = [
@@ -28,7 +43,46 @@ const links = [
 export function AppHeader() {
   const [opened, { toggle }] = useDisclosure(false);
   const theme = useMantineTheme();
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [logoutModalOpened, { open: openLogoutModal, close: closeLogoutModal }] = useDisclosure(false);
+  // Add state for notifications
+  const [notifications, setNotifications] = useState([
+    { id: '1', title: 'Welcome to FarmWise', message: 'Get started by exploring our features', color: 'green', date: new Date() },
+    { id: '2', title: 'New feature available', message: 'Try our AI Advisor for personalized farming recommendations', color: 'blue', date: new Date(Date.now() - 86400000) }, // 1 day ago
+  ]);
+  const [notificationsMenuOpened, { open: openNotificationsMenu, close: closeNotificationsMenu }] = useDisclosure(false);
+
+  // Check authentication status
+  useEffect(() => {
+    // Don't run on the server
+    if (typeof window === 'undefined') return;
+    
+    const checkAuth = () => {
+      const isUserAuthenticated = authService.isAuthenticated();
+      setIsAuthenticated(isUserAuthenticated);
+      
+      if (isUserAuthenticated) {
+        const user = authService.getCurrentUser();
+        setUserData(user);
+      } else {
+        setUserData(null);
+      }
+    };
+    
+    checkAuth();
+  }, [pathname]);
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!userData || !userData.first_name) return 'U';
+    
+    const first = userData.first_name.charAt(0);
+    const last = userData.last_name ? userData.last_name.charAt(0) : '';
+    return (first + last).toUpperCase();
+  };
 
   // Smooth scroll handler (only for homepage)
   const handleScroll = (event: React.MouseEvent<HTMLAnchorElement>, link: string) => {
@@ -45,6 +99,12 @@ export function AppHeader() {
         behavior: 'smooth'
       });
     }
+  };
+
+  const handleLogoutConfirm = () => {
+    closeLogoutModal();
+    authService.logout();
+    // The redirect is done in the authService.logout(), no need to do it here
   };
 
   // Generate items based on current path
@@ -71,6 +131,35 @@ export function AppHeader() {
       );
     }
   });
+
+  // Handle clearing a notification
+  const handleClearNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  };
+
+  // Handle clearing all notifications
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  // Format date for notifications
+  const formatNotificationDate = (date: Date) => {
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    
+    if (diffDays > 0) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+    } else {
+      return 'Just now';
+    }
+  };
 
   return (
     <Box component="header" className={classes.header}>
@@ -102,12 +191,139 @@ export function AppHeader() {
         {/* Right Section: Auth Buttons + Toggle */}
         <Group visibleFrom="sm">
           <ColorSchemeToggle />
-          <Button variant="default" component={Link} href="/login">
-            Log in
-          </Button>
-          <Button component={Link} href="/signup" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }}>
-            Sign up
-          </Button>
+          
+          {isAuthenticated ? (
+            <>
+              <Menu shadow="md" width={320} position="bottom-end" closeOnItemClick={false} opened={notificationsMenuOpened} onChange={notificationsMenuOpened ? closeNotificationsMenu : openNotificationsMenu}>
+                <Menu.Target>
+                  <Tooltip label="Notifications" withArrow position="bottom">
+                    <ActionIcon variant="subtle" radius="xl" size="lg" color="gray">
+                      <IconBell size={20} />
+                      {notifications.length > 0 && (
+                        <Box 
+                          pos="absolute" 
+                          top={3} 
+                          right={3} 
+                          w={14} 
+                          h={14} 
+                          bg="red" 
+                          style={{ 
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {notifications.length}
+                        </Box>
+                      )}
+                    </ActionIcon>
+                  </Tooltip>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Box p="xs">
+                    <Group justify="space-between" mb="xs">
+                      <Text fw={600}>Notifications</Text>
+                      {notifications.length > 0 && (
+                        <Button 
+                          variant="subtle" 
+                          color="gray" 
+                          size="xs"
+                          onClick={handleClearAllNotifications}
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                    </Group>
+                  </Box>
+                  
+                  <Divider />
+                  
+                  <ScrollArea h={notifications.length > 0 ? 320 : 'auto'} scrollbarSize={6}>
+                    {notifications.length > 0 ? (
+                      <Stack gap={0}>
+                        {notifications.map((notification) => (
+                          <Box key={notification.id} p="xs" style={{ position: 'relative' }}>
+                            <Group justify="space-between" mb={4}>
+                              <Group>
+                                <Badge color={notification.color} size="sm" variant="filled" />
+                                <Text size="sm" fw={600}>{notification.title}</Text>
+                              </Group>
+                              <CloseButton 
+                                size="xs" 
+                                onClick={() => handleClearNotification(notification.id)}
+                                title="Clear notification"
+                                aria-label="Clear notification"
+                              />
+                            </Group>
+                            <Text size="xs" color="dimmed" ml={28}>{notification.message}</Text>
+                            <Text size="xs" color="dimmed" ta="right" mt={5} style={{ fontStyle: 'italic' }}>
+                              {formatNotificationDate(notification.date)}
+                            </Text>
+                            <Divider mt={8} />
+                          </Box>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Center p="xl">
+                        <Box ta="center" py={20}>
+                          <IconBell size={40} opacity={0.3} />
+                          <Text c="dimmed" size="sm" mt={10}>No notifications</Text>
+                        </Box>
+                      </Center>
+                    )}
+                  </ScrollArea>
+                </Menu.Dropdown>
+              </Menu>
+            
+              <Menu shadow="md" width={200} position="bottom-end">
+                <Menu.Target>
+                  <UnstyledButton>
+                    <Group gap={8}>
+                      <Avatar color="green" radius="xl">{getUserInitials()}</Avatar>
+                      <Box style={{ flex: 1 }}>
+                        <Text size="sm" fw={500}>{userData?.first_name} {userData?.last_name}</Text>
+                        <Text c="dimmed" size="xs">{userData?.profile?.user_type || 'User'}</Text>
+                      </Box>
+                    </Group>
+                  </UnstyledButton>
+                </Menu.Target>
+
+                <Menu.Dropdown>
+                  <Menu.Label>Account</Menu.Label>
+                  <Menu.Item leftSection={<IconUser size={14} />} component={Link} href="/dashboard/profile">
+                    Profile
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconSettings size={14} />} component={Link} href="/dashboard/settings">
+                    Settings
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconInfoCircle size={14} />} component={Link} href="/dashboard/help-support">
+                    Help & Support
+                  </Menu.Item>
+                  <Divider />
+                  <Menu.Item
+                    leftSection={<IconLogout size={14} />}
+                    color="red"
+                    onClick={openLogoutModal}
+                  >
+                    Logout
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </>
+          ) : (
+            <>
+              <Button variant="default" component={Link} href="/login">
+                Log in
+              </Button>
+              <Button component={Link} href="/signup" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }}>
+                Sign up
+              </Button>
+            </>
+          )}
         </Group>
 
         {/* Mobile Burger Menu */}
@@ -115,6 +331,25 @@ export function AppHeader() {
 
         {/* TODO: Add Mobile Drawer/Menu based on 'opened' state */}
       </Container>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        opened={logoutModalOpened}
+        onClose={closeLogoutModal}
+        title="Confirm Logout"
+        centered
+        size="sm"
+      >
+        <Text size="sm">Are you sure you want to log out?</Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={closeLogoutModal}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleLogoutConfirm}>
+            Logout
+          </Button>
+        </Group>
+      </Modal>
     </Box>
   );
 } 
