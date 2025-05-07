@@ -811,7 +811,10 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
                     const base64Image = canvas.toDataURL('image/jpeg');
                     
                     // Make API call to backend - no trailing slash
-                    fetch('/api/detect-weeds', {
+                    // Try both with and without the /api prefix
+                    const WEED_API_URL = '/detect-weeds/'; // No /api prefix as a test
+                    console.log("Sending weed detection request to:", WEED_API_URL);
+                    fetch(WEED_API_URL, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -821,6 +824,8 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
                         }),
                     })
                     .then(response => {
+                        console.log("Weed detection response status:", response.status);
+                        console.log("Weed detection response headers:", Object.fromEntries(response.headers));
                         if (!response.ok) {
                             // Try to get error message from backend if available
                             return response.json().then(errData => {
@@ -868,24 +873,98 @@ const ImageAnalysis: React.FC<ImageAnalysisProps> = ({ type }) => {
                 console.error('Image load error for analysis img element');
             };
             img.src = uploadedImageDetails.url; // Use stored URL
-        } else if (type === 'disease') { // MOCK FOR DISEASE
-            // Simulate analysis delay
-            setTimeout(() => {
+        } else if (type === 'disease') {
+            // Get the base64 image from uploadedImageDetails
+            const img = document.createElement('img');
+            img.onload = () => {
+                // Create a canvas to get the image data
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    // Get the blob from canvas
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            setAnalyzing(false);
+                            setAnalysisError('Failed to process image');
+                            return;
+                        }
+                        
+                        // Create FormData and append the image
+                        const formData = new FormData();
+                        formData.append('image', blob, 'plant_image.jpg');
+                        
+                        // Make API call to backend
+                        // Try without the /api prefix as a test
+                        const DISEASE_API_URL = '/detect-disease/'; // No /api prefix as a test
+                        console.log('Sending disease detection request to backend:', DISEASE_API_URL);
+                        fetch(DISEASE_API_URL, {
+                            method: 'POST',
+                            body: formData,
+                            // Note: Don't set Content-Type when using FormData
+                        })
+                        .then(response => {
+                            console.log("Disease detection response status:", response.status);
+                            console.log("Disease detection response headers:", Object.fromEntries(response.headers));
+                            if (!response.ok) {
+                                return response.json().then(errData => {
+                                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                                }).catch(() => {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            setAnalyzing(false);
+                            console.log('Disease detection API Response:', data);
+                            
+                            if (data.error) {
+                                setAnalysisError(`Analysis failed: ${data.error}`);
+                                return;
+                            }
+                            
+                            // Format the response
+                            const className = data.predicted_class || '';
+                            const confidence = data.confidence || 0;
+                            
+                            // Extract plant and condition
+                            const parts = className.split('___');
+                            let plant = parts[0].replace(/_/g, ' ');
+                            let condition = parts[1] ? parts[1].replace(/_/g, ' ') : '';
+                            
+                            // Capitalize plant and condition
+                            plant = plant.split(' ').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+                            condition = condition.split(' ').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+                            
+                            const isHealthy = className.toLowerCase().includes('healthy');
+                            
+                            // Create result message
+                            let resultMessage;
+                            if (isHealthy) {
+                                resultMessage = `Analysis complete: ${plant} appears healthy (${(confidence * 100).toFixed(1)}% confidence).`;
+                            } else {
+                                resultMessage = `Detected: ${condition} on ${plant} (${(confidence * 100).toFixed(1)}% confidence). This condition can affect crop yield and quality. Consider appropriate treatment measures.`;
+                            }
+                            
+                            setResult(resultMessage);
+                        })
+                        .catch(error => {
+                            console.error('Error analyzing image for disease:', error);
+                            setAnalyzing(false);
+                            setAnalysisError(error.message || 'Error analyzing image. Please try again.');
+                        });
+                    }, 'image/jpeg', 0.95);
+                }
+            };
+            img.onerror = () => {
                 setAnalyzing(false);
-                // Simulate different outcomes for disease for testing UI
-                const mockOutcomes = [
-                    "The image shows symptoms of Septoria Leaf Blotch at early stage. This fungal disease affects wheat and can reduce yields by up to 30%. Early treatment is recommended. Ensure good air circulation by proper plant spacing and avoid overhead irrigation.",
-                    "No significant disease symptoms detected in the provided image. Continue regular monitoring.",
-                    "Possible signs of nutrient deficiency (e.g., nitrogen) observed. Consider soil testing for confirmation before applying treatments.",
-                ];
-                const randomOutcome = mockOutcomes[Math.floor(Math.random() * mockOutcomes.length)];
-                setResult(randomOutcome);
-                // Simulate an error occasionally
-                // if (Math.random() > 0.8) {
-                //     setAnalysisError("Mock analysis server error. Please try again.");
-                //     setResult(null);
-                // }
-            }, 2500);
+                setAnalysisError('Failed to load image for disease analysis.');
+                console.error('Image load error for disease analysis');
+            };
+            img.src = uploadedImageDetails.url;
         }
     };
 

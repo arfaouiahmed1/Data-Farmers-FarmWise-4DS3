@@ -18,6 +18,23 @@ export default withBundleAnalyzer({
         source: '/api/:path*',
         destination: 'http://localhost:8000/api/:path*', // Proxy to Django backend
       },
+      // Add specific rewrites for disease and weed detection
+      {
+        source: '/detect-disease',
+        destination: 'http://localhost:8000/api/detect-disease/',
+      },
+      {
+        source: '/detect-disease/',
+        destination: 'http://localhost:8000/api/detect-disease/',
+      },
+      {
+        source: '/detect-weeds',
+        destination: 'http://localhost:8000/api/detect-weeds/',
+      },
+      {
+        source: '/detect-weeds/',
+        destination: 'http://localhost:8000/api/detect-weeds/',
+      },
     ];
   },
 });

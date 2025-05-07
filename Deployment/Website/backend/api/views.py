@@ -543,10 +543,10 @@ def detect_weeds_view(request):
 # --- New View for Disease Detection ---
 @method_decorator(csrf_exempt, name='dispatch')
 class DetectDiseaseView(View):
-    # Define the image transformations
+    # Define the image transformations with larger input size to prevent dimension issues
     preprocess = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(512),  # Resize to a larger size to accommodate MaxPool2d(4) operations
+        transforms.CenterCrop(448),  # Crop to ensure divisibility by 4*4*4 = 64
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
@@ -564,17 +564,33 @@ class DetectDiseaseView(View):
             # Open image with PIL
             try:
                 img = Image.open(image_file).convert('RGB')
+                print(f"Original image dimensions: {img.width}x{img.height}")
             except Exception as img_err:
                 print(f"Error opening image: {img_err}")
                 return JsonResponse({'error': 'Invalid image file'}, status=400)
 
             # Preprocess the image and prepare it for the model
-            img_t = self.preprocess(img)
-            batch_t = torch.unsqueeze(img_t, 0) # Create a mini-batch as expected by the model
+            try:
+                img_t = self.preprocess(img)
+                print(f"Preprocessed tensor shape: {img_t.shape}")
+                batch_t = torch.unsqueeze(img_t, 0) # Create a mini-batch as expected by the model
+                print(f"Batch tensor shape: {batch_t.shape}")
+            except Exception as preprocess_err:
+                print(f"Error during preprocessing: {preprocess_err}")
+                import traceback
+                traceback.print_exc()
+                return JsonResponse({'error': f'Image preprocessing failed: {str(preprocess_err)}'}, status=500)
 
             # Make a prediction
-            with torch.no_grad(): # important for inference to disable gradient calculation
-                out = disease_model(batch_t)
+            try:
+                with torch.no_grad(): # important for inference to disable gradient calculation
+                    out = disease_model(batch_t)
+                print(f"Model output shape: {out.shape}")
+            except Exception as model_err:
+                print(f"Error during model inference: {model_err}")
+                import traceback
+                traceback.print_exc()
+                return JsonResponse({'error': f'Model inference failed: {str(model_err)}'}, status=500)
             
             # Get the predicted class index
             _, index = torch.max(out, 1)
@@ -595,4 +611,6 @@ class DetectDiseaseView(View):
 
         except Exception as e:
             print(f"Error during disease detection: {e}") # Log the error server-side
-            return JsonResponse({'error': 'Internal server error during disease detection.'}, status=500)
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': f'Internal server error during disease detection: {str(e)}'}, status=500)
