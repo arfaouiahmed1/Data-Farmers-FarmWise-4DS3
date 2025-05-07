@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'corsheaders',
     # Local apps
     'api',
+    'core',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -121,6 +123,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files (User uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -141,3 +148,28 @@ CORS_ALLOWED_ORIGINS = [
 
 # Disable automatic slash appending to prevent POST redirect issues
 APPEND_SLASH = False
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# Email settings (for password reset)
+# For development, use console backend
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@farmwise.com'
+
+# For production, use SMTP
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.yourprovider.com'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = 'your-email@example.com'
+# EMAIL_HOST_PASSWORD = 'your-password'
+# EMAIL_USE_TLS = True
+# DEFAULT_FROM_EMAIL = 'noreply@farmwise.com'

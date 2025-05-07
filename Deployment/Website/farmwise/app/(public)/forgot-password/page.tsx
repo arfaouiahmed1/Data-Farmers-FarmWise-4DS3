@@ -20,6 +20,7 @@ import { IconArrowLeft, IconCheck, IconAlertCircle } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormEvent } from 'react';
+import authService from '../../api/auth';
 import classes from './ForgotPasswordPage.module.css';
 
 // Animation variants
@@ -64,9 +65,7 @@ export default function ForgotPasswordPage() {
     setError('');
     
     try {
-      // In a real application, you would make an API call to send a password reset email
-      // For demonstration purposes, we'll simulate a successful response after a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await authService.forgotPassword({ email });
       
       // Set success message and clear email field
       setSuccess(true);
@@ -76,8 +75,9 @@ export default function ForgotPasswordPage() {
       setTimeout(() => {
         router.push('/login');
       }, 3000);
-    } catch (err) {
-      setError('An error occurred. Please try again later.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'An error occurred. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

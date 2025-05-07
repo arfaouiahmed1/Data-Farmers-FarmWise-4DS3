@@ -476,7 +476,7 @@ export default function LandDetailPage() {
                             </Text>
                           </Group>
                           <Text fw={700}>
-                            {isPriceGood ? '+' : ''}{formatPrice(priceDifference)} TND
+                            {isPriceGood ? '+' : ''}{formatPrice(priceDifference)} TND  
                           </Text>
                         </Group>
                         
