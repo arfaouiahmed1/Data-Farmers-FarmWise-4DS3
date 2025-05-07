@@ -16,12 +16,30 @@ import {
   Group,
   Tooltip,
   Popover,
+  ThemeIcon,
+  Divider,
+  SimpleGrid,
+  rem,
+  Box,
 } from '@mantine/core';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
-import { IconAlertCircle, IconCheck, IconX, IconInfoCircle } from '@tabler/icons-react';
+import { 
+  IconAlertCircle, 
+  IconCheck, 
+  IconX, 
+  IconInfoCircle, 
+  IconAt, 
+  IconUser, 
+  IconId, 
+  IconLock,
+  IconUserPlus,
+  IconArrowRight,
+  IconBrandGoogle,
+  IconBrandFacebook,
+} from '@tabler/icons-react';
 import authService from '../../api/auth';
 import classes from './SignupPage.module.css';
 import PasswordStrengthIndicator from '@/components/Auth/PasswordStrengthIndicator';
@@ -29,7 +47,7 @@ import { validatePassword } from '@/app/utils/passwordUtils';
 import { validateEmail, isValidEmail } from '@/app/utils/emailUtils';
 import { useDebouncedValue } from '@mantine/hooks';
 
-// Animation variant
+// Animation variants
 const containerVariant = {
   hidden: { opacity: 0, y: 10 },
   visible: { 
@@ -49,6 +67,26 @@ const notificationVariant = {
   exit: {
     opacity: 0,
     transition: { duration: 0.2, ease: "easeIn" }
+  }
+};
+
+const formVariant = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { 
+      duration: 0.4,
+      staggerChildren: 0.08,
+    }
+  }
+};
+
+const itemVariant = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.3 }
   }
 };
 
@@ -227,24 +265,31 @@ export default function SignupPage() {
   };
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariant}
-    >
-      <Container size={460} my={40}>
-        <Title ta="center" className={classes.title}>
-          Create your FarmWise Account
-        </Title>
-        <Text c="dimmed" size="sm" ta="center" mt={5}>
-          Already have an account?{' '}
-          <Anchor size="sm" component={Link} href="/login">
-            Sign in
-          </Anchor>
-        </Text>
+    <Container size={500} py={40}>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariant}
+        className={classes.wrapper}
+      >
+        <Box className={classes.headerWrapper}>
+          <ThemeIcon size={56} radius="xl" className={classes.iconWrapper}>
+            <IconUserPlus stroke={1.5} />
+          </ThemeIcon>
+          
+          <Title ta="center" className={classes.title}>
+            Create your FarmWise Account
+          </Title>
+          <Text c="dimmed" size="sm" ta="center" mt={5}>
+            Already have an account?{' '}
+            <Anchor size="sm" component={Link} href="/login" className={classes.link}>
+              Sign in
+            </Anchor>
+          </Text>
+        </Box>
 
-        <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-          <AnimatePresence>
+        <Paper withBorder shadow="md" p={30} mt={30} radius="lg" className={classes.formWrapper} bg="var(--mantine-color-body)">
+          <AnimatePresence mode="wait">
             {success ? (
               <motion.div
                 key="success"
@@ -256,20 +301,20 @@ export default function SignupPage() {
                 <Notification 
                   icon={<IconCheck size="1.1rem" />}
                   color="teal" 
-                  title="Registration successful!"
+                  title="Account created successfully!"
                   withCloseButton={false}
+                  className={classes.notification}
                 >
-                  Your account has been created. Redirecting to onboarding...
+                  Welcome to FarmWise! Redirecting you to onboarding...
                 </Notification>
               </motion.div>
             ) : (
               <motion.form
-                key="form"
+                key="form" 
                 onSubmit={handleSignup}
-                variants={notificationVariant}
+                variants={formVariant}
                 initial="hidden"
                 animate="visible"
-                exit="exit"
               >
                 <AnimatePresence>
                   {error && (
@@ -285,6 +330,8 @@ export default function SignupPage() {
                         withCloseButton 
                         onClose={() => setError('')}
                         mb="md"
+                        radius="md"
+                        className={classes.notification}
                       >
                         {error}
                       </Notification>
@@ -292,29 +339,45 @@ export default function SignupPage() {
                   )}
                 </AnimatePresence>
                 
-                <Stack>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <TextInput 
-                      label="First Name" 
-                      placeholder="John" 
-                      style={{ flex: 1 }}
+                <motion.div variants={itemVariant}>
+                  <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
+                    <TextInput
+                      label="First name"
+                      placeholder="Your first name"
                       value={firstName}
                       onChange={(e) => setFirstName(e.currentTarget.value)}
+                      radius="md"
+                      className={classes.input}
+                      leftSection={
+                        <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                          <IconId size="1rem" />
+                        </ThemeIcon>
+                      }
                     />
-                    <TextInput 
-                      label="Last Name" 
-                      placeholder="Doe" 
-                      style={{ flex: 1 }}
+                    <TextInput
+                      label="Last name"
+                      placeholder="Your last name"
                       value={lastName}
                       onChange={(e) => setLastName(e.currentTarget.value)}
+                      radius="md"
+                      className={classes.input}
+                      leftSection={
+                        <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                          <IconId size="1rem" />
+                        </ThemeIcon>
+                      }
                     />
-                  </div>
-                  <TextInput 
+                  </SimpleGrid>
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <TextInput
+                    required
                     label={
                       <Group gap={5}>
                         <span>Username</span>
                         <Tooltip
-                          label="Username must be at least 3 characters and unique"
+                          label="Choose a unique username (min. 3 characters)"
                           position="top-start"
                           withArrow
                         >
@@ -322,29 +385,44 @@ export default function SignupPage() {
                         </Tooltip>
                       </Group>
                     }
-                    placeholder="johndoe" 
-                    required 
+                    placeholder="your_username"
                     value={username}
                     onChange={(e) => setUsername(e.currentTarget.value)}
+                    error={usernameExists && usernameChecked ? 'Username already taken' : null}
+                    radius="md"
+                    className={classes.input}
+                    leftSection={
+                      <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                        <IconUser size="1rem" />
+                      </ThemeIcon>
+                    }
                     rightSection={
                       isCheckingUsername ? (
                         <Loader size="xs" />
-                      ) : usernameChecked ? (
-                        usernameExists ? (
-                          <IconX size="1.1rem" style={{ color: 'red' }} />
+                      ) : usernameChecked && username.length >= 3 ? (
+                        !usernameExists ? (
+                          <ThemeIcon color="green" size="sm" radius="xl" variant="light">
+                            <IconCheck size="0.8rem" />
+                          </ThemeIcon>
                         ) : (
-                          <IconCheck size="1.1rem" style={{ color: 'green' }} />
+                          <ThemeIcon color="red" size="sm" radius="xl" variant="light">
+                            <IconX size="0.8rem" />
+                          </ThemeIcon>
                         )
                       ) : null
                     }
-                    error={usernameExists ? 'Username already exists' : ''}
                   />
-                  <TextInput 
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <TextInput
+                    required
+                    mt="md"
                     label={
                       <Group gap={5}>
                         <span>Email</span>
                         <Tooltip
-                          label="Please use a valid, permanent email address"
+                          label="Enter a valid email address"
                           position="top-start"
                           withArrow
                         >
@@ -352,97 +430,188 @@ export default function SignupPage() {
                         </Tooltip>
                       </Group>
                     }
-                    placeholder="you@farmwise.ag" 
-                    required 
-                    type="email"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.currentTarget.value)}
+                    error={
+                      emailChecked && !emailValidation.isValid ? 'Invalid email format' :
+                      emailChecked && emailValidation.isDisposable ? 'Please use a permanent email address' :
+                      emailChecked && emailExists ? 'Email already registered' :
+                      null
+                    }
+                    radius="md"
+                    className={classes.input}
+                    leftSection={
+                      <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                        <IconAt size="1rem" />
+                      </ThemeIcon>
+                    }
                     rightSection={
                       isCheckingEmail ? (
                         <Loader size="xs" />
-                      ) : emailChecked && emailValidation.isValid ? (
-                        emailExists ? (
-                          <IconX size="1.1rem" style={{ color: 'red' }} />
+                      ) : emailChecked ? (
+                        emailValidation.isValid && !emailExists && !emailValidation.isDisposable ? (
+                          <ThemeIcon color="green" size="sm" radius="xl" variant="light">
+                            <IconCheck size="0.8rem" />
+                          </ThemeIcon>
                         ) : (
-                          <IconCheck size="1.1rem" style={{ color: 'green' }} />
+                          <ThemeIcon color="red" size="sm" radius="xl" variant="light">
+                            <IconX size="0.8rem" />
+                          </ThemeIcon>
                         )
-                      ) : email.length > 0 && !emailValidation.isValid ? (
-                        <IconX size="1.1rem" style={{ color: 'red' }} />
                       ) : null
                     }
-                    error={
-                      emailExists ? 'Email already registered' : 
-                      email.length > 0 && !emailValidation.isValid ? emailValidation.feedback : 
-                      emailValidation.isDisposable ? emailValidation.feedback : 
-                      ''
-                    }
                   />
-                  <PasswordInput 
-                    label={
-                      <Group gap={5}>
-                        <span>Password</span>
-                        <Tooltip
-                          label="Password must be at least 8 characters with lowercase, uppercase, numbers, and special characters"
-                          position="top-start"
-                          withArrow
-                        >
-                          <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
-                        </Tooltip>
-                      </Group>
-                    }
-                    placeholder="Your password" 
-                    required 
-                    value={password}
-                    onChange={(e) => setPassword(e.currentTarget.value)}
-                  />
-                  
-                  {password.length > 0 && (
-                    <PasswordStrengthIndicator passwordValidation={passwordValidation} />
-                  )}
-                  
-                  <PasswordInput 
-                    label="Confirm Password" 
-                    placeholder="Confirm your password" 
-                    required 
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <Popover width="target" position="bottom" shadow="md" withArrow>
+                    <Popover.Target>
+                      <div>
+                        <PasswordInput
+                          required
+                          mt="md"
+                          label={
+                            <Group gap={5}>
+                              <span>Password</span>
+                              <Tooltip
+                                label="Password must be at least 8 characters"
+                                position="top-start"
+                                withArrow
+                              >
+                                <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
+                              </Tooltip>
+                            </Group>
+                          }
+                          placeholder="Your strong password"
+                          value={password}
+                          onChange={(e) => setPassword(e.currentTarget.value)}
+                          radius="md"
+                          className={classes.input}
+                          leftSection={
+                            <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                              <IconLock size="1rem" />
+                            </ThemeIcon>
+                          }
+                          rightSection={
+                            password.length > 0 ? (
+                              passwordValidation.isValid ? (
+                                <ThemeIcon color="green" size="sm" radius="xl" variant="light">
+                                  <IconCheck size="0.8rem" />
+                                </ThemeIcon>
+                              ) : (
+                                <ThemeIcon color="red" size="sm" radius="xl" variant="light">
+                                  <IconX size="0.8rem" />
+                                </ThemeIcon>
+                              )
+                            ) : null
+                          }
+                        />
+                      </div>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <PasswordStrengthIndicator passwordValidation={passwordValidation} />
+                    </Popover.Dropdown>
+                  </Popover>
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <PasswordInput
+                    required
+                    mt="md"
+                    label="Confirm password"
+                    placeholder="Repeat your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.currentTarget.value)}
-                    error={password !== confirmPassword && confirmPassword.length > 0 ? 'Passwords do not match' : ''}
+                    error={confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match' : null}
+                    radius="md"
+                    className={classes.input}
+                    leftSection={
+                      <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                        <IconLock size="1rem" />
+                      </ThemeIcon>
+                    }
+                    rightSection={
+                      confirmPassword.length > 0 ? (
+                        password === confirmPassword ? (
+                          <ThemeIcon color="green" size="sm" radius="xl" variant="light">
+                            <IconCheck size="0.8rem" />
+                          </ThemeIcon>
+                        ) : (
+                          <ThemeIcon color="red" size="sm" radius="xl" variant="light">
+                            <IconX size="0.8rem" />
+                          </ThemeIcon>
+                        )
+                      ) : null
+                    }
                   />
-                  <Checkbox 
-                    label="I accept terms and conditions" 
-                    mt="lg" 
-                    required
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <Checkbox
+                    mt="xl"
+                    mb="xl"
+                    label={
+                      <Text size="sm">
+                        I agree to the{' '}
+                        <Anchor href="#" target="_blank" className={classes.link}>
+                          Terms of Service
+                        </Anchor>{' '}
+                        and{' '}
+                        <Anchor href="#" target="_blank" className={classes.link}>
+                          Privacy Policy
+                        </Anchor>
+                      </Text>
+                    }
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.currentTarget.checked)}
+                    required
+                    className={classes.checkbox}
                   />
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
                   <Button 
                     fullWidth 
-                    mt="xl" 
-                    variant="gradient" 
-                    gradient={{ from: 'farmGreen', to: 'cyan' }}
+                    radius="md"
                     type="submit"
                     loading={isSubmitting}
-                    disabled={
-                      isSubmitting || 
-                      usernameExists || 
-                      emailExists || 
-                      !emailValidation.isValid || 
-                      emailValidation.isDisposable ||
-                      !passwordValidation.isValid || 
-                      password !== confirmPassword ||
-                      !password ||
-                      !username ||
-                      !email
-                    }
+                    className={classes.button}
+                    rightSection={<IconArrowRight size={18} />}
                   >
-                    Sign up
+                    Create account
                   </Button>
-                </Stack>
+                </motion.div>
               </motion.form>
             )}
           </AnimatePresence>
+          
+          {!success && (
+            <>
+              <Divider label="Or continue with" labelPosition="center" mt="lg" mb="md" />
+              
+              <Group grow mb="md" mt="md">
+                <Button 
+                  variant="outline" 
+                  leftSection={<IconBrandGoogle stroke={1.5} />}
+                  radius="md"
+                  className={classes.socialButton}
+                >
+                  Google
+                </Button>
+                <Button
+                  variant="outline"
+                  leftSection={<IconBrandFacebook stroke={1.5} />}
+                  radius="md" 
+                  className={classes.socialButton}
+                >
+                  Facebook
+                </Button>
+              </Group>
+            </>
+          )}
         </Paper>
-      </Container>
-    </motion.div>
+      </motion.div>
+    </Container>
   );
 } 

@@ -12,12 +12,15 @@ import {
   Stack,
   Group,
   Divider,
-  ActionIcon,
   Notification,
   Loader,
   SegmentedControl,
   Box,
   Tooltip,
+  rem,
+  ThemeIcon,
+  PaperProps,
+  Avatar,
 } from '@mantine/core';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +34,9 @@ import {
   IconInfoCircle,
   IconAt,
   IconUser,
+  IconLock,
+  IconLogin,
+  IconArrowRight,
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
@@ -39,7 +45,7 @@ import classes from './LoginPage.module.css';
 import { useDebouncedValue } from '@mantine/hooks';
 import { isValidEmail } from '@/app/utils/emailUtils';
 
-// Animation variant
+// Animation variants
 const containerVariant = {
   hidden: { opacity: 0, y: 10 },
   visible: { 
@@ -59,6 +65,26 @@ const notificationVariant = {
   exit: {
     opacity: 0,
     transition: { duration: 0.2, ease: "easeIn" }
+  }
+};
+
+const formVariant = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { 
+      duration: 0.4,
+      staggerChildren: 0.1,
+    }
+  }
+};
+
+const itemVariant = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.3 }
   }
 };
 
@@ -153,23 +179,30 @@ export default function LoginPage() {
   };
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariant}
-    >
-      <Container size={420} my={40}>
-        <Title ta="center" className={classes.title}>
-          Welcome back!
-        </Title>
-        <Text c="dimmed" size="sm" ta="center" mt={5}>
-          Do not have an account yet?{' '}
-          <Anchor size="sm" component={Link} href="/signup">
-            Create account
-          </Anchor>
-        </Text>
+    <Container size={420} py={40}>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariant}
+        className={classes.wrapper}
+      >
+        <Box className={classes.headerWrapper}>
+          <ThemeIcon size={56} radius="xl" className={classes.iconWrapper}>
+            <IconLogin stroke={1.5} />
+          </ThemeIcon>
+          
+          <Title ta="center" className={classes.title}>
+            Welcome back
+          </Title>
+          <Text c="dimmed" size="sm" ta="center" mt={5}>
+            Don't have an account yet?{' '}
+            <Anchor size="sm" component={Link} href="/signup" className={classes.link}>
+              Create account
+            </Anchor>
+          </Text>
+        </Box>
 
-        <Paper withBorder shadow="md" p={30} mt={30} radius="md">
+        <Paper withBorder shadow="md" p={30} mt={30} radius="lg" className={classes.formWrapper} bg="var(--mantine-color-body)">
           <form onSubmit={handleLogin}>
             <AnimatePresence>
               {error && (
@@ -185,6 +218,8 @@ export default function LoginPage() {
                     withCloseButton 
                     onClose={() => setError('')}
                     mb="md"
+                    radius="md"
+                    className={classes.notification}
                   >
                     {error}
                   </Notification>
@@ -192,135 +227,160 @@ export default function LoginPage() {
               )}
             </AnimatePresence>
             
-            <Stack>
-              <SegmentedControl
-                value={loginMethod}
-                onChange={(value) => setLoginMethod(value as LoginMethod)}
-                data={[
-                  {
-                    value: 'username',
-                    label: (
-                      <Center>
-                        <IconUser size={16} />
-                        <Box ml={10}>Username</Box>
-                      </Center>
-                    ),
-                  },
-                  {
-                    value: 'email',
-                    label: (
-                      <Center>
-                        <IconAt size={16} />
-                        <Box ml={10}>Email</Box>
-                      </Center>
-                    ),
-                  },
-                ]}
-                fullWidth
-                mb="md"
-              />
-              
-              <TextInput 
-                label={
-                  <Group gap={5}>
-                    <span>{loginMethod === 'username' ? 'Username' : 'Email'}</span>
-                    <Tooltip
-                      label={loginMethod === 'username' ? 'Enter your username' : 'Enter your registered email'}
-                      position="top-start"
-                      withArrow
-                    >
-                      <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
-                    </Tooltip>
+            <motion.div 
+              variants={formVariant}
+              initial="hidden"
+              animate="visible"
+            >
+              <Stack gap="md">
+                <motion.div variants={itemVariant}>
+                  <SegmentedControl
+                    value={loginMethod}
+                    onChange={(value) => setLoginMethod(value as LoginMethod)}
+                    data={[
+                      {
+                        value: 'username',
+                        label: (
+                          <Center>
+                            <IconUser size={16} />
+                            <Box ml={10}>Username</Box>
+                          </Center>
+                        ),
+                      },
+                      {
+                        value: 'email',
+                        label: (
+                          <Center>
+                            <IconAt size={16} />
+                            <Box ml={10}>Email</Box>
+                          </Center>
+                        ),
+                      },
+                    ]}
+                    fullWidth
+                    radius="md"
+                    className={classes.segmentedControl}
+                  />
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <TextInput 
+                    label={
+                      <Group gap={5}>
+                        <span>{loginMethod === 'username' ? 'Username' : 'Email'}</span>
+                        <Tooltip
+                          label={loginMethod === 'username' ? 'Enter your username' : 'Enter your registered email'}
+                          position="top-start"
+                          withArrow
+                        >
+                          <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
+                        </Tooltip>
+                      </Group>
+                    }
+                    placeholder={loginMethod === 'username' ? 'Your username' : 'you@example.com'} 
+                    required 
+                    type={loginMethod === 'email' ? 'email' : 'text'}
+                    value={usernameOrEmail}
+                    onChange={(e) => setUsernameOrEmail(e.currentTarget.value)}
+                    leftSection={
+                      <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                        {loginMethod === 'username' ? <IconUser size="1rem" /> : <IconAt size="1rem" />}
+                      </ThemeIcon>
+                    }
+                    rightSection={
+                      isCheckingIdentity ? (
+                        <Loader size="xs" />
+                      ) : identityChecked && usernameOrEmail.length >= 3 ? (
+                        identityExists ? (
+                          <ThemeIcon color="green" size="sm" radius="xl" variant="light">
+                            <IconCheck size="0.8rem" />
+                          </ThemeIcon>
+                        ) : (
+                          <ThemeIcon color="red" size="sm" radius="xl" variant="light">
+                            <IconX size="0.8rem" />
+                          </ThemeIcon>
+                        )
+                      ) : null
+                    }
+                    radius="md"
+                    className={classes.input}
+                  />
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <PasswordInput
+                    label="Password"
+                    placeholder="Your password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.currentTarget.value)}
+                    leftSection={
+                      <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                        <IconLock size="1rem" />
+                      </ThemeIcon>
+                    }
+                    radius="md"
+                    className={classes.input}
+                  />
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <Group justify="space-between" mt="xs">
+                    <Text size="xs">
+                      <Anchor component={Link} href="/forgot-password" className={classes.link}>
+                        Forgot your password?
+                      </Anchor>
+                    </Text>
                   </Group>
-                }
-                placeholder={loginMethod === 'username' ? 'username' : 'you@example.com'} 
-                required 
-                type={loginMethod === 'email' ? 'email' : 'text'}
-                value={usernameOrEmail}
-                onChange={(e) => setUsernameOrEmail(e.currentTarget.value)}
-                rightSection={
-                  isCheckingIdentity ? (
-                    <Loader size="xs" />
-                  ) : identityChecked && usernameOrEmail.length >= 3 ? (
-                    identityExists ? (
-                      <IconCheck size="1.1rem" style={{ color: 'green' }} />
-                    ) : (
-                      <IconX size="1.1rem" style={{ color: 'red' }} />
-                    )
-                  ) : null
-                }
-                error={usernameOrEmail.length >= 3 && !identityExists && identityChecked ? 
-                  `${loginMethod === 'username' ? 'Username' : 'Email'} not found` : 
-                  ''}
-              />
-              <PasswordInput 
-                label={
-                  <Group gap={5}>
-                    <span>Password</span>
-                    <Tooltip
-                      label="Enter your password"
-                      position="top-start"
-                      withArrow
-                    >
-                      <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
-                    </Tooltip>
-                  </Group>
-                }
-                placeholder="Your password" 
-                required 
-                mt="md" 
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
-              />
-              <Group justify="space-between" mt="lg">
-                {/* Add Checkbox for remember me if needed */}
-                <Anchor component={Link} href="/forgot-password" size="sm">
-                  Forgot password?
-                </Anchor>
-              </Group>
+                </motion.div>
+                
+                <motion.div variants={itemVariant}>
+                  <Button 
+                    fullWidth 
+                    radius="md"
+                    type="submit"
+                    loading={isSubmitting}
+                    rightSection={<IconArrowRight size={18} />}
+                    className={classes.button}
+                    mt="md"
+                  >
+                    Sign in
+                  </Button>
+                </motion.div>
+              </Stack>
+            </motion.div>
+
+            <Divider label="Or continue with" labelPosition="center" mt="lg" mb="md" />
+            
+            <Group grow mb="md" mt="md">
               <Button 
-                fullWidth 
-                mt="xl" 
-                variant="gradient" 
-                gradient={{ from: 'farmGreen', to: 'cyan' }}
-                type="submit"
-                loading={isSubmitting}
-                disabled={
-                  isSubmitting || 
-                  (usernameOrEmail.length >= 3 && !identityExists && identityChecked) ||
-                  !usernameOrEmail ||
-                  !password
-                }
+                variant="outline" 
+                leftSection={<IconBrandGoogle stroke={1.5} />}
+                radius="md"
+                className={classes.socialButton}
               >
-                Sign in
+                Google
               </Button>
-            </Stack>
+              <Button
+                variant="outline"
+                leftSection={<IconBrandFacebook stroke={1.5} />}
+                radius="md" 
+                className={classes.socialButton}
+              >
+                Facebook
+              </Button>
+            </Group>
           </form>
-
-          <Divider label="Or continue with" labelPosition="center" my="lg" />
-
-          <Group justify="center" gap="md" mb="md" mt="md">
-            <ActionIcon size="lg" variant="default" radius="xl" aria-label="Sign in with Google">
-              <IconBrandGoogle size={22} />
-            </ActionIcon>
-            <ActionIcon size="lg" variant="default" radius="xl" aria-label="Sign in with Facebook">
-              <IconBrandFacebook size={22} />
-            </ActionIcon>
-            <ActionIcon size="lg" variant="default" radius="xl" aria-label="Sign in with Microsoft">
-              <IconBrandWindows size={22} />
-            </ActionIcon>
-          </Group>
         </Paper>
-      </Container>
-    </motion.div>
+      </motion.div>
+    </Container>
   );
 }
 
-// Helper component for SegmentedControl
 function Center({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Group justify="center" gap={10}>
       {children}
-    </div>
+    </Group>
   );
 } 

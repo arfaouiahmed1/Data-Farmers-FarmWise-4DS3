@@ -13,10 +13,11 @@ import {
   Box,
   rem,
   Notification,
+  ThemeIcon,
 } from '@mantine/core';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IconArrowLeft, IconCheck, IconAlertCircle } from '@tabler/icons-react';
+import { IconArrowLeft, IconCheck, IconAlertCircle, IconAt, IconKey, IconArrowRight } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormEvent } from 'react';
@@ -43,6 +44,26 @@ const notificationVariant = {
   exit: {
     opacity: 0,
     transition: { duration: 0.2, ease: "easeIn" }
+  }
+};
+
+const formVariant = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { 
+      duration: 0.4,
+      staggerChildren: 0.1,
+    }
+  }
+};
+
+const itemVariant = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.3 }
   }
 };
 
@@ -84,20 +105,27 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariant}
-    >
-      <Container size={460} my={30}>
-        <Title className={classes.title} ta="center">
-          Forgot your password?
-        </Title>
-        <Text c="dimmed" fz="sm" ta="center">
-          Enter your email to get a reset link
-        </Text>
+    <Container size={460} py={40}>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariant}
+        className={classes.wrapper}
+      >
+        <Box className={classes.headerWrapper}>
+          <ThemeIcon size={56} radius="xl" className={classes.iconWrapper}>
+            <IconKey stroke={1.5} />
+          </ThemeIcon>
+          
+          <Title className={classes.title} ta="center">
+            Forgot your password?
+          </Title>
+          <Text c="dimmed" fz="sm" ta="center">
+            Enter your email to get a reset link
+          </Text>
+        </Box>
 
-        <Paper withBorder shadow="md" p={30} radius="md" mt="xl">
+        <Paper withBorder shadow="md" p={30} radius="lg" mt="xl" className={classes.formWrapper} bg="var(--mantine-color-body)">
           <AnimatePresence mode="wait">
             {success ? (
               <motion.div
@@ -112,6 +140,7 @@ export default function ForgotPasswordPage() {
                   color="teal" 
                   title="Email sent!"
                   withCloseButton={false}
+                  className={classes.notification}
                 >
                   We've sent a password reset link to your email address. You'll be redirected to the login page shortly.
                 </Notification>
@@ -119,10 +148,9 @@ export default function ForgotPasswordPage() {
             ) : (
               <motion.form 
                 key="form"
-                variants={notificationVariant}
+                variants={formVariant}
                 initial="hidden"
                 animate="visible"
-                exit="exit"
                 onSubmit={handleSubmit}
               >
                 <AnimatePresence>
@@ -139,6 +167,8 @@ export default function ForgotPasswordPage() {
                         withCloseButton 
                         onClose={() => setError('')}
                         mb="md"
+                        radius="md"
+                        className={classes.notification}
                       >
                         {error}
                       </Notification>
@@ -146,37 +176,48 @@ export default function ForgotPasswordPage() {
                   )}
                 </AnimatePresence>
                 
-                <TextInput
-                  label="Your email"
-                  placeholder="me@farmwise.ag"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.currentTarget.value)}
-                  error={error && !email ? 'Email is required' : null}
-                />
+                <motion.div variants={itemVariant}>
+                  <TextInput
+                    label="Your email"
+                    placeholder="you@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.currentTarget.value)}
+                    error={error && !email ? 'Email is required' : null}
+                    radius="md"
+                    className={classes.input}
+                    leftSection={
+                      <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
+                        <IconAt size="1rem" />
+                      </ThemeIcon>
+                    }
+                  />
+                </motion.div>
                 
-                <Group justify="space-between" mt="lg" className={classes.controls}>
-                  <Anchor c="dimmed" size="sm" component={Link} href="/login" className={classes.control}>
-                    <Center inline>
-                      <IconArrowLeft style={{ width: rem(12), height: rem(12) }} stroke={1.5} />
-                      <Box ml={5}>Back to the login page</Box>
-                    </Center>
-                  </Anchor>
-                  <Button 
-                    className={classes.control} 
-                    variant="gradient" 
-                    gradient={{ from: 'farmGreen', to: 'cyan' }}
-                    type="submit"
-                    loading={isSubmitting}
-                  >
-                    Reset password
-                  </Button>
-                </Group>
+                <motion.div variants={itemVariant}>
+                  <Group justify="space-between" mt="lg" className={classes.controls}>
+                    <Anchor c="dimmed" size="sm" component={Link} href="/login" className={classes.link}>
+                      <Center inline>
+                        <IconArrowLeft style={{ width: rem(12), height: rem(12) }} stroke={1.5} />
+                        <Box ml={5}>Back to login</Box>
+                      </Center>
+                    </Anchor>
+                    <Button 
+                      className={classes.button}
+                      type="submit"
+                      loading={isSubmitting}
+                      radius="md"
+                      rightSection={<IconArrowRight size={18} />}
+                    >
+                      Reset password
+                    </Button>
+                  </Group>
+                </motion.div>
               </motion.form>
             )}
           </AnimatePresence>
         </Paper>
-      </Container>
-    </motion.div>
+      </motion.div>
+    </Container>
   );
 } 
