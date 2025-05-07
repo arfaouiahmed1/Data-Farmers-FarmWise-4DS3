@@ -1,4 +1,4 @@
-# FarmWise - Farm Analytics with YOLOv8
+# FarmWise
 
 ## Overview
 FarmWise is a comprehensive agricultural recommendation system powered by machine learning and deep learning technologies. Built with a modern tech stack featuring a Next.js frontend and Django backend, FarmWise provides data-driven insights to help farmers optimize their agricultural practices, increase productivity, and manage resources efficiently.
