@@ -4,6 +4,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap, FeatureGroup, GeoJSON } from 'react-leaflet';
 import L, { LatLngExpression, Layer, Map } from 'leaflet';
 import '@geoman-io/leaflet-geoman-free'; // Import Geoman JS
+import { ActionIcon, Badge, Tooltip } from '@mantine/core';
+import { IconMapPin, IconPencil } from '@tabler/icons-react';
+import classes from './FarmMapEditor.module.css'; // Import the CSS module
+import * as turf from '@turf/turf';
 
 // --- Leaflet Icon Fix (copy from onboarding page) ---
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -33,6 +37,7 @@ interface FarmMapEditorProps {
   editableBoundaryKey?: number | string; // Key to force GeoJSON layer remount when boundary changes
   hideAttribution?: boolean; // Whether to hide the attribution text
   readOnly?: boolean; // Whether the map is readonly (no editing)
+  allowToggleEdit?: boolean; // Whether to allow toggling edit mode (for profile page)
 }
 
 // Internal component to handle Geoman integration and loading external GeoJSON
@@ -170,7 +175,23 @@ const GeomanIntegration = ({
       if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
         drawnItemsRef.current?.addLayer(layer); // Add to our feature group
         const geojson = layer.toGeoJSON() as PolygonGeoJsonFeature;
-        console.log('Polygon Created:', geojson);
+        
+        // Calculate area in hectares
+        try {
+          const area = turf.area(geojson);
+          const areaHectares = area / 10000; // Convert square meters to hectares
+          
+          // Add area to properties
+          if (!geojson.properties) {
+            geojson.properties = {};
+          }
+          geojson.properties.area_hectares = Number(areaHectares.toFixed(2));
+          
+          console.log('Polygon Created:', geojson);
+        } catch (error) {
+          console.error('Error calculating area:', error);
+        }
+        
         setBoundary(geojson); // Update the main boundary state
         isEditingRef.current = true; // Now we are editing this new shape
 
@@ -187,7 +208,23 @@ const GeomanIntegration = ({
       const layer = e.layer || e.target; // Sometimes it's target
       if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
           const geojson = layer.toGeoJSON() as PolygonGeoJsonFeature;
-          console.log('Polygon Edited:', geojson);
+          
+          // Calculate area in hectares
+          try {
+            const area = turf.area(geojson);
+            const areaHectares = area / 10000; // Convert square meters to hectares
+            
+            // Add area to properties
+            if (!geojson.properties) {
+              geojson.properties = {};
+            }
+            geojson.properties.area_hectares = Number(areaHectares.toFixed(2));
+            
+            console.log('Polygon Edited:', geojson);
+          } catch (error) {
+            console.error('Error calculating area:', error);
+          }
+          
           setBoundary(geojson);
       }
     };
@@ -241,10 +278,17 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
     setMapInstance, // Accept the map instance setter
     editableBoundaryKey,
     hideAttribution = false, // Default to showing attribution
-    readOnly = false // Default to editable
+    readOnly = false, // Default to editable
+    allowToggleEdit = false // Default to not allow toggling edit mode
   }) => {
 
   const mapRef = useRef<Map>(null); // Ref for the map instance
+  const [editMode, setEditMode] = useState(false); // Track editing mode state for profile page
+
+  // Toggle edit mode for boundary
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+  };
 
   // Pass map instance up when ready
   useEffect(() => {
@@ -279,49 +323,84 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
   }, [onBoundarySelect]);
 
   return (
-    <MapContainer
-      ref={mapRef} // Assign ref
-      center={center}
-      zoom={zoom}
-      style={{ height: '100%', width: '100%' }}
-      scrollWheelZoom={true}
-    >
-      <TileLayer
-        attribution={hideAttribution ? '' : '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        maxZoom={20} // Allow deeper zoom for details
-        tileSize={512} // Use higher res tiles if available
-        zoomOffset={-1}
-        detectRetina={true}
-      />
-      
-      {/* For read-only mode, just show the boundary as a GeoJSON */}
-      {readOnly && boundary ? (
-        <GeoJSON data={boundary} style={readOnlyStyle} />
-      ) : (
-        <>
-          {/* Geoman Controls and Editable Layer (only in edit mode) */}
-          <GeomanIntegration 
-             boundary={boundary} 
-             setBoundary={setBoundary} 
-             editableBoundaryKey={editableBoundaryKey} 
-             detectedBoundaries={detectedBoundaries} // Pass detected boundaries down
-          />
+    <div className={classes.mapContainer}>
+      <MapContainer
+        ref={mapRef} // Assign ref
+        center={center}
+        zoom={zoom}
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom={true}
+        attributionControl={false} // We'll manage attribution ourselves
+      >
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          maxZoom={20} // Allow deeper zoom for details
+          tileSize={512} // Use higher res tiles if available
+          zoomOffset={-1}
+          detectRetina={true}
+          attribution={hideAttribution ? '' : '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
+        />
+        
+        {/* For read-only mode, just show the boundary as a GeoJSON */}
+        {(readOnly && !editMode) && boundary ? (
+          <GeoJSON data={boundary} style={readOnlyStyle} />
+        ) : (
+          <>
+            {/* Geoman Controls and Editable Layer (in edit mode) */}
+            <GeomanIntegration 
+               boundary={boundary} 
+               setBoundary={setBoundary} 
+               editableBoundaryKey={editableBoundaryKey} 
+               detectedBoundaries={detectedBoundaries} // Pass detected boundaries down
+            />
 
-          {/* Display Detected Boundaries (if any and boundary not yet selected) */}
-          {!boundary && detectedBoundaries.map((feat, index) => (
-              <GeoJSON
-                key={`detected-${index}`} // Use index or a feature ID if available
-                data={feat}
-                style={detectedStyle}
-                eventHandlers={{
-                  click: () => onDetectedClick(feat),
-                }}
-              />
-          ))}
-        </>
+            {/* Display Detected Boundaries (if any and boundary not yet selected) */}
+            {!boundary && detectedBoundaries.map((feat, index) => (
+                <GeoJSON
+                  key={`detected-${index}`} // Use index or a feature ID if available
+                  data={feat}
+                  style={detectedStyle}
+                  eventHandlers={{
+                    click: () => onDetectedClick(feat),
+                  }}
+                />
+            ))}
+          </>
+        )}
+      </MapContainer>
+
+      {/* Add edit toggle button for profile page */}
+      {allowToggleEdit && boundary && (
+        <div className={classes.editMode}>
+          <Tooltip label={editMode ? "Stop editing" : "Edit farm boundary"}>
+            <ActionIcon 
+              variant={editMode ? "filled" : "light"} 
+              color={editMode ? "red" : "blue"} 
+              onClick={toggleEditMode}
+              size="lg"
+            >
+              <IconPencil size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
       )}
-    </MapContainer>
+
+      {/* Add boundary info at bottom left */}
+      {boundary && !hideAttribution && (
+        <div className={classes.boundaryLabel}>
+          <Badge color="blue" variant="light">
+            {editMode ? "Editing boundary" : "Farm boundary"}
+          </Badge>
+        </div>
+      )}
+
+      {/* Custom attribution position */}
+      {!hideAttribution && (
+        <div className="leaflet-control-attribution leaflet-control">
+          © <a href="https://www.esri.com/">Esri</a> — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community
+        </div>
+      )}
+    </div>
   );
 };
 

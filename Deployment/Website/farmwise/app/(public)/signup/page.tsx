@@ -12,14 +12,22 @@ import {
   Stack,
   Checkbox,
   Notification,
+  Loader,
+  Group,
+  Tooltip,
+  Popover,
 } from '@mantine/core';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useState, FormEvent } from 'react';
-import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { useState, FormEvent, useEffect } from 'react';
+import { IconAlertCircle, IconCheck, IconX, IconInfoCircle } from '@tabler/icons-react';
 import authService from '../../api/auth';
 import classes from './SignupPage.module.css';
+import PasswordStrengthIndicator from '@/components/Auth/PasswordStrengthIndicator';
+import { validatePassword } from '@/app/utils/passwordUtils';
+import { validateEmail, isValidEmail } from '@/app/utils/emailUtils';
+import { useDebouncedValue } from '@mantine/hooks';
 
 // Animation variant
 const containerVariant = {
@@ -56,7 +64,80 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   
+  // Username checking state
+  const [debouncedUsername] = useDebouncedValue(username, 500);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameExists, setUsernameExists] = useState(false);
+  const [usernameChecked, setUsernameChecked] = useState(false);
+  
+  // Email checking state
+  const [debouncedEmail] = useDebouncedValue(email, 500);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [emailValidation, setEmailValidation] = useState({ isValid: true, isDisposable: false, feedback: '' });
+  
+  // Password validation state
+  const [passwordValidation, setPasswordValidation] = useState(validatePassword(''));
+  
   const router = useRouter();
+
+  // Check username availability when debounced username changes
+  useEffect(() => {
+    const checkUsername = async () => {
+      if (debouncedUsername.length < 3) {
+        setUsernameChecked(false);
+        setUsernameExists(false);
+        return;
+      }
+      
+      setIsCheckingUsername(true);
+      try {
+        const result = await authService.checkUsername(debouncedUsername);
+        setUsernameExists(result.exists);
+        setUsernameChecked(true);
+      } catch (err) {
+        console.error('Error checking username:', err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+    
+    checkUsername();
+  }, [debouncedUsername]);
+  
+  // Check email when debounced email changes
+  useEffect(() => {
+    const checkEmail = async () => {
+      // First, validate the email format
+      const validation = validateEmail(debouncedEmail);
+      setEmailValidation(validation);
+      
+      if (!validation.isValid || debouncedEmail.length < 5) {
+        setEmailChecked(false);
+        setEmailExists(false);
+        return;
+      }
+      
+      setIsCheckingEmail(true);
+      try {
+        const result = await authService.checkEmail(debouncedEmail);
+        setEmailExists(result.exists);
+        setEmailChecked(true);
+      } catch (err) {
+        console.error('Error checking email:', err);
+      } finally {
+        setIsCheckingEmail(false);
+      }
+    };
+    
+    checkEmail();
+  }, [debouncedEmail]);
+  
+  // Update password validation when password changes
+  useEffect(() => {
+    setPasswordValidation(validatePassword(password));
+  }, [password]);
 
   const handleSignup = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,6 +145,31 @@ export default function SignupPage() {
     // Validate form inputs
     if (!username || !email || !password || !confirmPassword) {
       setError('Please fill in all required fields');
+      return;
+    }
+    
+    if (usernameExists) {
+      setError('Username is already taken. Please choose another one.');
+      return;
+    }
+    
+    if (!emailValidation.isValid) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    
+    if (emailExists) {
+      setError('Email is already registered. Please use another email or try to login.');
+      return;
+    }
+    
+    if (emailValidation.isDisposable) {
+      setError('Please use a permanent email address, not a disposable one');
+      return;
+    }
+    
+    if (!passwordValidation.isValid) {
+      setError('Please choose a stronger password');
       return;
     }
     
@@ -204,33 +310,103 @@ export default function SignupPage() {
                     />
                   </div>
                   <TextInput 
-                    label="Username" 
+                    label={
+                      <Group gap={5}>
+                        <span>Username</span>
+                        <Tooltip
+                          label="Username must be at least 3 characters and unique"
+                          position="top-start"
+                          withArrow
+                        >
+                          <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
+                        </Tooltip>
+                      </Group>
+                    }
                     placeholder="johndoe" 
                     required 
                     value={username}
                     onChange={(e) => setUsername(e.currentTarget.value)}
+                    rightSection={
+                      isCheckingUsername ? (
+                        <Loader size="xs" />
+                      ) : usernameChecked ? (
+                        usernameExists ? (
+                          <IconX size="1.1rem" style={{ color: 'red' }} />
+                        ) : (
+                          <IconCheck size="1.1rem" style={{ color: 'green' }} />
+                        )
+                      ) : null
+                    }
+                    error={usernameExists ? 'Username already exists' : ''}
                   />
                   <TextInput 
-                    label="Email" 
+                    label={
+                      <Group gap={5}>
+                        <span>Email</span>
+                        <Tooltip
+                          label="Please use a valid, permanent email address"
+                          position="top-start"
+                          withArrow
+                        >
+                          <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
+                        </Tooltip>
+                      </Group>
+                    }
                     placeholder="you@farmwise.ag" 
                     required 
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.currentTarget.value)}
+                    rightSection={
+                      isCheckingEmail ? (
+                        <Loader size="xs" />
+                      ) : emailChecked && emailValidation.isValid ? (
+                        emailExists ? (
+                          <IconX size="1.1rem" style={{ color: 'red' }} />
+                        ) : (
+                          <IconCheck size="1.1rem" style={{ color: 'green' }} />
+                        )
+                      ) : email.length > 0 && !emailValidation.isValid ? (
+                        <IconX size="1.1rem" style={{ color: 'red' }} />
+                      ) : null
+                    }
+                    error={
+                      emailExists ? 'Email already registered' : 
+                      email.length > 0 && !emailValidation.isValid ? emailValidation.feedback : 
+                      emailValidation.isDisposable ? emailValidation.feedback : 
+                      ''
+                    }
                   />
                   <PasswordInput 
-                    label="Password" 
+                    label={
+                      <Group gap={5}>
+                        <span>Password</span>
+                        <Tooltip
+                          label="Password must be at least 8 characters with lowercase, uppercase, numbers, and special characters"
+                          position="top-start"
+                          withArrow
+                        >
+                          <IconInfoCircle size={16} style={{ display: 'block', opacity: 0.5 }} />
+                        </Tooltip>
+                      </Group>
+                    }
                     placeholder="Your password" 
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.currentTarget.value)}
                   />
+                  
+                  {password.length > 0 && (
+                    <PasswordStrengthIndicator passwordValidation={passwordValidation} />
+                  )}
+                  
                   <PasswordInput 
                     label="Confirm Password" 
                     placeholder="Confirm your password" 
                     required 
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.currentTarget.value)}
+                    error={password !== confirmPassword && confirmPassword.length > 0 ? 'Passwords do not match' : ''}
                   />
                   <Checkbox 
                     label="I accept terms and conditions" 
@@ -246,6 +422,18 @@ export default function SignupPage() {
                     gradient={{ from: 'farmGreen', to: 'cyan' }}
                     type="submit"
                     loading={isSubmitting}
+                    disabled={
+                      isSubmitting || 
+                      usernameExists || 
+                      emailExists || 
+                      !emailValidation.isValid || 
+                      emailValidation.isDisposable ||
+                      !passwordValidation.isValid || 
+                      password !== confirmPassword ||
+                      !password ||
+                      !username ||
+                      !email
+                    }
                   >
                     Sign up
                   </Button>

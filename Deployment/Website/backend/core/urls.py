@@ -19,6 +19,8 @@ urlpatterns = [
     path('login/', views.LoginView.as_view(), name='login'),
     path('forgot-password/', views.ForgotPasswordView.as_view(), name='forgot-password'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change-password'),
+    path('check-username/', views.CheckUsernameView.as_view(), name='check-username'),
+    path('check-email/', views.CheckEmailView.as_view(), name='check-email'),
     
     # Profile endpoints
     path('profile/', views.profile_detail, name='profile-detail'),
@@ -28,4 +30,7 @@ urlpatterns = [
     
     # Farm from onboarding data
     path('add-farm-from-onboarding/', views.add_farm_from_onboarding, name='add-farm-from-onboarding'),
+    
+    # Farm boundary update endpoint
+    path('farms/<int:farm_id>/update-boundary/', views.update_farm_boundary, name='update-farm-boundary'),
 ] 

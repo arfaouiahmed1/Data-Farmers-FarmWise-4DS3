@@ -141,6 +141,40 @@ class ChangePasswordView(APIView):
             'token': token.key
         }, status=status.HTTP_200_OK)
 
+class CheckUsernameView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        username = request.data.get('username')
+        
+        if not username:
+            return Response({'error': 'Please provide a username'}, 
+                           status=status.HTTP_400_BAD_REQUEST)
+        
+        exists = User.objects.filter(username=username).exists()
+        
+        return Response({
+            'exists': exists
+        }, status=status.HTTP_200_OK)
+
+class CheckEmailView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({'error': 'Please provide an email'}, 
+                           status=status.HTTP_400_BAD_REQUEST)
+        
+        exists = User.objects.filter(email=email).exists()
+        is_valid = '@' in email and '.' in email.split('@')[1]
+        
+        return Response({
+            'exists': exists,
+            'is_valid': is_valid
+        }, status=status.HTTP_200_OK)
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     API endpoint for users
@@ -382,6 +416,51 @@ def add_farm_from_onboarding(request):
             })
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_farm_boundary(request, farm_id):
+    """
+    Update a farm's boundary GeoJSON data
+    """
+    try:
+        # Get the farm
+        farm = get_object_or_404(Farm, id=farm_id)
+        
+        # Check permissions - only owner or admin can update
+        is_owner = hasattr(request.user.profile, 'farmer_profile') and farm.owner == request.user.profile.farmer_profile
+        is_admin = request.user.profile.is_admin or request.user.is_staff
+        
+        if not is_owner and not is_admin:
+            return Response(
+                {"error": "You don't have permission to update this farm"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Update only the boundary_geojson field
+        if 'boundary_geojson' in request.data:
+            farm.boundary_geojson = request.data['boundary_geojson']
+            farm.save(update_fields=['boundary_geojson'])
+            
+            # Update farm size if GeoJSON contains area information
+            if farm.boundary_geojson and 'properties' in farm.boundary_geojson and 'area_hectares' in farm.boundary_geojson['properties']:
+                farm.size_hectares = farm.boundary_geojson['properties']['area_hectares']
+                farm.save(update_fields=['size_hectares'])
+            
+            return Response({
+                "success": True,
+                "message": "Farm boundary updated successfully"
+            })
+        else:
+            return Response({
+                "error": "No boundary_geojson data provided"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
     except Exception as e:
         return Response(
             {"error": str(e)},

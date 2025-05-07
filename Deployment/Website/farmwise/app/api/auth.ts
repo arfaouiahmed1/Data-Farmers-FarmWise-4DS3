@@ -99,6 +99,18 @@ export const authService = {
     return response.data;
   },
   
+  // Check if username exists
+  async checkUsername(username: string): Promise<{ exists: boolean }> {
+    const response = await api.post('/core/check-username/', { username });
+    return response.data;
+  },
+  
+  // Check if email exists and is valid
+  async checkEmail(email: string): Promise<{ exists: boolean, is_valid: boolean }> {
+    const response = await api.post('/core/check-email/', { email });
+    return response.data;
+  },
+  
   // Register a new user
   async register(data: SignupData): Promise<AuthResponse> {
     const response = await api.post('/core/register/', data);
