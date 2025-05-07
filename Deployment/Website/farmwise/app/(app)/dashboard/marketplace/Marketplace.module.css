@@ -1,0 +1,214 @@
+/* Marketplace.module.css */
+
+.pageTitle {
+  font-family: 'Poppins', var(--mantine-font-family-headings);
+  font-weight: 700;
+}
+
+.listingCard {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
+
+.featuredBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+.filterSection {
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.priceLabel {
+  width: 80px;
+  text-align: right;
+}
+
+.predictedValueHigher {
+  color: var(--mantine-color-green-7);
+}
+
+.predictedValueLower {
+  color: var(--mantine-color-red-7);
+}
+
+.priceDifference {
+  font-weight: 700;
+  font-size: var(--mantine-font-size-lg);
+}
+
+.priceDifferencePositive {
+  composes: priceDifference;
+  color: var(--mantine-color-green-7);
+}
+
+.priceDifferenceNegative {
+  composes: priceDifference;
+  color: var(--mantine-color-red-7);
+}
+
+.mapContainer {
+  height: 300px;
+  margin-bottom: var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+}
+
+.createForm {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.imageUploadBox {
+  border: 2px dashed var(--mantine-color-gray-4);
+  background-color: var(--mantine-color-gray-0);
+  padding: var(--mantine-spacing-xl);
+  text-align: center;
+  border-radius: var(--mantine-radius-md);
+  transition: all 150ms ease;
+  cursor: pointer;
+  
+  &:hover {
+    border-color: var(--mantine-color-blue-5);
+    background-color: var(--mantine-color-blue-0);
+  }
+}
+
+.emptyState {
+  padding: var(--mantine-spacing-xl) 0;
+  text-align: center;
+}
+
+.myListingsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.featureDisabled {
+  opacity: 0.5;
+}
+
+.landMap {
+  width: 100%;
+  height: 300px;
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  margin-bottom: var(--mantine-spacing-md);
+  background-color: var(--mantine-color-gray-1);
+}
+
+.statusBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--mantine-spacing-xs);
+  align-items: center;
+}
+
+.pricingTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: var(--mantine-spacing-md);
+}
+
+.pricingTable th,
+.pricingTable td {
+  padding: var(--mantine-spacing-xs);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+.pricingTable th {
+  text-align: left;
+  font-weight: 500;
+}
+
+.carouselDots {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--mantine-spacing-xs);
+}
+
+.carouselDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-gray-4);
+  margin: 0 4px;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.carouselDotActive {
+  background-color: var(--mantine-color-blue-6);
+  width: 10px;
+  height: 10px;
+}
+
+.reviewSection {
+  margin-top: var(--mantine-spacing-lg);
+  padding-top: var(--mantine-spacing-md);
+  border-top: 1px solid var(--mantine-color-gray-3);
+}
+
+.star {
+  color: var(--mantine-color-yellow-4);
+}
+
+.starFilled {
+  color: var(--mantine-color-yellow-5);
+}
+
+/* Dark mode specific styles */
+[data-mantine-color-scheme="dark"] .imageUploadBox {
+  background-color: var(--mantine-color-dark-6);
+  border-color: var(--mantine-color-dark-4);
+  
+  &:hover {
+    background-color: var(--mantine-color-dark-5);
+    border-color: var(--mantine-color-blue-7);
+  }
+}
+
+[data-mantine-color-scheme="dark"] .featureDisabled {
+  opacity: 0.4;
+}
+
+[data-mantine-color-scheme="dark"] .landMap {
+  background-color: var(--mantine-color-dark-6);
+}
+
+[data-mantine-color-scheme="dark"] .pricingTable td,
+[data-mantine-color-scheme="dark"] .pricingTable th {
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+[data-mantine-color-scheme="dark"] .carouselDot {
+  background-color: var(--mantine-color-dark-4);
+}
+
+[data-mantine-color-scheme="dark"] .carouselDotActive {
+  background-color: var(--mantine-color-blue-5);
+}
+
+[data-mantine-color-scheme="dark"] .reviewSection {
+  border-top-color: var(--mantine-color-dark-4);
+} 

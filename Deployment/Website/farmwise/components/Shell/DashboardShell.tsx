@@ -52,7 +52,8 @@ import {
   IconListDetails,
   IconBrain,
   IconArrowsMaximize,
-  IconArrowsMinimize
+  IconArrowsMinimize,
+  IconShoppingCart
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -180,6 +181,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       color: 'lime',
       label: 'Farm Log / Tracker',
       path: '/dashboard/tracker',
+    },
+    {
+      icon: IconShoppingCart,
+      color: 'violet',
+      label: 'Marketplace',
+      path: '/dashboard/marketplace',
     }
   ];
 
