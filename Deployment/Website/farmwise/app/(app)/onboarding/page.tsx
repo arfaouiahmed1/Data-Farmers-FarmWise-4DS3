@@ -1989,12 +1989,134 @@ export default function OnboardingPage() {
 
   return (
     <div className={classes.wrapper}>
-      <div className={classes.bgDecoration} />
+      <div className={classes.bgDecoration}>
+        {/* Background hills */}
+        <div className={classes.hills}>
+          <div className={classes.hill1}></div>
+          <div className={classes.hill2}></div>
+        </div>
+        
+        {/* Clouds */}
+        <div className={`${classes.cloud} ${classes.cloud1}`}></div>
+        <div className={`${classes.cloud} ${classes.cloud2}`}></div>
+        <div className={`${classes.cloud} ${classes.cloud3}`}></div>
+        <div className={`${classes.cloud} ${classes.cloud4}`}></div>
+        <div className={`${classes.cloud} ${classes.cloud5}`}></div>
+        
+        {/* Rain effect (will show occasionally based on animation) */}
+        <div className={classes.rain}>
+          <div className={`${classes.raindrop} ${classes.raindrop1}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop2}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop3}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop4}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop5}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop6}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop7}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop8}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop9}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop10}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop11}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop12}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop13}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop14}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop15}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop16}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop17}`}></div>
+          <div className={`${classes.raindrop} ${classes.raindrop18}`}></div>
+        </div>
+        
+        {/* Farm buildings */}
+        <div className={classes.barn}>
+          <div className={classes.barnRoof}></div>
+          <div className={classes.barnDoor}></div>
+          <div className={classes.barnWindow}></div>
+        </div>
+        
+        <div className={classes.silo}>
+          <div className={classes.siloCap}></div>
+        </div>
+        
+        {/* Fence */}
+        <div className={classes.fence}>
+          <div className={classes.fencePost}></div>
+          <div className={classes.fencePost}></div>
+          <div className={classes.fencePost}></div>
+          <div className={classes.fencePost}></div>
+          <div className={classes.fencePost}></div>
+          <div className={classes.fenceRail} style={{top: '5px'}}></div>
+          <div className={classes.fenceRail} style={{bottom: '5px'}}></div>
+        </div>
+        
+        {/* Basic crops */}
+        <div className={`${classes.crop} ${classes.crop1}`}></div>
+        <div className={`${classes.crop} ${classes.crop2}`}></div>
+        <div className={`${classes.crop} ${classes.crop3}`}></div>
+        <div className={`${classes.crop} ${classes.crop4}`}></div>
+        <div className={`${classes.crop} ${classes.crop5}`}></div>
+        <div className={`${classes.crop} ${classes.crop6}`}></div>
+        <div className={`${classes.crop} ${classes.crop7}`}></div>
+        <div className={`${classes.crop} ${classes.crop8}`}></div>
+        <div className={`${classes.crop} ${classes.crop9}`}></div>
+        <div className={`${classes.crop} ${classes.crop10}`}></div>
+        <div className={`${classes.crop} ${classes.crop11}`}></div>
+        <div className={`${classes.crop} ${classes.crop12}`}></div>
+        <div className={`${classes.crop} ${classes.crop13}`}></div>
+        <div className={`${classes.crop} ${classes.crop14}`}></div>
+        
+        {/* Tall crops (corn) */}
+        <div className={`${classes.tallCrop} ${classes.tallCrop1}`}>
+          <div className={`${classes.leaf} ${classes.leaf1}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf2}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf3}`}></div>
+        </div>
+        <div className={`${classes.tallCrop} ${classes.tallCrop2}`}>
+          <div className={`${classes.leaf} ${classes.leaf1}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf2}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf3}`}></div>
+        </div>
+        <div className={`${classes.tallCrop} ${classes.tallCrop3}`}>
+          <div className={`${classes.leaf} ${classes.leaf1}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf2}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf3}`}></div>
+        </div>
+        <div className={`${classes.tallCrop} ${classes.tallCrop4}`}>
+          <div className={`${classes.leaf} ${classes.leaf1}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf2}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf3}`}></div>
+        </div>
+        <div className={`${classes.tallCrop} ${classes.tallCrop5}`}>
+          <div className={`${classes.leaf} ${classes.leaf1}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf2}`}></div>
+          <div className={`${classes.leaf} ${classes.leaf3}`}></div>
+        </div>
+        
+        {/* Tractor */}
+        <div className={classes.tractor}>
+          <div className={classes.wheel1}></div>
+          <div className={classes.wheel2}></div>
+        </div>
+        
+        {/* Birds */}
+        <div className={classes.bird}>
+          <div className={`${classes.wing} ${classes.wing1}`}></div>
+          <div className={`${classes.wing} ${classes.wing2}`}></div>
+        </div>
+        
+        <div className={classes.bird2}>
+          <div className={`${classes.wing} ${classes.wing1}`}></div>
+          <div className={`${classes.wing} ${classes.wing2}`}></div>
+        </div>
+        
+        {/* Butterfly */}
+        <div className={classes.butterfly}>
+          <div className={`${classes.butterflyWing} ${classes.butterflyWing1}`}></div>
+          <div className={`${classes.butterflyWing} ${classes.butterflyWing2}`}></div>
+        </div>
+      </div>
       
       <Title className={classes.title}>Welcome to FarmWise</Title>
-      
       <Text className={classes.subtitle}>
-        Complete this quick onboarding process to set up your farm and get personalized insights for better farming.
+        Let's get your farm set up! Complete this onboarding process to customize your experience.
       </Text>
       
       <Paper className={classes.paper} withBorder p={0}>
