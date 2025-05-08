@@ -65,6 +65,31 @@ class Farm(models.Model):
         ('L', 'Large'),
     ]
     
+    SOIL_TYPE_CHOICES = [
+        ('Clay', 'Clay'),
+        ('Sandy', 'Sandy'),
+        ('Loamy', 'Loamy'),
+        ('Silty', 'Silty'),
+        ('Peaty', 'Peaty'),
+        ('Chalky', 'Chalky'),
+    ]
+    
+    IRRIGATION_TYPE_CHOICES = [
+        ('Drip', 'Drip Irrigation'),
+        ('Sprinkler', 'Sprinkler System'),
+        ('Flood', 'Flood Irrigation'),
+        ('Furrow', 'Furrow Irrigation'),
+        ('None', 'No Irrigation'),
+    ]
+    
+    FARMING_METHOD_CHOICES = [
+        ('Organic', 'Organic Farming'),
+        ('Conventional', 'Conventional Farming'),
+        ('Mixed', 'Mixed Methods'),
+        ('Permaculture', 'Permaculture'),
+        ('Hydroponic', 'Hydroponic'),
+    ]
+    
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(
         Farmer, 
@@ -79,10 +104,22 @@ class Farm(models.Model):
     boundary_geojson = models.JSONField(blank=True, null=True)
     
     # Soil parameters
+    soil_type = models.CharField(max_length=20, choices=SOIL_TYPE_CHOICES, blank=True, null=True)
     soil_nitrogen = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # N value in PPM
     soil_phosphorus = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # P value in PPM
     soil_potassium = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # K value in PPM
     soil_ph = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)  # pH value (0-14)
+    
+    # Infrastructure and accessibility
+    has_water_access = models.BooleanField(default=False)  # Whether the farm has water sources
+    irrigation_type = models.CharField(max_length=20, choices=IRRIGATION_TYPE_CHOICES, blank=True, null=True)
+    has_road_access = models.BooleanField(default=False)  # Whether the farm has road access
+    has_electricity = models.BooleanField(default=False)  # Whether the farm has electricity
+    storage_capacity = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # Storage capacity in square meters
+    
+    # Farming methods and practices
+    farming_method = models.CharField(max_length=20, choices=FARMING_METHOD_CHOICES, blank=True, null=True)
+    year_established = models.PositiveIntegerField(blank=True, null=True)  # Year the farm was established
     
     # Farm valuation
     estimated_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # Farm estimated price
@@ -165,6 +202,33 @@ class Crop(models.Model):
         return self.name
 
 class FarmCrop(models.Model):
+    GROWTH_STAGE_CHOICES = [
+        ('Planting', 'Planting'),
+        ('Germination', 'Germination'),
+        ('Vegetative', 'Vegetative Growth'),
+        ('Flowering', 'Flowering'),
+        ('Fruiting', 'Fruiting'),
+        ('Harvest', 'Harvest Ready'),
+        ('Post-Harvest', 'Post-Harvest'),
+    ]
+    
+    HEALTH_STATUS_CHOICES = [
+        ('Excellent', 'Excellent'),
+        ('Good', 'Good'),
+        ('Fair', 'Fair'),
+        ('Poor', 'Poor'),
+        ('Critical', 'Critical'),
+    ]
+    
+    WATERING_FREQUENCY_CHOICES = [
+        ('Daily', 'Daily'),
+        ('Every_2_Days', 'Every 2 Days'),
+        ('Every_3_Days', 'Every 3 Days'),
+        ('Weekly', 'Weekly'),
+        ('Biweekly', 'Biweekly'),
+        ('As_Needed', 'As Needed'),
+    ]
+    
     farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='farm_crops')
     crop = models.ForeignKey(Crop, on_delete=models.PROTECT, related_name='crop_plantings')  # Protect Crop from deletion if used
     planting_date = models.DateField(blank=True, null=True)
@@ -172,6 +236,18 @@ class FarmCrop(models.Model):
     area_planted_hectares = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Crop management and monitoring
+    growth_stage = models.CharField(max_length=20, choices=GROWTH_STAGE_CHOICES, blank=True, null=True)
+    health_status = models.CharField(max_length=20, choices=HEALTH_STATUS_CHOICES, default='Good')
+    notes = models.TextField(blank=True, null=True)  # Field notes about the crop
+    last_fertilized = models.DateField(blank=True, null=True)
+    watering_frequency = models.CharField(max_length=20, choices=WATERING_FREQUENCY_CHOICES, blank=True, null=True)
+    
+    # Economics
+    planting_cost = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # Cost to plant this crop
+    expected_yield_per_hectare = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # Expected yield per hectare
+    projected_revenue = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # Projected revenue
     
     # Yield prediction fields
     predicted_yield = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # in tons or appropriate unit
@@ -188,6 +264,10 @@ class FarmCrop(models.Model):
         
         # Base yield per hectare (this would be based on historical data or crop type)
         base_yield_per_hectare = 4.5  # Example value in tons/hectare
+        
+        # If user has provided an expected yield per hectare, use that as the base
+        if self.expected_yield_per_hectare:
+            base_yield_per_hectare = float(self.expected_yield_per_hectare)
         
         # Get weather data if available
         recent_weather = Weather.objects.filter(
@@ -212,6 +292,15 @@ class FarmCrop(models.Model):
             if self.farm.soil_potassium > 150:
                 soil_multiplier *= 1.05
         
+        # Adjust based on soil type if no detailed soil data
+        elif self.farm.soil_type:
+            if self.farm.soil_type == 'Loamy':
+                soil_multiplier *= 1.2  # Loamy soil is excellent for most crops
+            elif self.farm.soil_type == 'Clay':
+                soil_multiplier *= 0.9  # Clay can be challenging for some crops
+            elif self.farm.soil_type == 'Sandy':
+                soil_multiplier *= 0.85  # Sandy soil may have poor nutrient retention
+        
         # Weather adjustment (simplified example)
         weather_multiplier = 1.0
         if recent_weather.exists():
@@ -229,21 +318,98 @@ class FarmCrop(models.Model):
             elif avg_rain and avg_rain > 50:  # Too wet
                 weather_multiplier *= 0.85
         
+        # Crop health adjustment based on growth stage and health status
+        health_multiplier = 1.0
+        if self.growth_stage and self.health_status:
+            # Health status impact
+            health_factors = {
+                'Excellent': 1.2,
+                'Good': 1.0,
+                'Fair': 0.85,
+                'Poor': 0.7,
+                'Critical': 0.5
+            }
+            
+            health_multiplier *= health_factors.get(self.health_status, 1.0)
+            
+            # Growth stage impact - later stages mean more certainty
+            # but reduced potential for yield improvement
+            stage_factors = {
+                'Planting': 0.9,     # Most uncertain stage
+                'Germination': 0.92,
+                'Vegetative': 0.95,
+                'Flowering': 1.0,    # Critical stage for many crops
+                'Fruiting': 1.05,
+                'Harvest': 1.1,      # Most certain stage
+                'Post-Harvest': 1.1  # Already harvested
+            }
+            
+            health_multiplier *= stage_factors.get(self.growth_stage, 1.0)
+        
+        # Watering frequency impact (if irrigation data is available)
+        irrigation_multiplier = 1.0
+        if self.watering_frequency and self.farm.irrigation_type:
+            if self.farm.irrigation_type == 'None':
+                # No irrigation system, fully dependent on rainfall
+                irrigation_multiplier = 0.85
+            elif self.farm.irrigation_type == 'Drip':
+                # Drip irrigation is efficient
+                irrigation_multiplier = 1.15
+            
+            # Factor in watering frequency
+            if self.watering_frequency == 'Daily':
+                irrigation_multiplier *= 1.1  # Regular watering is good
+            elif self.watering_frequency == 'As_Needed':
+                irrigation_multiplier *= 0.95  # Less predictable
+        
         # Calculate final predicted yield
-        predicted_yield = float(self.area_planted_hectares) * base_yield_per_hectare * soil_multiplier * weather_multiplier
+        predicted_yield = float(self.area_planted_hectares) * base_yield_per_hectare * soil_multiplier * weather_multiplier * health_multiplier * irrigation_multiplier
         
         # Set confidence level based on available data
         confidence = 70.0  # Base confidence
         if not recent_weather.exists():
-            confidence -= 20  # Lower confidence without weather data
+            confidence -= 15  # Lower confidence without weather data
         if not (self.farm.soil_ph and self.farm.soil_nitrogen):
-            confidence -= 15  # Lower confidence without soil data
-            
+            confidence -= 10  # Lower confidence without soil data
+        
+        # Increase confidence for detailed crop monitoring
+        if self.growth_stage and self.health_status:
+            confidence += 15
+        if self.last_fertilized:
+            confidence += 5
+        
+        # Growth stage affects confidence
+        if self.growth_stage in ['Fruiting', 'Harvest']:
+            confidence += 10  # More confidence closer to harvest
+        
+        # Cap confidence at 95%
+        confidence = min(confidence, 95.0)
+        
         # Update the model
         self.predicted_yield = round(predicted_yield, 2)
         self.yield_prediction_date = timezone.now()
         self.yield_confidence = confidence
-        self.save(update_fields=['predicted_yield', 'yield_prediction_date', 'yield_confidence'])
+        
+        # Calculate projected revenue if planting cost is available
+        if self.predicted_yield and self.crop:
+            try:
+                # This is simplified. In reality, you would need to get current market prices
+                # for the specific crop, potentially from an external API or database
+                average_price_per_ton = 500  # Example price in currency units per ton
+                
+                # Calculate revenue
+                total_revenue = self.predicted_yield * average_price_per_ton
+                self.projected_revenue = round(total_revenue, 2)
+            except Exception as e:
+                # Log but don't halt processing
+                print(f"Error calculating projected revenue: {e}")
+        
+        # Save the updated fields
+        update_fields = ['predicted_yield', 'yield_prediction_date', 'yield_confidence']
+        if self.projected_revenue is not None:
+            update_fields.append('projected_revenue')
+        
+        self.save(update_fields=update_fields)
         
         return self.predicted_yield
 

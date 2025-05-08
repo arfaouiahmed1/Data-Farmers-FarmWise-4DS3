@@ -6,7 +6,9 @@ class FarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farm
         fields = ['id', 'name', 'address', 'description', 'size_hectares', 'size_category',
-                  'soil_nitrogen', 'soil_phosphorus', 'soil_potassium', 'soil_ph',
+                  'soil_type', 'soil_nitrogen', 'soil_phosphorus', 'soil_potassium', 'soil_ph',
+                  'has_water_access', 'irrigation_type', 'has_road_access', 'has_electricity', 
+                  'storage_capacity', 'farming_method', 'year_established',
                   'estimated_price', 'boundary_geojson', 'created_at', 'updated_at']
     
     def validate_boundary_geojson(self, value):
@@ -58,7 +60,10 @@ class FarmCropSerializer(serializers.ModelSerializer):
     class Meta:
         model = FarmCrop
         fields = ['id', 'farm', 'crop', 'crop_name', 'planting_date', 'expected_harvest_date', 
-                  'area_planted_hectares', 'predicted_yield', 'yield_confidence', 'yield_prediction_date']
+                  'area_planted_hectares', 'growth_stage', 'health_status', 'notes', 
+                  'last_fertilized', 'watering_frequency', 'planting_cost', 
+                  'expected_yield_per_hectare', 'projected_revenue',
+                  'predicted_yield', 'yield_confidence', 'yield_prediction_date']
         
 class DetectedWeedSerializer(serializers.ModelSerializer):
     class Meta:

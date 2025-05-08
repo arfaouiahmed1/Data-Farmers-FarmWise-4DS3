@@ -18,9 +18,26 @@ import {
   Notification,
   Textarea,
   SegmentedControl,
+  Select,
+  NumberInput,
+  Switch,
+  SimpleGrid,
+  Card,
+  Divider,
+  Tooltip,
 } from '@mantine/core';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IconCheck, IconMapPin, IconUser, IconSettings, IconTarget, IconX, IconInfoCircle, IconBook } from '@tabler/icons-react';
+import { 
+  IconCheck, 
+  IconMapPin, 
+  IconUser, 
+  IconSettings, 
+  IconTarget, 
+  IconX, 
+  IconInfoCircle, 
+  IconBook,
+  IconTexture
+} from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import classes from './OnboardingPage.module.css';
@@ -92,9 +109,23 @@ type FarmEditorPolygonGeoJsonFeature = GeoJSON.Feature<
 export default function OnboardingPage() {
   const [active, setActive] = useState(0);
   const [farmName, setFarmName] = useState('');
-  const [farmType, setFarmType] = useState(''); // State for farm type
+  const [soilType, setSoilType] = useState(''); // Change farmType to soilType
   const [farmAddress, setFarmAddress] = useState(''); // State for farm address
   const [farmerExperience, setFarmerExperience] = useState<'new' | 'experienced' | '' >(''); // State for farmer experience
+  const [irrigationType, setIrrigationType] = useState('');
+  const [farmingMethod, setFarmingMethod] = useState('');
+  // Soil nutrient data states
+  const [soilNitrogen, setSoilNitrogen] = useState<number | ''>('');
+  const [soilPhosphorus, setSoilPhosphorus] = useState<number | ''>('');
+  const [soilPotassium, setSoilPotassium] = useState<number | ''>('');
+  const [soilPh, setSoilPh] = useState<number | ''>('');
+  const [hasNutrientData, setHasNutrientData] = useState(false);
+  // Infrastructure and accessibility
+  const [hasWaterAccess, setHasWaterAccess] = useState(false);
+  const [hasRoadAccess, setHasRoadAccess] = useState(false);
+  const [hasElectricity, setHasElectricity] = useState(false);
+  const [storageCapacity, setStorageCapacity] = useState<number | ''>('');
+  const [yearEstablished, setYearEstablished] = useState<number | ''>('');
   // Update state type to use the new PolygonGeoJsonFeature type
   const [farmBoundary, setFarmBoundary] = useState<PolygonGeoJsonFeature | null>(null);
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
@@ -109,6 +140,9 @@ export default function OnboardingPage() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const theme = useMantineTheme();
+  const [isLabFinderOpen, setIsLabFinderOpen] = useState(false);
+  const [labResults, setLabResults] = useState<{name: string, address: string, distance: string, phone?: string}[]>([]);
+  const [isLoadingLabs, setIsLoadingLabs] = useState(false);
 
   // --- Callback to receive map instance from child ---
   const handleSetMapInstance = useCallback((map: LeafletMap | null) => {
@@ -148,20 +182,70 @@ export default function OnboardingPage() {
   const nextStep = () => {
     // Validation can be added here per step if needed
     // e.g., if (active === 1 && !farmName) return;
-    if (active === 3 && !farmBoundary) { // Adjusted index for location step
+    if (active === 4 && !farmBoundary) { // Adjusted index for location step
       console.warn("Please select or draw your farm boundary on the map.");
       return;
     }
-    setActive((current) => (current < 4 ? current + 1 : current)); // Updated max step index to 4
+    setActive((current) => (current < 6 ? current + 1 : current)); // Updated max step index to 6
   };
   const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
+
+  // Function to get current location and update address field
+  const handleGetLocation = () => {
+    setIsLocating(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            // Try to get a human-readable address using reverse geocoding
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+              { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await response.json();
+            
+            if (data && data.display_name) {
+              setFarmAddress(data.display_name);
+            } else {
+              // If reverse geocoding fails, use coordinates
+              setFarmAddress(`Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`);
+            }
+            
+            // Update map center
+            setMapCenter([latitude, longitude]);
+          } catch (error) {
+            console.error('Error getting address from coordinates:', error);
+            // Fallback to just coordinates
+            setFarmAddress(`Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`);
+          } finally {
+            setIsLocating(false);
+          }
+        },
+        (error) => {
+          console.warn(`Geolocation error: ${error.message}`);
+          setIsLocating(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      console.warn('Geolocation is not supported by this browser.');
+      setIsLocating(false);
+    }
+  };
 
   const handleFinish = async () => {
     console.log('Onboarding finished. Data:', {
       farmName,
-      farmType,
+      soilType,
       farmAddress,
       farmerExperience,
+      irrigationType,
+      farmingMethod,
       boundary: farmBoundary
     });
 
@@ -191,10 +275,23 @@ export default function OnboardingPage() {
         },
         body: JSON.stringify({
           farm_name: farmName,
-          // farm_type was removed from the Farm model, so don't send it
           farm_address: farmAddress,
           boundary: farmBoundary,
-          size_hectares: sizeHectares
+          size_hectares: sizeHectares,
+          soil_type: soilType,
+          irrigation_type: irrigationType,
+          farming_method: farmingMethod,
+          // Add soil nutrient data if provided
+          soil_nitrogen: hasNutrientData ? soilNitrogen : null,
+          soil_phosphorus: hasNutrientData ? soilPhosphorus : null,
+          soil_potassium: hasNutrientData ? soilPotassium : null,
+          soil_ph: hasNutrientData ? soilPh : null,
+          // Infrastructure data
+          has_water_access: hasWaterAccess,
+          has_road_access: hasRoadAccess,
+          has_electricity: hasElectricity,
+          storage_capacity: storageCapacity || null,
+          year_established: yearEstablished || null
         })
       });
       
@@ -404,6 +501,115 @@ export default function OnboardingPage() {
 
   };
 
+  // Function to estimate soil nutrients based on soil type
+  const estimateSoilNutrients = useCallback(() => {
+    if (!soilType) return;
+    
+    // Default estimates based on soil type
+    const estimates: {[key: string]: {n: number, p: number, k: number, ph: number}} = {
+      'Clay': { n: 45, p: 35, k: 180, ph: 6.5 },
+      'Sandy': { n: 25, p: 20, k: 120, ph: 6.0 },
+      'Loamy': { n: 60, p: 40, k: 200, ph: 6.8 },
+      'Silty': { n: 50, p: 30, k: 170, ph: 6.4 },
+      'Peaty': { n: 70, p: 25, k: 150, ph: 5.5 },
+      'Chalky': { n: 35, p: 30, k: 160, ph: 7.8 }
+    };
+    
+    // Set estimated values with small random variations for realism
+    const randomVariation = () => (Math.random() * 0.2 + 0.9); // 90-110% of base value
+    
+    if (estimates[soilType]) {
+      const est = estimates[soilType];
+      setSoilNitrogen(Math.round(est.n * randomVariation()));
+      setSoilPhosphorus(Math.round(est.p * randomVariation()));
+      setSoilPotassium(Math.round(est.k * randomVariation()));
+      setSoilPh(Number((est.ph * randomVariation()).toFixed(1)));
+    }
+  }, [soilType]);
+  
+  // Find nearby soil testing labs
+  const findNearbyLabs = useCallback(async () => {
+    setIsLabFinderOpen(true);
+    setIsLoadingLabs(true);
+    
+    try {
+      // Get current location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            
+            // Mock API results (in real app, this would be a call to a real API like Google Places)
+            setTimeout(() => {
+              const mockResults = [
+                {
+                  name: "AgriSoil Testing Lab",
+                  address: "123 Farm Rd, Agricity",
+                  distance: "5.2 miles",
+                  phone: "555-123-4567"
+                },
+                {
+                  name: "County Extension Office",
+                  address: "456 Government St, Agricity",
+                  distance: "6.8 miles",
+                  phone: "555-987-6543"
+                },
+                {
+                  name: "State Agricultural Services",
+                  address: "789 Research Dr, Croptown",
+                  distance: "12.3 miles"
+                },
+                {
+                  name: "University Ag Department",
+                  address: "1000 University Ave, College Park",
+                  distance: "15.7 miles",
+                  phone: "555-789-0123"
+                }
+              ];
+              
+              setLabResults(mockResults);
+              setIsLoadingLabs(false);
+            }, 1500);
+          },
+          (error) => {
+            console.warn(`Geolocation error: ${error.message}`);
+            setIsLoadingLabs(false);
+            
+            // Provide fallback results if location access fails
+            setLabResults([
+              {
+                name: "AgriSoil Testing Lab",
+                address: "123 Farm Rd, Agricity",
+                distance: "Unknown distance",
+                phone: "555-123-4567"
+              },
+              {
+                name: "County Extension Office",
+                address: "456 Government St, Agricity",
+                distance: "Unknown distance",
+                phone: "555-987-6543"
+              }
+            ]);
+          }
+        );
+      } else {
+        console.warn('Geolocation is not supported by this browser.');
+        setIsLoadingLabs(false);
+        setLabResults([
+          {
+            name: "AgriSoil Testing Lab",
+            address: "123 Farm Rd, Agricity",
+            distance: "Unknown distance",
+            phone: "555-123-4567"
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error finding labs:', error);
+      setIsLoadingLabs(false);
+    }
+  }, []);
+
   const steps = [
     {
       label: 'Welcome',
@@ -441,22 +647,75 @@ export default function OnboardingPage() {
               required
               styles={{ label: { color: theme.white } }}
             />
-            <TextInput
-              label="Primary Farm Type"
-              placeholder="e.g., Dairy, Crop (Corn/Soy), Livestock (Cattle), Orchard, Vineyard"
-              value={farmType}
-              onChange={(event) => setFarmType(event.currentTarget.value)}
+            <Select
+              label="Soil Type"
+              placeholder="Select your farm's soil type"
+              value={soilType}
+              onChange={(value) => value !== null && setSoilType(value)}
+              data={[
+                { value: 'Clay', label: 'Clay' },
+                { value: 'Sandy', label: 'Sandy' },
+                { value: 'Loamy', label: 'Loamy' },
+                { value: 'Silty', label: 'Silty' },
+                { value: 'Peaty', label: 'Peaty' },
+                { value: 'Chalky', label: 'Chalky' },
+              ]}
               styles={{ label: { color: theme.white } }}
             />
-             <Textarea
-                label="Farm Address or General Location"
-                placeholder="e.g., 123 Farm Road, Rural County, ST or nearby landmark"
-                value={farmAddress}
-                onChange={(event) => setFarmAddress(event.currentTarget.value)}
-                autosize
-                minRows={2}
-                styles={{ label: { color: theme.white } }}
+            <Group align="flex-end">
+               <Textarea
+                  label="Farm Address or General Location"
+                  placeholder="e.g., 123 Farm Road, Rural County, ST or nearby landmark"
+                  value={farmAddress}
+                  onChange={(event) => setFarmAddress(event.currentTarget.value)}
+                  autosize
+                  minRows={2}
+                  styles={{ 
+                    label: { color: theme.white },
+                    root: { flexGrow: 1 }
+                  }}
+               />
+               <Button 
+                leftSection={isLocating ? <Loader size="xs" /> : <IconMapPin size={16} />}
+                onClick={handleGetLocation}
+                disabled={isLocating}
+                variant="light"
+                mt={2}
+               >
+                 {isLocating ? 'Getting...' : 'Get Location'}
+               </Button>
+             </Group>
+             
+             <Select
+               label="Irrigation Type"
+               placeholder="Select irrigation system type"
+               value={irrigationType}
+               onChange={(value) => value !== null && setIrrigationType(value)}
+               data={[
+                 { value: 'Drip', label: 'Drip Irrigation' },
+                 { value: 'Sprinkler', label: 'Sprinkler System' },
+                 { value: 'Flood', label: 'Flood Irrigation' },
+                 { value: 'Furrow', label: 'Furrow Irrigation' },
+                 { value: 'None', label: 'No Irrigation' },
+               ]}
+               styles={{ label: { color: theme.white } }}
              />
+             
+             <Select
+               label="Farming Method"
+               placeholder="Select your farming approach"
+               value={farmingMethod}
+               onChange={(value) => value !== null && setFarmingMethod(value)}
+               data={[
+                 { value: 'Organic', label: 'Organic Farming' },
+                 { value: 'Conventional', label: 'Conventional Farming' },
+                 { value: 'Mixed', label: 'Mixed Methods' },
+                 { value: 'Permaculture', label: 'Permaculture' },
+                 { value: 'Hydroponic', label: 'Hydroponic' },
+               ]}
+               styles={{ label: { color: theme.white } }}
+             />
+             
              <Text size="xs" c="dimmed" mt="xs">This helps personalize weather and regional information.</Text>
           </Stack>
       ),
@@ -503,6 +762,247 @@ export default function OnboardingPage() {
            */}
          </Stack>
        ),
+    },
+    {
+      label: 'Soil & Infrastructure',
+      description: 'More farm details',
+      icon: <IconTexture size={18} />,
+      content: (
+        <Stack>
+          <Title order={3} ta="center" c={theme.white} mb="md">Soil & Farm Infrastructure</Title>
+          
+          {/* Soil nutrient information toggle */}
+          <Switch 
+            label="I have soil nutrient information" 
+            checked={hasNutrientData}
+            onChange={(event) => setHasNutrientData(event.currentTarget.checked)}
+            color={logoDarkGreen}
+            styles={{ label: { color: theme.white } }}
+          />
+          
+          {hasNutrientData && (
+            <Stack gap="xs" mt="sm">
+              <Group justify="space-between" align="center">
+                <Text size="sm" c="gray.4">
+                  Enter your soil nutrient information if available.
+                </Text>
+                <Button 
+                  variant="subtle" 
+                  color="teal" 
+                  onClick={estimateSoilNutrients} 
+                  size="sm"
+                  leftSection={<IconInfoCircle size="1rem" />}
+                >
+                  Estimate from soil type
+                </Button>
+              </Group>
+              <SimpleGrid cols={{base: 1, sm: 2}} spacing="xs">
+                <NumberInput
+                  label="Soil Nitrogen (N) in PPM"
+                  placeholder="e.g., 45"
+                  min={0}
+                  max={500}
+                  value={soilNitrogen}
+                  onChange={(value) => {
+                    if (value === '') {
+                      setSoilNitrogen('');
+                    } else if (typeof value === 'number') {
+                      setSoilNitrogen(value);
+                    } else {
+                      setSoilNitrogen(Number(value));
+                    }
+                  }}
+                  styles={{ label: { color: theme.white } }}
+                />
+                <NumberInput
+                  label="Soil Phosphorus (P) in PPM"
+                  placeholder="e.g., 30"
+                  min={0}
+                  max={500}
+                  value={soilPhosphorus}
+                  onChange={(value) => {
+                    if (value === '') {
+                      setSoilPhosphorus('');
+                    } else if (typeof value === 'number') {
+                      setSoilPhosphorus(value);
+                    } else {
+                      setSoilPhosphorus(Number(value));
+                    }
+                  }}
+                  styles={{ label: { color: theme.white } }}
+                />
+                <NumberInput
+                  label="Soil Potassium (K) in PPM"
+                  placeholder="e.g., 150"
+                  min={0}
+                  max={1000}
+                  value={soilPotassium}
+                  onChange={(value) => {
+                    if (value === '') {
+                      setSoilPotassium('');
+                    } else if (typeof value === 'number') {
+                      setSoilPotassium(value);
+                    } else {
+                      setSoilPotassium(Number(value));
+                    }
+                  }}
+                  styles={{ label: { color: theme.white } }}
+                />
+                <NumberInput
+                  label="Soil pH"
+                  placeholder="e.g., 6.5"
+                  decimalScale={1}
+                  min={0}
+                  max={14}
+                  step={0.1}
+                  value={soilPh}
+                  onChange={(value) => {
+                    if (value === '') {
+                      setSoilPh('');
+                    } else if (typeof value === 'number') {
+                      setSoilPh(value);
+                    } else {
+                      setSoilPh(Number(value));
+                    }
+                  }}
+                  styles={{ label: { color: theme.white } }}
+                />
+              </SimpleGrid>
+              <Text size="xs" c="dimmed" mt="xs" component="div">
+                <Tooltip label="Soil testing kits are available from agricultural suppliers or you can send samples to a lab for analysis.">
+                  <Box style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <IconInfoCircle size="0.9rem" style={{ marginRight: 5 }} />
+                    Not sure about your soil values? Hover for info.
+                  </Box>
+                </Tooltip>
+              </Text>
+            </Stack>
+          )}
+          
+          {!hasNutrientData && (
+            <Card withBorder p="md" radius="md" bg="dark.7" mt="sm">
+              <Stack gap="xs">
+                <Text size="sm" c="gray.3" mb="xs">
+                  Don't have soil nutrient information? You can get your soil tested at a lab near you.
+                </Text>
+                
+                <Button 
+                  variant="outline" 
+                  color="teal" 
+                  onClick={findNearbyLabs}
+                  leftSection={<IconMapPin size="1rem" />}
+                  fullWidth
+                >
+                  Find Soil Testing Labs Near Me
+                </Button>
+                
+                {isLabFinderOpen && (
+                  <>
+                    {isLoadingLabs ? (
+                      <Center p="xl">
+                        <Stack align="center">
+                          <Loader size="sm" />
+                          <Text size="sm" c="gray.4">Finding labs near your location...</Text>
+                        </Stack>
+                      </Center>
+                    ) : (
+                      <>
+                        <Text size="sm" fw={500} c="teal.4" mt="sm">Nearby Soil Testing Facilities:</Text>
+                        <SimpleGrid cols={1} spacing="xs">
+                          {labResults.map((lab, index) => (
+                            <Card key={index} withBorder p="xs" radius="sm" bg="dark.6">
+                              <Group justify="space-between" wrap="nowrap">
+                                <div>
+                                  <Text size="sm" fw={500} c="gray.2">{lab.name}</Text>
+                                  <Text size="xs" c="gray.5">{lab.address}</Text>
+                                  {lab.phone && <Text size="xs" c="blue.4">{lab.phone}</Text>}
+                                </div>
+                                <Text size="xs" c="teal" fw={600}>{lab.distance}</Text>
+                              </Group>
+                            </Card>
+                          ))}
+                        </SimpleGrid>
+                        <Text size="xs" mt="xs" c="dimmed">
+                          Note: After getting your soil tested, you can add the results in your farm profile later.
+                        </Text>
+                      </>
+                    )}
+                  </>
+                )}
+              </Stack>
+            </Card>
+          )}
+          
+          <Divider my="md" />
+          
+          <Text size="sm" c="gray.4" mb="sm">
+            Farm Infrastructure & Accessibility
+          </Text>
+          
+          <SimpleGrid cols={{base: 1, sm: 3}} spacing="sm">
+            <Switch 
+              label="Water Access" 
+              description="Farm has direct water access"
+              checked={hasWaterAccess}
+              onChange={(event) => setHasWaterAccess(event.currentTarget.checked)}
+              color={logoDarkGreen}
+              styles={{ label: { color: theme.white }, description: { color: 'gray.5' } }}
+            />
+            <Switch 
+              label="Road Access" 
+              description="Farm has road access"
+              checked={hasRoadAccess}
+              onChange={(event) => setHasRoadAccess(event.currentTarget.checked)}
+              color={logoDarkGreen}
+              styles={{ label: { color: theme.white }, description: { color: 'gray.5' } }}
+            />
+            <Switch 
+              label="Electricity" 
+              description="Farm has electrical power"
+              checked={hasElectricity}
+              onChange={(event) => setHasElectricity(event.currentTarget.checked)}
+              color={logoDarkGreen}
+              styles={{ label: { color: theme.white }, description: { color: 'gray.5' } }}
+            />
+          </SimpleGrid>
+          
+          <SimpleGrid cols={{base: 1, sm: 2}} spacing="sm" mt="md">
+            <NumberInput
+              label="Storage Capacity (sq. meters)"
+              placeholder="e.g., 500"
+              min={0}
+              value={storageCapacity}
+              onChange={(value) => {
+                if (value === '') {
+                  setStorageCapacity('');
+                } else if (typeof value === 'number') {
+                  setStorageCapacity(value);
+                } else {
+                  setStorageCapacity(Number(value));
+                }
+              }}
+              styles={{ label: { color: theme.white } }}
+            />
+            <NumberInput
+              label="Year Established"
+              placeholder="e.g., 2020"
+              min={1900}
+              max={new Date().getFullYear()}
+              value={yearEstablished}
+              onChange={(value) => {
+                if (value === '') {
+                  setYearEstablished('');
+                } else if (typeof value === 'number') {
+                  setYearEstablished(value);
+                } else {
+                  setYearEstablished(Number(value));
+                }
+              }}
+              styles={{ label: { color: theme.white } }}
+            />
+          </SimpleGrid>
+        </Stack>
+      ),
     },
     {
       label: 'Location',
@@ -578,8 +1078,80 @@ export default function OnboardingPage() {
       content: (
           <>
            <Title order={3} ta="center" c={theme.white}>Ready to Go!</Title>
-           <Text size="lg" ta="center" mt="md" mb="xl" c="gray.3">
-              You're all set. Review your information (optional display below) and click "Finish Setup" to proceed to your dashboard.
+           <Text size="lg" ta="center" mt="md" mb="lg" c="gray.3">
+              You're all set. Review your farm information below and click "Finish Setup" to proceed to your dashboard.
+           </Text>
+           
+           <Paper withBorder p="md" radius="md" bg="dark.6">
+             <Stack gap="xs">
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Farm Name:</Text>
+                 <Text c="gray.1">{farmName || 'Not specified'}</Text>
+               </Group>
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Soil Type:</Text>
+                 <Text c="gray.1">{soilType || 'Not specified'}</Text>
+               </Group>
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Location:</Text>
+                 <Text c="gray.1" style={{ maxWidth: '300px', textAlign: 'right' }}>{farmAddress || 'Not specified'}</Text>
+               </Group>
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Irrigation:</Text>
+                 <Text c="gray.1">{
+                   irrigationType ? 
+                   irrigationType === 'None' ? 'No Irrigation' :
+                   {'Drip': 'Drip Irrigation', 'Sprinkler': 'Sprinkler System', 'Flood': 'Flood Irrigation', 'Furrow': 'Furrow Irrigation'}[irrigationType] 
+                   : 'Not specified'
+                 }</Text>
+               </Group>
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Farming Method:</Text>
+                 <Text c="gray.1">{
+                   farmingMethod ?
+                   {'Organic': 'Organic Farming', 'Conventional': 'Conventional Farming', 'Mixed': 'Mixed Methods', 'Permaculture': 'Permaculture', 'Hydroponic': 'Hydroponic'}[farmingMethod]
+                   : 'Not specified'
+                 }</Text>
+               </Group>
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Experience Level:</Text>
+                 <Text c="gray.1">{farmerExperience === 'new' ? 'New Farmer' : farmerExperience === 'experienced' ? 'Experienced Farmer' : 'Not specified'}</Text>
+               </Group>
+               
+               {hasNutrientData && (
+                 <Group justify="space-between">
+                   <Text fw={500} c="gray.3">Soil Nutrients:</Text>
+                   <Text c="gray.1">
+                     N:{soilNitrogen || '?'} P:{soilPhosphorus || '?'} K:{soilPotassium || '?'} pH:{soilPh || '?'}
+                   </Text>
+                 </Group>
+               )}
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Infrastructure:</Text>
+                 <Text c="gray.1">
+                   {[
+                     hasWaterAccess ? 'Water' : null,
+                     hasRoadAccess ? 'Road' : null,
+                     hasElectricity ? 'Electricity' : null
+                   ].filter(Boolean).join(', ') || 'None specified'}
+                 </Text>
+               </Group>
+               
+               <Group justify="space-between">
+                 <Text fw={500} c="gray.3">Boundary Defined:</Text>
+                 <Text c="gray.1">{farmBoundary ? 'Yes' : 'No'}</Text>
+               </Group>
+             </Stack>
+           </Paper>
+           
+           <Text size="sm" ta="center" mt="lg" c="blue.4">
+             You can always update these details later in your profile settings.
            </Text>
           </>
       ),
@@ -645,7 +1217,7 @@ export default function OnboardingPage() {
               <Button variant="default" onClick={prevStep} disabled={active === 0}>
                 Back
               </Button>
-              {active === 4 ? (
+              {active === 5 ? (
                 <Button
                    onClick={handleFinish}
                    variant="gradient"
@@ -656,7 +1228,7 @@ export default function OnboardingPage() {
               ) : (
                 <Button
                    onClick={nextStep}
-                   disabled={(active === 3 && !farmBoundary && detectedBoundaries.length === 0) || (active === 2 && !farmerExperience) || (active === 1 && !farmName)}
+                   disabled={(active === 4 && !farmBoundary && detectedBoundaries.length === 0) || (active === 3 && !farmerExperience) || (active === 2 && !farmName)}
                    variant="gradient"
                    gradient={{ from: logoLightGreen, to: logoDarkGreen, deg: 90 }}
                  >

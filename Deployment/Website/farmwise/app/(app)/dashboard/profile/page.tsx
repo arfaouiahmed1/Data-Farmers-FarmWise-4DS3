@@ -44,6 +44,14 @@ interface FarmData {
   soil_potassium: number | null;
   soil_ph: number | null;
   boundary_geojson: any | null;
+  soil_type: string | null;
+  irrigation_type: string | null;
+  farming_method: string | null;
+  has_water_access: boolean;
+  has_road_access: boolean;
+  has_electricity: boolean;
+  storage_capacity: number | null;
+  year_established: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -167,11 +175,14 @@ export default function ProfilePage() {
             phone: extendedUser.profile?.phone_number || '',
             bio: extendedUser.profile?.bio || '',
             address: extendedUser.profile?.address || '',
-            waterAccess: false, // These would come from farm data
-            roadAccess: false,
-            electricityAccess: false,
-            storageCapacity: 0,
-            soilType: '',
+            waterAccess: extendedUser.profile?.farmer_data?.farms?.[0]?.has_water_access || false,
+            roadAccess: extendedUser.profile?.farmer_data?.farms?.[0]?.has_road_access || false,
+            electricityAccess: extendedUser.profile?.farmer_data?.farms?.[0]?.has_electricity || false,
+            storageCapacity: extendedUser.profile?.farmer_data?.farms?.[0]?.storage_capacity || 0,
+            soilType: extendedUser.profile?.farmer_data?.farms?.[0]?.soil_type || '',
+            irrigationType: extendedUser.profile?.farmer_data?.farms?.[0]?.irrigation_type || '',
+            farmingMethod: extendedUser.profile?.farmer_data?.farms?.[0]?.farming_method || '',
+            yearEstablished: extendedUser.profile?.farmer_data?.farms?.[0]?.year_established?.toString() || '',
           });
         }
       } catch (err) {
@@ -198,6 +209,9 @@ export default function ProfilePage() {
       electricityAccess: false,
       storageCapacity: 0,
       soilType: '',
+      irrigationType: '',
+      farmingMethod: '',
+      yearEstablished: '',
     },
   });
 
@@ -248,6 +262,35 @@ export default function ProfilePage() {
           },
           body: formData,
         });
+      }
+      
+      // Update farm data if farm exists
+      if (userData?.profile?.farmer_data?.farms?.[0]?.id) {
+        const farmId = userData.profile.farmer_data.farms[0].id;
+        
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/core/farms/${farmId}/`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+              name: values.farmName,
+              has_water_access: values.waterAccess,
+              has_road_access: values.roadAccess,
+              has_electricity: values.electricityAccess,
+              storage_capacity: values.storageCapacity,
+              soil_type: values.soilType,
+              irrigation_type: values.irrigationType,
+              farming_method: values.farmingMethod,
+              year_established: values.yearEstablished ? parseInt(values.yearEstablished) : null
+            }),
+          });
+        } catch (farmError) {
+          console.error('Error updating farm data:', farmError);
+          // Continue with profile update even if farm update fails
+        }
       }
       
       // Save farm boundary if it changed
@@ -306,6 +349,9 @@ export default function ProfilePage() {
         electricityAccess: false,
         storageCapacity: 0,
         soilType: '',
+        irrigationType: '',
+        farmingMethod: '',
+        yearEstablished: '',
       });
     }
     setIsEditing(false);
@@ -471,6 +517,15 @@ export default function ProfilePage() {
                           'Not recorded'}
                       </Text>
                     </Card>
+
+                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
+                      <Text fw={500}>Soil Type</Text>
+                      <Text size="lg">
+                        {userData.profile.farmer_data.farms[0].soil_type ?
+                          userData.profile.farmer_data.farms[0].soil_type :
+                          'Not recorded'}
+                      </Text>
+                    </Card>
                   </SimpleGrid>
                 </>
               )}
@@ -485,34 +540,96 @@ export default function ProfilePage() {
                     </Group>
                   </Group>
                   <Text fw={500} c="blue.5" size="md">
-                    {farmUISettings.waterAccess ? 'Available' : 'Not Available'}
+                    {userData?.profile?.farmer_data?.farms?.[0]?.has_water_access ? 'Available' : 'Not Available'}
                   </Text>
                 </Card>
                 
                 <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.08)' }}>
                   <Group mb={6} justify="apart">
                     <Group gap={6}>
-                      <IconRoad size={18} color={farmUISettings.roadAccess ? '#616161' : 'gray'} />
+                      <IconRoad size={18} color={userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? '#616161' : 'gray'} />
                       <Text fw={500}>Road:</Text>
                     </Group>
                   </Group>
-                  <Text fw={500} c={farmUISettings.roadAccess ? 'gray.7' : 'gray.6'} size="md">
-                    {farmUISettings.roadAccess ? 'Available' : 'Not Available'}
+                  <Text fw={500} c={userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'gray.7' : 'gray.6'} size="md">
+                    {userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'Available' : 'Not Available'}
                   </Text>
                 </Card>
                 
                 <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(255, 193, 7, 0.08)' }}>
                   <Group mb={6} justify="apart">
                     <Group gap={6}>
-                      <IconBolt size={18} color={farmUISettings.electricityAccess ? '#ffc107' : 'gray'} />
+                      <IconBolt size={18} color={userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? '#ffc107' : 'gray'} />
                       <Text fw={500}>Power:</Text>
                     </Group>
                   </Group>
-                  <Text fw={500} c={farmUISettings.electricityAccess ? 'yellow.5' : 'gray.6'} size="md">
-                    {farmUISettings.electricityAccess ? 'Available' : 'Not Available'}
+                  <Text fw={500} c={userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'yellow.5' : 'gray.6'} size="md">
+                    {userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'Available' : 'Not Available'}
                   </Text>
                 </Card>
               </SimpleGrid>
+
+              {/* Additional Farm Information */}
+              {userData?.profile?.farmer_data?.farms?.[0] && (
+                <>
+                  <Title order={4} mt="xl" mb="md">Farming Details</Title>
+                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
+                      <Text fw={500}>Irrigation Type</Text>
+                      <Text size="lg">
+                        {userData.profile.farmer_data.farms[0].irrigation_type ? 
+                          (() => {
+                            const typeMap: {[key: string]: string} = {
+                              'Drip': 'Drip Irrigation',
+                              'Sprinkler': 'Sprinkler System',
+                              'Flood': 'Flood Irrigation',
+                              'Furrow': 'Furrow Irrigation',
+                              'None': 'No Irrigation'
+                            };
+                            return typeMap[userData.profile.farmer_data.farms[0].irrigation_type as string] || userData.profile.farmer_data.farms[0].irrigation_type;
+                          })() : 
+                          'Not recorded'}
+                      </Text>
+                    </Card>
+                    
+                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
+                      <Text fw={500}>Farming Method</Text>
+                      <Text size="lg">
+                        {userData.profile.farmer_data.farms[0].farming_method ? 
+                          (() => {
+                            const methodMap: {[key: string]: string} = {
+                              'Organic': 'Organic Farming',
+                              'Conventional': 'Conventional Farming',
+                              'Mixed': 'Mixed Methods',
+                              'Permaculture': 'Permaculture',
+                              'Hydroponic': 'Hydroponic'
+                            };
+                            return methodMap[userData.profile.farmer_data.farms[0].farming_method as string] || userData.profile.farmer_data.farms[0].farming_method;
+                          })() : 
+                          'Not recorded'}
+                      </Text>
+                    </Card>
+                    
+                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
+                      <Text fw={500}>Year Established</Text>
+                      <Text size="lg">
+                        {userData.profile.farmer_data.farms[0].year_established ?
+                          userData.profile.farmer_data.farms[0].year_established :
+                          'Not recorded'}
+                      </Text>
+                    </Card>
+
+                    {userData.profile.farmer_data.farms[0].storage_capacity ? (
+                      <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
+                        <Text fw={500}>Storage Capacity</Text>
+                        <Text size="lg">
+                          {userData.profile.farmer_data.farms[0].storage_capacity} sq m
+                        </Text>
+                      </Card>
+                    ) : null}
+                  </SimpleGrid>
+                </>
+              )}
             </Paper>
           </Stack>
         ) : (
@@ -633,11 +750,13 @@ export default function ProfilePage() {
                             geometry: {
                               type: "Polygon",
                               coordinates: [[
-                                [mapCenter[1] - 0.01, mapCenter[0] - 0.01],
-                                [mapCenter[1] + 0.01, mapCenter[0] - 0.01],
-                                [mapCenter[1] + 0.01, mapCenter[0] + 0.01],
-                                [mapCenter[1] - 0.01, mapCenter[0] + 0.01],
-                                [mapCenter[1] - 0.01, mapCenter[0] - 0.01]
+                                // Cast mapCenter to the correct type for coordinates
+                                // Leaflet uses [lat, lng] but GeoJSON uses [lng, lat]
+                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng - 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat - 0.01],
+                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng + 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat - 0.01],
+                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng + 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat + 0.01],
+                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng - 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat + 0.01],
+                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng - 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat - 0.01]
                               ]]
                             }
                           })
@@ -695,6 +814,57 @@ export default function ProfilePage() {
                         { value: 'Chalky', label: 'Chalky' },
                       ]}
                       {...form.getInputProps('soilType')}
+                    />
+                  </Grid.Col>
+                </Grid>
+              </Paper>
+              
+              <Paper withBorder p="md" radius="md">
+                <Title order={3} mb="md">Irrigation and Farming Method</Title>
+                
+                <Grid>
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <Select
+                      label="Irrigation Type"
+                      placeholder="Select irrigation type"
+                      data={[
+                        { value: 'Drip', label: 'Drip Irrigation' },
+                        { value: 'Sprinkler', label: 'Sprinkler System' },
+                        { value: 'Flood', label: 'Flood Irrigation' },
+                        { value: 'Furrow', label: 'Furrow Irrigation' },
+                        { value: 'None', label: 'No Irrigation' },
+                      ]}
+                      {...form.getInputProps('irrigationType')}
+                    />
+                  </Grid.Col>
+                  
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <Select
+                      label="Farming Method"
+                      placeholder="Select farming method"
+                      data={[
+                        { value: 'Organic', label: 'Organic Farming' },
+                        { value: 'Conventional', label: 'Conventional Farming' },
+                        { value: 'Mixed', label: 'Mixed Methods' },
+                        { value: 'Permaculture', label: 'Permaculture' },
+                        { value: 'Hydroponic', label: 'Hydroponic' },
+                      ]}
+                      {...form.getInputProps('farmingMethod')}
+                    />
+                  </Grid.Col>
+                </Grid>
+              </Paper>
+              
+              <Paper withBorder p="md" radius="md">
+                <Title order={3} mb="md">Year Established</Title>
+                
+                <Grid>
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <TextInput
+                      label="Year Established"
+                      placeholder="e.g., 2015"
+                      type="number"
+                      {...form.getInputProps('yearEstablished')}
                     />
                   </Grid.Col>
                 </Grid>

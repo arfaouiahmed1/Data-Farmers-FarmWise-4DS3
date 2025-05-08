@@ -393,12 +393,25 @@ def add_farm_from_onboarding(request):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Create farm with onboarding data - farm_type has been removed from the model
+        # Create farm with onboarding data
         serializer = FarmSerializer(data={
             'name': request.data.get('farm_name', 'My Farm'),
             'address': request.data.get('farm_address'),
             'boundary_geojson': request.data.get('boundary'),
-            'size_hectares': request.data.get('size_hectares')
+            'size_hectares': request.data.get('size_hectares'),
+            'soil_type': request.data.get('soil_type'),
+            'irrigation_type': request.data.get('irrigation_type'),
+            'farming_method': request.data.get('farming_method'),
+            'has_water_access': request.data.get('has_water_access', False),
+            'year_established': request.data.get('year_established'),
+            'has_road_access': request.data.get('has_road_access', False),
+            'has_electricity': request.data.get('has_electricity', False),
+            'storage_capacity': request.data.get('storage_capacity'),
+            # Add soil nutrient data fields
+            'soil_nitrogen': request.data.get('soil_nitrogen'),
+            'soil_phosphorus': request.data.get('soil_phosphorus'),
+            'soil_potassium': request.data.get('soil_potassium'),
+            'soil_ph': request.data.get('soil_ph'),
         })
         
         if serializer.is_valid():
