@@ -31,6 +31,9 @@ urlpatterns = [
     # Farm from onboarding data
     path('add-farm-from-onboarding/', views.add_farm_from_onboarding, name='add-farm-from-onboarding'),
     
+    # Enhanced onboarding with progress saving
+    path('farm/onboarding/', views.farm_onboarding, name='farm-onboarding'),
+    
     # Farm boundary update endpoint
     path('farms/<int:farm_id>/update-boundary/', views.update_farm_boundary, name='update-farm-boundary'),
 ] 

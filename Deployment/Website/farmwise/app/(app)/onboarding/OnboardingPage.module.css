@@ -1,118 +1,635 @@
+:root {
+  --primary-color: #5cb85c;
+  --primary-dark: #4a934a;
+  --primary-light: #8ed08e;
+  --accent-color: #ffb84d;
+  --accent-dark: #e69500;
+  --accent-light: #ffd699;
+  --success-color: #3c8c3c;
+  --neutral-light: #f8fafc;
+}
+
 .wrapper {
-  min-height: 100vh; /* Ensure wrapper takes at least full height */
-  height: auto; /* Allow wrapper to grow beyond viewport */
-  display: flex;
-  flex-direction: column; /* Ensure vertical stacking for centering paper */
-  align-items: center; /* Center paper horizontally */
-  justify-content: flex-start; /* Align paper to top when scrollable */
-  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md); /* Add more vertical padding */
-  position: relative;
-  /* overflow: hidden; */ /* REMOVE THIS to allow page scroll */
-  background-color: #f0fdf4;
-  z-index: 0;
-}
-
-/* Base style for new background shapes */
-.bgShape {
-  position: absolute;
-  z-index: -1; /* Position behind the paper */
-  opacity: 0.5; /* Make them somewhat subtle */
-  pointer-events: none; /* Prevent interference */
-}
-
-/* Shape 1: Rotating Square/Diamond (Light Green) */
-.bgShape1 {
-  width: 250px;
-  height: 250px;
-  background-color: #77c146;
-  top: 5%;
-  left: 8%;
-  border-radius: 30px; /* Rounded square */
-  opacity: 0.4;
-  animation: rotatePulse 20s infinite alternate ease-in-out;
-}
-
-/* Shape 2: Pulsing Circle (Yellow) */
-.bgShape2 {
-  width: 180px;
-  height: 180px;
-  background-color: #ffcc00;
-  bottom: 8%;
-  right: 12%;
-  border-radius: 50%;
-  opacity: 0.5;
-  animation: pulseScale 14s infinite alternate ease-in-out;
-  animation-delay: -3s;
-}
-
-/* Shape 3: Moving Line (Dark Green) */
-.bgLine {
-  width: 60%; /* Make it quite long */
-  height: 6px; /* Relatively thin */
-  background-color: #4f852c;
-  top: 55%; /* Position slightly below center */
-  left: -60%; /* Start off-screen left */
-  transform: translateY(-50%) rotate(-20deg); /* Angle it */
-  opacity: 0.35;
-  animation: slideAcross 16s infinite linear; /* Smooth slide */
-  animation-delay: -7s; /* Stagger start */
-}
-
-/* --- Animations --- */
-
-@keyframes rotatePulse {
-  0% { transform: rotate(0deg) scale(1); opacity: 0.3; }
-  50% { transform: rotate(120deg) scale(1.15); opacity: 0.5; }
-  100% { transform: rotate(240deg) scale(1); opacity: 0.3; } /* Don't return fully to start */
-}
-
-@keyframes pulseScale {
-  0% { transform: scale(0.95) translate(0, 0); opacity: 0.4; }
-  50% { transform: scale(1.1) translate(10px, -5px); opacity: 0.6; } /* Add slight drift */
-  100% { transform: scale(0.95) translate(0, 0); opacity: 0.4; }
-}
-
-@keyframes slideAcross {
-  0% { left: -60%; transform: translateY(-50%) rotate(-20deg); }
-  100% { left: 100%; transform: translateY(-50%) rotate(-15deg); } /* Slightly change angle */
-}
-
-/* Remove previous blob styles if they exist */
-/* .wrapper::before, .wrapper::after { display: none; } */
-
-.title {
-  font-family: Greycliff CF, var(--mantine-font-family);
-  margin-bottom: var(--mantine-spacing-xl);
-  /* Color set in TSX */
-}
-
-.mapPlaceholder {
-  /* This might not be used anymore if map loads directly */
-  height: 350px;
-  width: 100%;
-  background-color: var(--mantine-color-dark-5);
-  border: 1px dashed var(--mantine-color-dark-3);
+  min-height: 100vh;
+  height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md);
+  position: relative;
+  background-color: var(--neutral-light);
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Animated Background */
+.bgDecoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(92, 184, 92, 0.05) 0%, rgba(74, 147, 74, 0.15) 100%);
+  clip-path: polygon(100% 0, 100% 100%, 30% 100%, 0 0);
+  z-index: -1;
+  animation: pulseGlow 10s ease-in-out infinite alternate;
+}
+
+.bgDecoration::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  right: 20%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-light) 0%, rgba(255, 184, 77, 0) 70%);
+  opacity: 0.4;
+  animation: floatSun 15s ease-in-out infinite;
+}
+
+.bgDecoration::after {
+  content: '';
+  position: absolute;
+  bottom: 10%;
+  left: 10%;
+  width: 300px;
+  height: 20px;
+  background: linear-gradient(90deg, rgba(92, 184, 92, 0) 0%, rgba(92, 184, 92, 0.2) 50%, rgba(92, 184, 92, 0) 100%);
+  filter: blur(8px);
+  animation: growField 8s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% { 
+    opacity: 0.7;
+    background: linear-gradient(135deg, rgba(92, 184, 92, 0.05) 0%, rgba(74, 147, 74, 0.15) 100%);
+  }
+  50% {
+    opacity: 0.9;
+    background: linear-gradient(135deg, rgba(92, 184, 92, 0.08) 0%, rgba(74, 147, 74, 0.2) 100%);
+  }
+  100% { 
+    opacity: 0.7;
+    background: linear-gradient(135deg, rgba(92, 184, 92, 0.05) 0%, rgba(74, 147, 74, 0.15) 100%);
+  }
+}
+
+@keyframes floatSun {
+  0% { transform: translateY(0) translateX(0); opacity: 0.4; }
+  50% { transform: translateY(-20px) translateX(10px); opacity: 0.6; }
+  100% { transform: translateY(0) translateX(0); opacity: 0.4; }
+}
+
+@keyframes growField {
+  0% { transform: scaleX(0.8); opacity: 0.5; }
+  100% { transform: scaleX(1.2); opacity: 0.8; }
+}
+
+.title {
+  font-family: Greycliff CF, var(--mantine-font-family);
+  margin-bottom: var(--mantine-spacing-md);
+  color: var(--mantine-color-dark-8);
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.5px;
+  position: relative;
+}
+
+.title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+  border-radius: 3px;
+}
+
+.subtitle {
+  text-align: center;
+  margin-bottom: var(--mantine-spacing-xl);
+  color: var(--mantine-color-dimmed);
+  max-width: 580px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.paper {
+  background-color: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  margin: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.paper:hover {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom Stepper Styles */
+.stepperContainer {
+  padding: 25px 20px 5px;
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.stepperWrapper {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.stepLine {
+  position: absolute;
+  top: 35px;
+  left: 0;
+  height: 2px;
+  background-color: var(--mantine-color-gray-3);
+  width: 100%;
+  z-index: -1;
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  transition: all 0.3s ease;
+}
+
+.stepItem:hover {
+  transform: translateY(-3px);
+}
+
+.stepCircle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-gray-1);
+  display: flex;
+  align-items: center;
   justify-content: center;
+  margin-bottom: 8px;
+  border: 2px solid var(--mantine-color-gray-3);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.stepCircleActive {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 0 0 5px rgba(92, 184, 92, 0.3);
+  transform: scale(1.1);
+}
+
+.stepCircleCompleted {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+  color: white;
+}
+
+.stepTitle {
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 4px;
+  color: var(--mantine-color-gray-7);
+  transition: all 0.3s ease;
+}
+
+.stepTitleActive {
+  color: var(--mantine-color-dark-8);
+  font-weight: 700;
+}
+
+.stepTitleCompleted {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.stepDescription {
+  font-size: 12px;
+  color: var(--mantine-color-gray-6);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepDescriptionActive {
+  color: var(--primary-color);
+}
+
+.stepperContent {
+  padding: var(--mantine-spacing-xl);
+  min-height: 400px;
+}
+
+.stepIcon {
+  transition: all 0.3s ease;
+}
+
+.stepIconActive {
+  transform: scale(1.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1.2); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1.2); }
+}
+
+.stepIconCompleted {
+  transform: scale(1);
+}
+
+.progressLine {
+  position: absolute;
+  top: 35px;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+  transition: width 0.6s ease;
+  z-index: -1;
+  border-radius: 3px;
+}
+
+.sectionTitle {
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin-bottom: var(--mantine-spacing-md);
+  color: var(--mantine-color-dark-8);
+  position: relative;
+  display: inline-block;
+}
+
+.sectionTitle::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background-color: var(--primary-color);
+  border-radius: 3px;
+}
+
+.sectionDescription {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: var(--mantine-spacing-lg);
+  color: var(--mantine-color-gray-7);
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--mantine-spacing-xl);
+  padding: var(--mantine-spacing-lg);
+  border-top: 1px solid var(--mantine-color-gray-2);
+  background: linear-gradient(0deg, rgba(248, 250, 252, 0.8) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.mapContainer {
+  width: 100%;
+  height: 400px;
   border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--mantine-color-gray-2);
+  transition: all 0.3s ease;
+}
+
+.mapContainer:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.cardHighlight {
+  border: 2px solid var(--primary-color);
+  transform: translateY(-8px);
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(92, 184, 92, 0.25);
+  position: relative;
+  z-index: 2;
+}
+
+.cardHighlight::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  border-radius: 3px;
+  opacity: 0.6;
+}
+
+.cardHighlight::before {
+  content: 'Selected';
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  background-color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s;
+}
+
+.cardHighlight:hover::before {
+  opacity: 1;
+}
+
+.card {
+  transition: all 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  border-color: var(--mantine-color-gray-2);
+}
+
+.soilTypeIcon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--mantine-spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(92, 184, 92, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.soilTypeIcon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover .soilTypeIcon::after {
+  opacity: 1;
+}
+
+.card:hover .soilTypeIcon {
+  background-color: rgba(92, 184, 92, 0.2);
+  transform: scale(1.05);
+}
+
+/* Animation for soil selection */
+@keyframes selectPulse {
+  0% { box-shadow: 0 0 0 0 rgba(92, 184, 92, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(92, 184, 92, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(92, 184, 92, 0); }
+}
+
+.cardHighlight .soilTypeIcon {
+  animation: selectPulse 2s infinite;
+  background-color: rgba(92, 184, 92, 0.25);
+}
+
+/* Enhanced input styles */
+.nutrientInput {
+  transition: all 0.3s ease;
+}
+
+.nutrientInput:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Validation states for inputs */
+.invalidInput {
+  border-color: var(--mantine-color-red-6);
+  background-color: rgba(255, 76, 76, 0.03);
+  animation: errorShake 0.5s ease-in-out;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.errorTooltip {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--mantine-color-red-6);
+  background-color: white;
+  padding: 2px 5px;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.nutrientInput:hover .errorTooltip,
+.nutrientInput:focus .errorTooltip,
+.invalidInput .errorTooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.estimateButton {
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.estimateButton::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.estimateButton:hover::after {
+  opacity: 1;
+}
+
+.infoCard {
+  background-color: rgba(66, 133, 244, 0.08);
+  padding: var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  margin-bottom: var(--mantine-spacing-md);
+  border-left: 3px solid #4285f4;
+  transition: all 0.3s ease;
+}
+
+.infoCard:hover {
+  background-color: rgba(66, 133, 244, 0.12);
+  transform: translateY(-2px);
+}
+
+.successStep {
+  text-align: center;
+  padding: var(--mantine-spacing-xl) 0;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.successIcon {
+  color: var(--primary-color);
+  font-size: 4rem;
+  margin-bottom: var(--mantine-spacing-md);
+  animation: scaleSuccess 1s ease-in-out;
+}
+
+@keyframes scaleSuccess {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.fieldGroup {
   margin-bottom: var(--mantine-spacing-lg);
 }
 
-/* Explicit dark background for paper */
-.paper {
- background-color: var(--mantine-color-dark-7); /* Dark background */
- z-index: 1; /* Keep paper above shapes */
- position: relative; /* Establish stacking context */
- /* Removed backdrop-filter, flex properties now handled inline */
- /* display: flex, flexDirection: column, height, overflow are set inline */
+.fieldLabel {
+  font-weight: 600;
+  margin-bottom: var(--mantine-spacing-xs);
+  color: var(--mantine-color-dark-7);
+  font-size: 0.95rem;
 }
 
-/* Add some padding to the scrollable content area if needed */
-/* This is optional, as padding can be handled within the steps themselves */
-/* 
-.contentArea {
-  padding: var(--mantine-spacing-sm);
+.optionalLabel {
+  color: var(--mantine-color-dimmed);
+  font-size: 0.8rem;
+  margin-left: var(--mantine-spacing-xs);
 }
-*/
+
+.formDivider {
+  margin: var(--mantine-spacing-md) 0;
+}
+
+.helpText {
+  font-size: 0.85rem;
+  color: var(--mantine-color-gray-6);
+  margin-top: 5px;
+}
+
+/* Improved responsiveness for mobile */
+@media (max-width: 768px) {
+  .title {
+    font-size: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .paper {
+    padding: var(--mantine-spacing-xs);
+  }
+  
+  .stepperContent {
+    padding: var(--mantine-spacing-md);
+  }
+  
+  .mapContainer {
+    height: 300px;
+  }
+  
+  .buttonGroup {
+    flex-direction: column-reverse;
+    gap: var(--mantine-spacing-md);
+  }
+  
+  .buttonGroup button {
+    width: 100%;
+  }
+  
+  .stepperWrapper {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .stepItem {
+    flex: 0 0 calc(33.33% - 10px);
+    margin-bottom: 20px;
+  }
+  
+  .stepLine {
+    display: none;
+  }
+  
+  .progressLine {
+    display: none;
+  }
+}
+
+.stepperContentLastStep {
+  padding-bottom: 0 !important; /* Example: Adjust if padding is the issue */
+  border-bottom: none !important; /* Example: Adjust if a border is the issue */
+  /* Add any other specific overrides needed to remove the visual line */
+}
+
+/* Ensure the main button group has appropriate styling if it has a border */
+.buttonGroup {
+  /* If this group had a top border, you might remove it or ensure it doesn't add to the line issue */
+  /* e.g., border-top: none; */
+  padding: var(--mantine-spacing-md); /* Standard padding */
+  /* If it has a border-top that you want to remove when it's not shown, that's handled by not rendering it */
+}

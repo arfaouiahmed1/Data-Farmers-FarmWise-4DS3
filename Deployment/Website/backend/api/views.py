@@ -32,6 +32,14 @@ import random
 import uuid
 import time
 
+from core.models import UserProfile, Farm, Farmer
+from django.contrib.auth.models import User
+from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -1186,3 +1194,165 @@ Respond in a friendly, conversational tone as if you're chatting with a farmer f
             return True
             
         return False
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def complete_onboarding(request):
+    """
+    API endpoint for completing the user onboarding process.
+    Creates or updates a Farm with the provided details and marks the user's profile as onboarding_completed.
+    """
+    try:
+        # Get the user profile
+        user_profile = request.user.profile
+        
+        # Get the farmer profile through the user profile
+        try:
+            farmer = user_profile.farmer_profile
+        except Farmer.DoesNotExist:
+            return Response(
+                {"error": "User does not have a farmer profile"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Extract data from request
+        data = request.data
+        
+        # Required fields
+        required_fields = ['farmName', 'soilType']
+        for field in required_fields:
+            if field not in data:
+                return Response(
+                    {"error": f"Missing required field: {field}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Validate NPK and pH values
+        validation_errors = []
+        
+        # Constants for validation
+        MAX_NITROGEN = 500
+        MAX_PHOSPHORUS = 300
+        MAX_POTASSIUM = 400
+        MIN_PH = 0
+        MAX_PH = 14
+        
+        # Validate nitrogen
+        if 'soilNitrogen' in data and data['soilNitrogen'] is not None:
+            try:
+                nitrogen_value = float(data['soilNitrogen'])
+                if nitrogen_value < 0:
+                    validation_errors.append("Nitrogen value must be positive")
+                elif nitrogen_value > MAX_NITROGEN:
+                    validation_errors.append(f"Nitrogen value must be less than {MAX_NITROGEN} PPM")
+            except (ValueError, TypeError):
+                validation_errors.append("Nitrogen value must be a valid number")
+        
+        # Validate phosphorus
+        if 'soilPhosphorus' in data and data['soilPhosphorus'] is not None:
+            try:
+                phosphorus_value = float(data['soilPhosphorus'])
+                if phosphorus_value < 0:
+                    validation_errors.append("Phosphorus value must be positive")
+                elif phosphorus_value > MAX_PHOSPHORUS:
+                    validation_errors.append(f"Phosphorus value must be less than {MAX_PHOSPHORUS} PPM")
+            except (ValueError, TypeError):
+                validation_errors.append("Phosphorus value must be a valid number")
+        
+        # Validate potassium
+        if 'soilPotassium' in data and data['soilPotassium'] is not None:
+            try:
+                potassium_value = float(data['soilPotassium'])
+                if potassium_value < 0:
+                    validation_errors.append("Potassium value must be positive")
+                elif potassium_value > MAX_POTASSIUM:
+                    validation_errors.append(f"Potassium value must be less than {MAX_POTASSIUM} PPM")
+            except (ValueError, TypeError):
+                validation_errors.append("Potassium value must be a valid number")
+        
+        # Validate pH - must be within the pH scale (0-14)
+        if 'soilPh' in data and data['soilPh'] is not None:
+            try:
+                ph_value = float(data['soilPh'])
+                if ph_value < MIN_PH:
+                    validation_errors.append(f"pH value must be at least {MIN_PH}")
+                elif ph_value > MAX_PH:
+                    validation_errors.append(f"pH value must be no greater than {MAX_PH}")
+            except (ValueError, TypeError):
+                validation_errors.append("pH value must be a valid number")
+        
+        # If there are validation errors, return them
+        if validation_errors:
+            return Response(
+                {"error": "Validation failed", "details": validation_errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Use transaction to ensure all operations succeed or fail together
+        with transaction.atomic():
+            # Create or update the farm
+            farm_data = {
+                'name': data.get('farmName'),
+                'soil_type': data.get('soilType'),
+                'address': data.get('farmAddress', ''),
+                'irrigation_type': data.get('irrigationType', 'None'),
+                'farming_method': data.get('farmingMethod', 'Conventional'),
+                'has_water_access': data.get('hasWaterAccess', False),
+                'has_road_access': data.get('hasRoadAccess', False),
+                'has_electricity': data.get('hasElectricity', False),
+            }
+            
+            # Handle optional numeric fields
+            if 'soilNitrogen' in data and data['soilNitrogen']:
+                farm_data['soil_nitrogen'] = data['soilNitrogen']
+            if 'soilPhosphorus' in data and data['soilPhosphorus']:
+                farm_data['soil_phosphorus'] = data['soilPhosphorus']
+            if 'soilPotassium' in data and data['soilPotassium']:
+                farm_data['soil_potassium'] = data['soilPotassium']
+            if 'soilPh' in data and data['soilPh']:
+                farm_data['soil_ph'] = data['soilPh']
+            if 'storageCapacity' in data and data['storageCapacity']:
+                farm_data['storage_capacity'] = data['storageCapacity']
+            if 'yearEstablished' in data and data['yearEstablished']:
+                farm_data['year_established'] = data['yearEstablished']
+            
+            # Handle farm boundary geojson if provided
+            if 'farmBoundary' in data and data['farmBoundary']:
+                farm_data['boundary_geojson'] = data['farmBoundary']
+                # If area_hectares is in the properties, extract it
+                if data['farmBoundary'].get('properties', {}).get('area_hectares'):
+                    farm_data['size_hectares'] = data['farmBoundary']['properties']['area_hectares']
+                    
+                    # Set size category based on area
+                    if farm_data['size_hectares'] < 10:
+                        farm_data['size_category'] = 'S'  # Small
+                    elif farm_data['size_hectares'] < 50:
+                        farm_data['size_category'] = 'M'  # Medium
+                    else:
+                        farm_data['size_category'] = 'L'  # Large
+            
+            # Create or update farm
+            farm, created = Farm.objects.update_or_create(
+                owner=farmer,
+                name=data.get('farmName'),
+                defaults=farm_data
+            )
+            
+            # Calculate estimated price
+            farm.calculate_estimated_price()
+            
+            # Update user profile to mark onboarding as completed
+            user_profile.onboarding_completed = True
+            user_profile.save()
+            
+            return Response({
+                "message": "Onboarding completed successfully",
+                "farm_id": farm.id,
+                "created": created
+            }, status=status.HTTP_200_OK)
+            
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

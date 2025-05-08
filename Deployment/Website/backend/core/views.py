@@ -479,3 +479,217 @@ def update_farm_boundary(request, farm_id):
             {"error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['POST', 'GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def farm_onboarding(request):
+    """
+    Handle farm onboarding process with save/resume support
+    
+    POST: Submit complete farm onboarding data
+    GET: Retrieve saved onboarding progress
+    PUT: Save partial onboarding progress
+    """
+    user = request.user
+    profile = user.profile
+    
+    # Check if user is a farmer
+    if not profile.is_farmer or not hasattr(profile, 'farmer_profile'):
+        return Response(
+            {"error": "Only farmers can complete farm onboarding"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+        
+    if request.method == 'POST':
+        # Complete onboarding and create farm
+        validation_errors = []
+        
+        # Validate required fields
+        farm_name = request.data.get('farm_name')
+        if not farm_name or not farm_name.strip():
+            validation_errors.append("Your farm needs a name to grow! Please give it one.")
+            
+        farm_address = request.data.get('farm_address')
+        if not farm_address or not farm_address.strip():
+            validation_errors.append("Where's your farm located? We need an address.")
+            
+        soil_type = request.data.get('soil_type')
+        if not soil_type:
+            validation_errors.append("Your crops want to know what soil they'll be growing in!")
+            
+        irrigation_type = request.data.get('irrigation_type')
+        if not irrigation_type:
+            validation_errors.append("How will you water your plants? Please select an irrigation method.")
+            
+        farming_method = request.data.get('farming_method')
+        if not farming_method:
+            validation_errors.append("What's your farming style? Organic? Conventional? Your plants are curious!")
+            
+        boundary = request.data.get('boundary')
+        if not boundary:
+            validation_errors.append("Your farm needs boundaries! Please draw your farm on the map.")
+            
+        farmer_experience = request.data.get('farmer_experience')
+        if not farmer_experience:
+            validation_errors.append("Are you new to farming or a seasoned pro? We'd love to know!")
+            
+        # Validate soil nutrient data if provided
+        soil_nitrogen = request.data.get('soil_nitrogen')
+        soil_phosphorus = request.data.get('soil_phosphorus')
+        soil_potassium = request.data.get('soil_potassium')
+        soil_ph = request.data.get('soil_ph')
+        
+        if soil_nitrogen is not None:
+            try:
+                n_value = float(soil_nitrogen)
+                if n_value < 0:
+                    validation_errors.append("Nitrogen can't be negative. What would your plants eat?")
+                elif n_value > 150:
+                    validation_errors.append("That's super-charged nitrogen! A bit too high for soil.")
+            except (ValueError, TypeError):
+                validation_errors.append("Nitrogen level should be a valid number.")
+                
+        if soil_phosphorus is not None:
+            try:
+                p_value = float(soil_phosphorus)
+                if p_value < 0:
+                    validation_errors.append("Phosphorus can't be negative. Your plants would be puzzled!")
+                elif p_value > 100:
+                    validation_errors.append("That's rocket-fuel phosphorus levels! A bit too high.")
+            except (ValueError, TypeError):
+                validation_errors.append("Phosphorus level should be a valid number.")
+                
+        if soil_potassium is not None:
+            try:
+                k_value = float(soil_potassium)
+                if k_value < 0:
+                    validation_errors.append("Potassium can't be negative. Your plants would be confused!")
+                elif k_value > 300:
+                    validation_errors.append("That's banana-level potassium! A bit too high for soil.")
+            except (ValueError, TypeError):
+                validation_errors.append("Potassium level should be a valid number.")
+                
+        if soil_ph is not None:
+            try:
+                ph_value = float(soil_ph)
+                if ph_value < 0:
+                    validation_errors.append("pH below 0? That's not soil, that's science fiction!")
+                elif ph_value > 14:
+                    validation_errors.append("pH can't exceed 14 - that's beyond the pH scale entirely!")
+            except (ValueError, TypeError):
+                validation_errors.append("pH should be a valid number between 0 and 14.")
+        
+        # Return validation errors if any
+        if validation_errors:
+            return Response({
+                "error": "Validation failed",
+                "details": validation_errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Create farm with onboarding data
+            from .models import Farm
+            
+            # Process size from boundary if available
+            size_hectares = None
+            if boundary and 'properties' in boundary and 'area_hectares' in boundary['properties']:
+                size_hectares = boundary['properties']['area_hectares']
+            
+            farm = Farm.objects.create(
+                name=farm_name.strip(),
+                owner=profile.farmer_profile,
+                address=farm_address.strip(),
+                boundary_geojson=boundary,
+                size_hectares=size_hectares,
+                soil_type=soil_type,
+                irrigation_type=irrigation_type,
+                farming_method=farming_method,
+                has_water_access=request.data.get('has_water_access', False),
+                has_road_access=request.data.get('has_road_access', False),
+                has_electricity=request.data.get('has_electricity', False),
+                storage_capacity=request.data.get('storage_capacity'),
+                year_established=request.data.get('year_established'),
+                soil_nitrogen=soil_nitrogen,
+                soil_phosphorus=soil_phosphorus,
+                soil_potassium=soil_potassium,
+                soil_ph=soil_ph
+            )
+            
+            # Update farmer experience if provided
+            if farmer_experience:
+                farmer = profile.farmer_profile
+                
+                if farmer_experience == 'new':
+                    farmer.farming_experience_years = 0
+                elif farmer_experience == 'experienced':
+                    # Default to 5 years for experienced farmers
+                    farmer.farming_experience_years = 5
+                
+                farmer.save(update_fields=['farming_experience_years'])
+            
+            # Mark onboarding as completed
+            profile.onboarding_completed = True
+            profile.save(update_fields=['onboarding_completed'])
+            
+            # Clear any saved progress data
+            if hasattr(profile, 'onboarding_progress'):
+                profile.onboarding_progress = None
+                profile.save(update_fields=['onboarding_progress'])
+            
+            # Calculate and update estimated price
+            farm.calculate_estimated_price()
+            
+            return Response({
+                "success": True,
+                "message": "Congratulations! Your farm has been set up successfully.",
+                "farm_id": farm.id
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    elif request.method == 'GET':
+        # Retrieve saved onboarding progress
+        from .models import UserProfile
+        
+        try:
+            # Check if there's saved progress
+            if hasattr(profile, 'onboarding_progress') and profile.onboarding_progress:
+                return Response({
+                    "success": True,
+                    "has_saved_progress": True,
+                    "progress": profile.onboarding_progress
+                })
+            else:
+                return Response({
+                    "success": True,
+                    "has_saved_progress": False
+                })
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    elif request.method == 'PUT':
+        # Save partial onboarding progress
+        try:
+            progress_data = request.data
+            
+            # Save the progress to the user profile
+            profile.onboarding_progress = progress_data
+            profile.save(update_fields=['onboarding_progress'])
+            
+            return Response({
+                "success": True,
+                "message": "Progress saved successfully"
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

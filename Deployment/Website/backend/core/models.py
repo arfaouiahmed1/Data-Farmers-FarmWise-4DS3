@@ -23,6 +23,7 @@ class UserProfile(models.Model):
     date_joined = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
     onboarding_completed = models.BooleanField(default=False)
+    onboarding_progress = models.JSONField(blank=True, null=True, help_text="Stores temporary onboarding progress data")
     
     def __str__(self):
         return f"{self.user.username}'s Profile"

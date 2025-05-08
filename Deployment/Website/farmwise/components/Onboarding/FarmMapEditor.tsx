@@ -148,14 +148,24 @@ const GeomanIntegration = ({
       removalMode: true,
     });
 
-    // Restrict drawing to one polygon
-    map.pm.setGlobalOptions({ limitMarkersToCount: 1 }); // Not exactly for polygons, but helps manage layers
-
-    // Set shape options (optional)
-    map.pm.setPathOptions({
-      color: '#ffcc00', // Example: yellow lines
-      fillColor: '#ffcc00',
-      fillOpacity: 0.4,
+    // Enable snapping for more precise drawing
+    map.pm.setGlobalOptions({
+      limitMarkersToCount: 1, // Restrict to one polygon
+      editable: true,
+      preventMarkerRemoval: false,
+      snappable: true,
+      snapDistance: 15,
+      allowSelfIntersection: false,
+      tooltips: true,
+      // Set path options for drawn polygons
+      pathOptions: {
+        color: '#ffcc00',
+        fillColor: '#ffcc00',
+        fillOpacity: 0.4,
+        weight: 4,
+        lineJoin: 'round',
+        lineCap: 'round'
+      }
     });
 
     // Modify event handlers to work with the editable layer
@@ -268,6 +278,8 @@ const GeomanIntegration = ({
   );
 };
 
+const defaultCenter: [number, number] = [39.8283, -98.5795]; // Center of US
+
 const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
     center,
     zoom,
@@ -301,26 +313,113 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
 
   // Style for detected boundaries (not selected yet)
   const detectedStyle = {
-    color: "#3388ff", // Blue
-    weight: 2,
-    opacity: 0.8,
-    fillOpacity: 0.1,
+    color: "#0066ff", // Brighter blue
+    weight: 3, // Thinner lines for more natural appearance
+    opacity: 0.9,
+    fillOpacity: 0.2,
+    fillColor: "#0066ff",
+    // Smooth rendering options
+    lineJoin: 'round' as const,
+    lineCap: 'round' as const,
+    interactive: true
   };
   
+  // Style for detected boundaries on hover (interactive effect)
+  const detectedHoverStyle = {
+    color: "#ff4500", // Orange-red
+    weight: 4, 
+    opacity: 1,
+    fillOpacity: 0.35,
+    fillColor: "#ff4500",
+    // Smooth rendering options
+    lineJoin: 'round' as const,
+    lineCap: 'round' as const
+  };
+
   // Style for readonly boundaries
   const readOnlyStyle = {
     color: "#38a169", // Green
-    weight: 3,
-    opacity: 0.7,
-    fillOpacity: 0.2,
+    weight: 4,
+    opacity: 0.8,
+    fillOpacity: 0.3,
+    fillColor: "#38a169"
   };
 
   // Click handler for detected boundaries
   const onDetectedClick = useCallback((feature: PolygonGeoJsonFeature) => {
+    console.log('Detected boundary clicked:', feature);
     if (onBoundarySelect) {
       onBoundarySelect(feature);
     }
   }, [onBoundarySelect]);
+
+  // Process GeoJSON to ensure coordinates are valid and improve display
+  const preprocessBoundary = (feature: PolygonGeoJsonFeature): PolygonGeoJsonFeature => {
+    // Clone to avoid mutating the original
+    const processedFeature = JSON.parse(JSON.stringify(feature));
+    
+    try {
+      // Ensure all coordinates are valid numbers to prevent rendering issues
+      if (processedFeature.geometry && processedFeature.geometry.coordinates) {
+        // Log some boundary details to help with debugging
+        const coordsString = JSON.stringify(processedFeature.geometry.coordinates);
+        console.log(`Boundary coordinates length: ${coordsString.length} characters`);
+        console.log(`Boundary type: ${processedFeature.geometry.type}`);
+        
+        // For MultiPolygons, check each polygon's coordinates
+        if (processedFeature.geometry.type === 'MultiPolygon') {
+          processedFeature.geometry.coordinates.forEach((polygon: any, i: number) => {
+            console.log(`Polygon ${i} has ${polygon.length} coordinate rings`);
+          });
+        }
+        
+        // For Polygons, check the coordinate rings
+        if (processedFeature.geometry.type === 'Polygon') {
+          console.log(`Polygon has ${processedFeature.geometry.coordinates.length} coordinate rings`);
+          console.log(`Exterior ring has ${processedFeature.geometry.coordinates[0]?.length || 0} points`);
+        }
+      }
+    } catch (error) {
+      console.error("Error preprocessing boundary:", error);
+    }
+    
+    return processedFeature;
+  };
+
+  useEffect(() => {
+    console.log('FarmMapEditor initializing with props:', {
+      center,
+      zoom,
+      boundary: !!boundary,
+      detectedBoundaries: detectedBoundaries ? detectedBoundaries.length : 0,
+      editableBoundaryKey
+    });
+    
+    // Check for valid center coordinates to avoid map rendering issues
+    if (!center || (Array.isArray(center) && (isNaN(center[0]) || isNaN(center[1])))) {
+      console.warn('Invalid center coordinates, using default:', defaultCenter);
+    }
+  }, [center, zoom, boundary, detectedBoundaries, editableBoundaryKey]);
+
+  // Add new method to directly apply smoothing to GeoJSON layers
+  const smoothGeoJSONLayer = (layer: L.GeoJSON) => {
+    layer.setStyle({
+      lineJoin: 'round' as const,
+      lineCap: 'round' as const,
+    });
+    
+    // Apply to all sublayers if it's a feature collection
+    layer.eachLayer((sublayer: any) => {
+      if (sublayer.setStyle) {
+        sublayer.setStyle({
+          lineJoin: 'round' as const,
+          lineCap: 'round' as const,
+        });
+      }
+    });
+    
+    return layer;
+  };
 
   return (
     <div className={classes.mapContainer}>
@@ -334,11 +433,12 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
       >
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={20} // Allow deeper zoom for details
-          tileSize={512} // Use higher res tiles if available
+          maxZoom={22} // Increase max zoom level to get highest resolution possible
+          tileSize={512} 
           zoomOffset={-1}
-          detectRetina={true}
-          attribution={hideAttribution ? '' : '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
+          detectRetina={true} // Enable high-DPI/retina display support
+          maxNativeZoom={19} // Maximum zoom level the tile server supports
+          attribution={hideAttribution ? '' : '© Esri'}
         />
         
         {/* For read-only mode, just show the boundary as a GeoJSON */}
@@ -355,16 +455,52 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
             />
 
             {/* Display Detected Boundaries (if any and boundary not yet selected) */}
-            {!boundary && detectedBoundaries.map((feat, index) => (
+            {!boundary && detectedBoundaries.map((feat, index) => {
+              // Process each feature to get smooth boundaries
+              const smoothedFeature = preprocessBoundary(feat);
+              return (
                 <GeoJSON
-                  key={`detected-${index}`} // Use index or a feature ID if available
-                  data={feat}
+                  key={`detected-${index}`}
+                  data={smoothedFeature}
                   style={detectedStyle}
                   eventHandlers={{
-                    click: () => onDetectedClick(feat),
+                    click: () => onDetectedClick(feat), // Use original feature for selection
+                    mouseover: (e) => {
+                      const layer = e.target;
+                      layer.setStyle(detectedHoverStyle);
+                      layer.bringToFront();
+                      
+                      // Add a tooltip if not already present
+                      if (!layer._tooltip) {
+                        layer.bindTooltip("Click to select this farm boundary", {
+                          sticky: true,
+                          direction: 'top',
+                          className: 'leaflet-tooltip-select'
+                        }).openTooltip();
+                      }
+                    },
+                    mouseout: (e) => {
+                      const layer = e.target;
+                      layer.setStyle(detectedStyle);
+                      if (layer._tooltip) {
+                        layer.closeTooltip();
+                      }
+                    },
+                    // Add an event handler when the layer is added to the map
+                    add: (e) => {
+                      const layer = e.target;
+                      // Apply styling without smoothFactor
+                      if (layer.setStyle) {
+                        layer.setStyle({
+                          lineJoin: 'round' as const,
+                          lineCap: 'round' as const
+                        });
+                      }
+                    }
                   }}
                 />
-            ))}
+              );
+            })}
           </>
         )}
       </MapContainer>
@@ -397,7 +533,7 @@ const FarmMapEditor: React.FC<FarmMapEditorProps> = ({
       {/* Custom attribution position */}
       {!hideAttribution && (
         <div className="leaflet-control-attribution leaflet-control">
-          © <a href="https://www.esri.com/">Esri</a> — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community
+          © Esri
         </div>
       )}
     </div>

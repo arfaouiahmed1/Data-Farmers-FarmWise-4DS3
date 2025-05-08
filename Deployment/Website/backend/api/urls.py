@@ -11,4 +11,5 @@ urlpatterns = [
     path('detect-disease/', DetectDiseaseView.as_view(), name='detect_disease'),
     path('chat-treatment/', TreatmentChatView.as_view(), name='chat_treatment_api'),
     path('chat-treatment', TreatmentChatView.as_view(), name='chat_treatment_api_no_slash'),
+    path('complete-onboarding/', views.complete_onboarding, name='complete_onboarding'),
 ]
