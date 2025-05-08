@@ -552,7 +552,7 @@ export default function ProfilePage() {
                   {missingInfoMessages.map((msg, index) => <List.Item key={index} icon={<IconInfoCircle size={16} />}>{msg}</List.Item>)}
                 </List>
               }
-            </Box>
+                      </Box>
             <RingProgress
               size={100}
               thickness={10}
@@ -560,7 +560,7 @@ export default function ProfilePage() {
               label={
                 <Text c={completionPercentage > 80 ? "teal" : completionPercentage > 50 ? "yellow" : "red"} fw={700} ta="center" size="md">
                   {completionPercentage}%
-                </Text>
+                      </Text>
               }
               sections={[
                 { value: completionPercentage, color: completionPercentage > 80 ? 'teal' : completionPercentage > 50 ? 'yellow' : 'red' },
@@ -569,8 +569,8 @@ export default function ProfilePage() {
             />
           </Group>
         </Alert>
-      )}
-
+              )}
+              
       {error && (
         <Alert 
           icon={<IconAlertCircle size="1.2rem" />} 
@@ -601,62 +601,62 @@ export default function ProfilePage() {
                 </Avatar>
               </Group>
               {isEditing && (
-                <FileInput
+                      <FileInput
                   label="Change Profile Picture"
-                  placeholder="Upload new image"
+                        placeholder="Upload new image"
                   leftSection={<IconPhoto size={16} />}
-                  onChange={setProfileImageFile}
+                        onChange={setProfileImageFile}
                   mb="md"
                   accept="image/png,image/jpeg"
                 />
               )}
-              <TextInput
-                label="Full Name"
+                      <TextInput
+                        label="Full Name"
                 placeholder="Your full name"
-                leftSection={<IconUser size={16} />}
-                {...form.getInputProps('name')}
+                        leftSection={<IconUser size={16} />}
+                        {...form.getInputProps('name')}
                 readOnly={!isEditing}
                 mb="sm"
-              />
-              <TextInput
+                      />
+                      <TextInput
                 label="Email Address"
                 placeholder="your@email.com"
-                leftSection={<IconMail size={16} />}
-                {...form.getInputProps('email')}
+                        leftSection={<IconMail size={16} />}
+                        {...form.getInputProps('email')}
                 readOnly={!isEditing}
                 mb="sm"
-              />
-              <TextInput
-                label="Phone Number"
+                      />
+                      <TextInput
+                        label="Phone Number"
                 placeholder="Your phone number"
-                leftSection={<IconPhone size={16} />}
-                {...form.getInputProps('phone')}
+                        leftSection={<IconPhone size={16} />}
+                        {...form.getInputProps('phone')}
                 readOnly={!isEditing}
                 mb="sm"
-              />
-              <Textarea
+                      />
+                      <Textarea
                 label="Short Bio"
                 placeholder="Tell us a bit about yourself"
                 leftSection={<IconNote size={16} />}
-                {...form.getInputProps('bio')}
+                        {...form.getInputProps('bio')}
                 readOnly={!isEditing}
                 autosize
                 minRows={2}
                 mb="sm"
-              />
+                      />
             </Card>
-          </Grid.Col>
+                  </Grid.Col>
 
           {/* Farm Details Section */}
           <Grid.Col span={{ base: 12, md: 5 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
               <Title order={3} mb="lg">🚜 Farm Information</Title>
               <SimpleGrid cols={1} spacing="md">
-                <TextInput
-                  label="Farm Name"
+                    <TextInput
+                      label="Farm Name"
                   placeholder="Name of your farm"
-                  leftSection={<IconBuildingWarehouse size={16} />}
-                  {...form.getInputProps('farmName')}
+                      leftSection={<IconBuildingWarehouse size={16} />}
+                      {...form.getInputProps('farmName')}
                   readOnly={!isEditing}
                 />
                 <TextInput
@@ -695,12 +695,12 @@ export default function ProfilePage() {
                   max={new Date().getFullYear()}
                 />
               </SimpleGrid>
-              
+                
               <Title order={4} mt="xl" mb="md">🌾 Farm Infrastructure & Access</Title>
               <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" mb="md">
                 {isEditing ? (
-                  <Switch
-                    label="Water Access"
+                    <Switch
+                      label="Water Access"
                     checked={form.values.waterAccess}
                     onChange={(event) => form.setFieldValue('waterAccess', event.currentTarget.checked)}
                     thumbIcon={form.values.waterAccess ? <IconDropletFilled size={12} /> : <IconX size={12} />}
@@ -722,8 +722,8 @@ export default function ProfilePage() {
                   </Paper>
                 )}
                 {isEditing ? (
-                  <Switch
-                    label="Road Access"
+                    <Switch
+                      label="Road Access"
                     checked={form.values.roadAccess}
                     onChange={(event) => form.setFieldValue('roadAccess', event.currentTarget.checked)}
                     thumbIcon={form.values.roadAccess ? <IconRoad size={12} /> : <IconX size={12} />}
@@ -745,8 +745,8 @@ export default function ProfilePage() {
                   </Paper>
                 )}
                 {isEditing ? (
-                  <Switch
-                    label="Electricity Access"
+                    <Switch
+                      label="Electricity Access"
                     checked={form.values.electricityAccess}
                     onChange={(event) => form.setFieldValue('electricityAccess', event.currentTarget.checked)}
                     thumbIcon={form.values.electricityAccess ? <IconBolt size={12} /> : <IconX size={12} />}
@@ -769,18 +769,18 @@ export default function ProfilePage() {
                 )}
               </SimpleGrid>
             </Card>
-          </Grid.Col>
-          
+                  </Grid.Col>
+                  
           {/* New Farmer Details Section */}
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
               <Title order={3} mb="lg">👨‍🌾 Farmer Specifics</Title>
               <SimpleGrid cols={1} spacing="md">
-                <NumberInput
+                    <NumberInput
                   label="Farming Experience (Years)"
                   placeholder="e.g., 10"
                   leftSection={<IconTimeline size={16} />}
-                  min={0}
+                      min={0}
                   {...form.getInputProps('farmingExperienceYears')}
                   readOnly={!isEditing}
                 />
@@ -818,7 +818,7 @@ export default function ProfilePage() {
                 />
               </SimpleGrid>
             </Card>
-          </Grid.Col>
+                  </Grid.Col>
 
           {/* Farm Map Section */}
           <Grid.Col span={12}>
@@ -843,18 +843,18 @@ export default function ProfilePage() {
                 </Text>
               )}
             </Card>
-          </Grid.Col>
-        </Grid>
-        
+                  </Grid.Col>
+                </Grid>
+              
         {isEditing && (
           <Group justify="flex-end" mt="xl" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)', position: 'sticky', bottom: 0, background: 'var(--mantine-color-body)', zIndex: 10 }}>
             <Button variant="default" onClick={handleCancelEdit} leftSection={<IconX size={16}/>}>
-              Cancel
-            </Button>
+                  Cancel
+                </Button>
             <Button type="submit" loading={isLoading} leftSection={<IconDeviceFloppy size={16}/>}>
-              Save Changes
-            </Button>
-          </Group>
+                  Save Changes
+                </Button>
+              </Group>
         )}
       </form>
     </Container>
