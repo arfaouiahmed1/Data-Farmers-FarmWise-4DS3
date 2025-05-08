@@ -557,6 +557,7 @@ export default function OnboardingPage() {
       if (!validation.valid) {
         setActive(step);
         setIsSubmitting(false);
+        highlightEmptyFields(step); // Make sure all required fields are highlighted
         notifications.show({
           title: 'Please Complete All Steps',
           message: validation.message || 'A piece of information is missing or incorrect. Please check the highlighted fields.',
@@ -573,82 +574,103 @@ export default function OnboardingPage() {
       // First, set the current view to success/completion
       setActive(5);
       
+      // Show a submission notification
+      notifications.show({
+        id: 'submit-progress',
+        title: 'Creating Your Farm',
+        message: 'Setting up your farm and preparing your dashboard...',
+        color: 'blue',
+        loading: true,
+        autoClose: false,
+      });
+      
       // Send the form data to the backend
-      const response = await fetch('/api/complete-onboarding/', {
+      const response = await fetch('/core/farm/onboarding/', { // Changed URL
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Token ${token}` : '',
         },
         body: JSON.stringify({
-          farmName: farmName.trim(),
-          farmAddress: farmAddress.trim(),
-          soilType: soilType,
-          irrigationType: irrigationType,
-          farmingMethod: farmingMethod,
-          farmerExperience: farmerExperience,
-          soilNitrogen: soilNitrogen || null,
-          soilPhosphorus: soilPhosphorus || null,
-          soilPotassium: soilPotassium || null,
-          soilPh: soilPh || null,
-          hasWaterAccess: hasWaterAccess,
-          hasRoadAccess: hasRoadAccess,
-          hasElectricity: hasElectricity,
-          storageCapacity: storageCapacity || null,
-          yearEstablished: yearEstablished || null,
-          farmBoundary: farmBoundary,
+          farm_name: farmName.trim(),
+          farm_address: farmAddress.trim(),
+          soil_type: soilType,
+          irrigation_type: irrigationType,
+          farming_method: farmingMethod,
+          farmer_experience: farmerExperience,
+          soil_nitrogen: soilNitrogen || null,
+          soil_phosphorus: soilPhosphorus || null,
+          soil_potassium: soilPotassium || null,
+          soil_ph: soilPh || null,
+          has_water_access: hasWaterAccess,
+          has_road_access: hasRoadAccess,
+          has_electricity: hasElectricity,
+          storage_capacity: storageCapacity || null,
+          year_established: yearEstablished || null,
+          // Backend expects boundary, so we use that as primary field name
+          boundary: farmBoundary,
         }),
       });
       
+      // Close the submission notification
+      notifications.hide('submit-progress');
+      
       const contentType = response.headers.get("content-type");
+      let responseData: any; // Declare responseData here with explicit type any
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        responseData = await response.json(); // Parse JSON for all responses
+      }
+
       if (!response.ok) {
         // Handle error response
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await response.json();
+        if (responseData) {
           // Handle validation errors and field-specific errors
-          if (data.error === 'Validation failed' && data.details && Array.isArray(data.details)) {
-            data.details.forEach((error: string) => {
+          if (responseData.error === 'Validation failed' && responseData.details && Array.isArray(responseData.details)) {
+            responseData.details.forEach((error: string) => {
               const errorLower = error.toLowerCase();
-              if (errorLower.includes('nitrogen')) { setNitrogenError(error); setActive(3); }
-              else if (errorLower.includes('phosphorus')) { setPhosphorusError(error); setActive(3); }
-              else if (errorLower.includes('potassium')) { setPotassiumError(error); setActive(3); }
-              else if (errorLower.includes('ph')) { setPhError(error); setActive(3); }
-              else if (errorLower.includes('farm name') || errorLower.includes('farmname')) { setActive(0); }
-              else if (errorLower.includes('boundary') || errorLower.includes('map')) { setActive(3); }
-              else if (errorLower.includes('soil type')) { setActive(1); }
-              else if (errorLower.includes('irrigation') || errorLower.includes('farming method')) { setActive(2); }
-              else if (errorLower.includes('experience')) { setActive(0); }
+              if (errorLower.includes('nitrogen')) { setNitrogenError(error); setActive(1); }
+              else if (errorLower.includes('phosphorus')) { setPhosphorusError(error); setActive(1); }
+              else if (errorLower.includes('potassium')) { setPotassiumError(error); setActive(1); }
+              else if (errorLower.includes('ph')) { setPhError(error); setActive(1); }
+              else if (errorLower.includes('farm name') || errorLower.includes('farm_name')) { setActive(0); markFieldTouched('farmName'); }
+              else if (errorLower.includes('boundary') || errorLower.includes('map')) { setActive(3); markFieldTouched('farmBoundary'); }
+              else if (errorLower.includes('soil type') || errorLower.includes('soil_type')) { setActive(1); markFieldTouched('soilType'); }
+              else if (errorLower.includes('irrigation') || errorLower.includes('irrigation_type')) { setActive(2); markFieldTouched('irrigationType'); }
+              else if (errorLower.includes('farming method') || errorLower.includes('farming_method')) { setActive(2); markFieldTouched('farmingMethod'); }
+              else if (errorLower.includes('experience') || errorLower.includes('farmer_experience')) { setActive(0); markFieldTouched('farmerExperience'); }
             });
             
-            if (data.details.length > 0) {
+            if (responseData.details.length > 0) {
               notifications.show({
                 title: 'Oops! We Need More Information',
-                message: data.details[0],
+                message: responseData.details[0],
                 color: 'orange',
                 icon: <IconAlertTriangle />,
               });
             }
           } else {
             // Handle other JSON errors
-            setSubmitError(data.error || 'An unexpected error occurred during submission. Please try again.');
+            setSubmitError(responseData.error || 'An unexpected error occurred during submission. Please try again.');
+            notifications.show({
+              title: 'Error Creating Farm',
+              message: responseData.error || 'An unexpected error occurred. Please try again.',
+              color: 'red',
+              icon: <IconAlertCircle />,
+            });
           }
         } else {
           const errorText = await response.text();
           console.error("Server returned non-JSON error:", errorText.substring(0, 500));
           setSubmitError('The server returned an unexpected response. Please try again. If the problem persists, the server might be experiencing issues.');
+          notifications.show({
+            title: 'Server Error',
+            message: 'The server returned an unexpected response. Please try again.',
+            color: 'red',
+            icon: <IconAlertCircle />,
+          });
         }
         setIsSubmitting(false);
         return; 
-      }
-      
-      // IMPORTANT: Explicitly mark onboarding as completed in the user profile
-      try {
-        console.log('Marking onboarding as completed...');
-        await authService.completeOnboarding();
-        console.log('Onboarding marked as completed successfully');
-      } catch (completeError) {
-        console.error('Failed to mark onboarding as completed:', completeError);
-        // Continue anyway since the farm was created successfully
       }
       
       // Success! Show notification and navigate
@@ -665,14 +687,30 @@ export default function OnboardingPage() {
         localStorage.removeItem('user');
         
         // Use window.location for a full page navigation instead of router.push
-        window.location.href = '/dashboard';
-      }, 1000);
+        // Redirect to dashboard with farm_id if available
+        if (responseData && responseData.farm_id) {
+          window.location.href = `/dashboard?farm_id=${responseData.farm_id}`;
+        } else {
+          window.location.href = '/dashboard'; // Fallback to dashboard without ID
+        }
+      }, 1500);
       
     } catch (error) {
+      // Close the submission notification if it's still showing
+      notifications.hide('submit-progress');
+      
       console.error('Error submitting onboarding data:', error);
       setSubmitError(error instanceof Error ? error.message : 'A critical error occurred. Please try again or contact support.');
-    } finally {
+      
+      notifications.show({
+        title: 'Connection Error',
+        message: 'Could not connect to the server. Please check your internet connection and try again.',
+        color: 'red',
+        icon: <IconAlertCircle />,
+      });
+      
       setIsSubmitting(false);
+      // Stay on the success step but allow retry
     }
   };
 
@@ -1922,16 +1960,15 @@ export default function OnboardingPage() {
               <Button 
                 onClick={async () => {
                   try {
-                    // Mark onboarding as completed before navigating
-                    await authService.completeOnboarding();
                     // Clear any cached user data
                     localStorage.removeItem('user');
                     // Navigate to dashboard
-                    window.location.href = '/dashboard';
+                    window.location.href = '/dashboard'; 
                   } catch (error) {
-                    console.error('Error completing onboarding:', error);
+                    console.error('Error completing onboarding (from success screen button):', error); // Added context to log
                     // Navigate anyway
-                    window.location.href = '/dashboard';
+                    localStorage.removeItem('user'); // Ensure user cache is cleared on error too before navigation
+                    window.location.href = '/dashboard'; 
                   }
                 }}
                 color="green"
@@ -2102,12 +2139,13 @@ export default function OnboardingPage() {
             ) : (
               // "Complete Setup" button for step 4 (active === 4 here due to outer condition)
               <Button 
-                onClick={nextStep} 
-                rightSection={<IconArrowRight size={16} />}
+                onClick={handleSubmit} // Changed from nextStep to handleSubmit
+                rightSection={<IconCheck size={16} />} // Changed icon
                 ml="auto"
                 disabled={isSubmitting}
+                loading={isSubmitting} // Added loading state
               >
-                Next
+                Complete Setup // Changed text from Next
               </Button>
             )}
           </Group>

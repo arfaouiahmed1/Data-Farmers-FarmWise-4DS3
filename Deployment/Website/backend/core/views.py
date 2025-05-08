@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, action
@@ -36,13 +36,29 @@ class LoginView(APIView):
     
     def post(self, request):
         username = request.data.get('username')
+        email = request.data.get('email')
         password = request.data.get('password')
         
-        if not username or not password:
-            return Response({'error': 'Please provide both username and password'}, 
+        if not password:
+            return Response({'error': 'Please provide a password'}, 
                             status=status.HTTP_400_BAD_REQUEST)
         
-        user = authenticate(username=username, password=password)
+        if not username and not email:
+            return Response({'error': 'Please provide either username or email'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        user = None
+        
+        # First try to authenticate with provided credentials
+        if username:
+            user = authenticate(username=username, password=password)
+        elif email:
+            # Try to find a user with this email
+            try:
+                user_obj = User.objects.get(email=email)
+                user = authenticate(username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                pass
         
         if not user:
             return Response({'error': 'Invalid credentials'}, 
@@ -358,27 +374,6 @@ def profile_detail(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def complete_onboarding(request):
-    """
-    Mark user's onboarding as completed
-    """
-    try:
-        user = request.user
-        profile = user.profile
-        
-        profile.onboarding_completed = True
-        profile.save()
-        
-        return Response({
-            'success': True,
-            'message': 'Onboarding marked as completed'
-        })
-        
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_farm_from_onboarding(request):
@@ -490,178 +485,159 @@ def farm_onboarding(request):
     GET: Retrieve saved onboarding progress
     PUT: Save partial onboarding progress
     """
-    user = request.user
-    profile = user.profile
+    # Define user_profile here so it's available to all request methods
+    user_profile = request.user.profile
+
+    print("\n===== FARM ONBOARDING DEBUG =====")
+    print(f"Request method: {request.method}")
+    print(f"User: {request.user.username}, Auth: {request.user.is_authenticated}")
+    print(f"Has profile: {hasattr(request.user, 'profile')}")
     
-    # Check if user is a farmer
-    if not profile.is_farmer or not hasattr(profile, 'farmer_profile'):
-        return Response(
-            {"error": "Only farmers can complete farm onboarding"},
-            status=status.HTTP_403_FORBIDDEN
-        )
-        
+    if hasattr(request.user, 'profile'):
+        print(f"Profile type: {request.user.profile.user_type}")
+        print(f"Is farmer: {request.user.profile.is_farmer}")
+        print(f"Has farmer profile: {hasattr(request.user.profile, 'farmer_profile')}")
+    
+    print("================================\n")
+    
     if request.method == 'POST':
         # Complete onboarding and create farm
         validation_errors = []
         
+        # Get profile and ensure it has farmer_profile
+        # user_profile = request.user.profile # No longer needed here, defined above
+        
+        # Ensure user is a farmer
+        if user_profile.user_type != 'FARMER':
+            user_profile.user_type = 'FARMER'
+            user_profile.save()
+        
+        # Create farmer profile if it doesn't exist yet
+        if not hasattr(user_profile, 'farmer_profile'):
+            print("Creating missing farmer profile for user")
+            farmer = Farmer.objects.create(profile=user_profile)
+        else:
+            farmer = user_profile.farmer_profile
+        
         # Validate required fields
         farm_name = request.data.get('farm_name')
-        if not farm_name or not farm_name.strip():
-            validation_errors.append("Your farm needs a name to grow! Please give it one.")
-            
-        farm_address = request.data.get('farm_address')
-        if not farm_address or not farm_address.strip():
-            validation_errors.append("Where's your farm located? We need an address.")
+        if not farm_name:
+            validation_errors.append("Your farm needs a name! Please tell us what to call it.")
             
         soil_type = request.data.get('soil_type')
         if not soil_type:
-            validation_errors.append("Your crops want to know what soil they'll be growing in!")
+            validation_errors.append("Help us understand your farm better - what type of soil do you have?")
             
         irrigation_type = request.data.get('irrigation_type')
         if not irrigation_type:
-            validation_errors.append("How will you water your plants? Please select an irrigation method.")
+            validation_errors.append("How do you water your crops? Please select an irrigation method.")
             
         farming_method = request.data.get('farming_method')
         if not farming_method:
             validation_errors.append("What's your farming style? Organic? Conventional? Your plants are curious!")
             
+        # Check for both boundary and farmBoundary fields
         boundary = request.data.get('boundary')
+        if not boundary:
+            # Try alternative field name from frontend
+            boundary = request.data.get('farmBoundary')
+            
         if not boundary:
             validation_errors.append("Your farm needs boundaries! Please draw your farm on the map.")
             
         farmer_experience = request.data.get('farmer_experience')
         if not farmer_experience:
-            validation_errors.append("Are you new to farming or a seasoned pro? We'd love to know!")
-            
-        # Validate soil nutrient data if provided
-        soil_nitrogen = request.data.get('soil_nitrogen')
-        soil_phosphorus = request.data.get('soil_phosphorus')
-        soil_potassium = request.data.get('soil_potassium')
-        soil_ph = request.data.get('soil_ph')
+            validation_errors.append("How experienced are you as a farmer? Every bit of experience counts!")
         
-        if soil_nitrogen is not None:
-            try:
-                n_value = float(soil_nitrogen)
-                if n_value < 0:
-                    validation_errors.append("Nitrogen can't be negative. What would your plants eat?")
-                elif n_value > 150:
-                    validation_errors.append("That's super-charged nitrogen! A bit too high for soil.")
-            except (ValueError, TypeError):
-                validation_errors.append("Nitrogen level should be a valid number.")
-                
-        if soil_phosphorus is not None:
-            try:
-                p_value = float(soil_phosphorus)
-                if p_value < 0:
-                    validation_errors.append("Phosphorus can't be negative. Your plants would be puzzled!")
-                elif p_value > 100:
-                    validation_errors.append("That's rocket-fuel phosphorus levels! A bit too high.")
-            except (ValueError, TypeError):
-                validation_errors.append("Phosphorus level should be a valid number.")
-                
-        if soil_potassium is not None:
-            try:
-                k_value = float(soil_potassium)
-                if k_value < 0:
-                    validation_errors.append("Potassium can't be negative. Your plants would be confused!")
-                elif k_value > 300:
-                    validation_errors.append("That's banana-level potassium! A bit too high for soil.")
-            except (ValueError, TypeError):
-                validation_errors.append("Potassium level should be a valid number.")
-                
-        if soil_ph is not None:
-            try:
-                ph_value = float(soil_ph)
-                if ph_value < 0:
-                    validation_errors.append("pH below 0? That's not soil, that's science fiction!")
-                elif ph_value > 14:
-                    validation_errors.append("pH can't exceed 14 - that's beyond the pH scale entirely!")
-            except (ValueError, TypeError):
-                validation_errors.append("pH should be a valid number between 0 and 14.")
-        
-        # Return validation errors if any
+        # If validation fails, return errors
         if validation_errors:
-            return Response({
-                "error": "Validation failed",
-                "details": validation_errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            raise serializers.ValidationError({'errors': validation_errors})
+            
+        # Create farm
         try:
-            # Create farm with onboarding data
-            from .models import Farm
+            # Prepare farm data
+            farm_data = {
+                'name': farm_name,
+                'owner': farmer,
+                'soil_type': soil_type,
+                'irrigation_type': irrigation_type,
+                'farming_method': farming_method,
+            }
             
-            # Process size from boundary if available
-            size_hectares = None
-            if boundary and 'properties' in boundary and 'area_hectares' in boundary['properties']:
-                size_hectares = boundary['properties']['area_hectares']
-            
-            farm = Farm.objects.create(
-                name=farm_name.strip(),
-                owner=profile.farmer_profile,
-                address=farm_address.strip(),
-                boundary_geojson=boundary,
-                size_hectares=size_hectares,
-                soil_type=soil_type,
-                irrigation_type=irrigation_type,
-                farming_method=farming_method,
-                has_water_access=request.data.get('has_water_access', False),
-                has_road_access=request.data.get('has_road_access', False),
-                has_electricity=request.data.get('has_electricity', False),
-                storage_capacity=request.data.get('storage_capacity'),
-                year_established=request.data.get('year_established'),
-                soil_nitrogen=soil_nitrogen,
-                soil_phosphorus=soil_phosphorus,
-                soil_potassium=soil_potassium,
-                soil_ph=soil_ph
-            )
-            
-            # Update farmer experience if provided
-            if farmer_experience:
-                farmer = profile.farmer_profile
+            # Optional address
+            if 'farm_address' in request.data:
+                farm_data['address'] = request.data.get('farm_address')
                 
-                if farmer_experience == 'new':
-                    farmer.farming_experience_years = 0
-                elif farmer_experience == 'experienced':
-                    # Default to 5 years for experienced farmers
-                    farmer.farming_experience_years = 5
+            # Optional numeric fields
+            if 'soil_nitrogen' in request.data:
+                farm_data['soil_nitrogen'] = request.data.get('soil_nitrogen')
                 
-                farmer.save(update_fields=['farming_experience_years'])
+            if 'soil_phosphorus' in request.data:
+                farm_data['soil_phosphorus'] = request.data.get('soil_phosphorus')
+                
+            if 'soil_potassium' in request.data:
+                farm_data['soil_potassium'] = request.data.get('soil_potassium')
+                
+            if 'soil_ph' in request.data:
+                farm_data['soil_ph'] = request.data.get('soil_ph')
+                
+            # Boolean fields
+            farm_data['has_water_access'] = request.data.get('has_water_access', False)
+            farm_data['has_road_access'] = request.data.get('has_road_access', False)
+            farm_data['has_electricity'] = request.data.get('has_electricity', False)
+            
+            # Optional numeric fields
+            if 'storage_capacity' in request.data:
+                farm_data['storage_capacity'] = request.data.get('storage_capacity')
+                
+            if 'year_established' in request.data:
+                farm_data['year_established'] = request.data.get('year_established')
+                
+            # Handle farm boundary geojson if provided
+            if boundary:
+                farm_data['boundary_geojson'] = boundary
+                # If area_hectares is in the properties, extract it
+                if isinstance(boundary, dict) and boundary.get('properties', {}).get('area_hectares'):
+                    farm_data['size_hectares'] = boundary['properties']['area_hectares']
+                    
+                    # Set size category based on area
+                    if farm_data['size_hectares'] < 10:
+                        farm_data['size_category'] = 'S'  # Small
+                    elif farm_data['size_hectares'] < 50:
+                        farm_data['size_category'] = 'M'  # Medium
+                    else:
+                        farm_data['size_category'] = 'L'  # Large
+            
+            # Create the farm
+            farm = Farm.objects.create(**farm_data)
             
             # Mark onboarding as completed
-            profile.onboarding_completed = True
-            profile.save(update_fields=['onboarding_completed'])
-            
-            # Clear any saved progress data
-            if hasattr(profile, 'onboarding_progress'):
-                profile.onboarding_progress = None
-                profile.save(update_fields=['onboarding_progress'])
-            
-            # Calculate and update estimated price
-            farm.calculate_estimated_price()
+            user_profile.onboarding_completed = True
+            user_profile.save()
             
             return Response({
-                "success": True,
-                "message": "Congratulations! Your farm has been set up successfully.",
-                "farm_id": farm.id
+                'success': True,
+                'message': 'Farm onboarding completed successfully',
+                'farm_id': farm.id
             })
-            
         except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            print(f"Error creating farm: {str(e)}")
+            return Response({
+                'error': f'Error creating farm: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     elif request.method == 'GET':
         # Retrieve saved onboarding progress
-        from .models import UserProfile
+        # from .models import UserProfile # Import is at the top
         
         try:
+            # user_profile = request.user.profile # No longer needed here, defined above
             # Check if there's saved progress
-            if hasattr(profile, 'onboarding_progress') and profile.onboarding_progress:
+            if hasattr(user_profile, 'onboarding_progress') and user_profile.onboarding_progress:
                 return Response({
                     "success": True,
                     "has_saved_progress": True,
-                    "progress": profile.onboarding_progress
+                    "progress": user_profile.onboarding_progress
                 })
             else:
                 return Response({
@@ -677,11 +653,12 @@ def farm_onboarding(request):
     elif request.method == 'PUT':
         # Save partial onboarding progress
         try:
+            # user_profile = request.user.profile # No longer needed here, defined above
             progress_data = request.data
             
             # Save the progress to the user profile
-            profile.onboarding_progress = progress_data
-            profile.save(update_fields=['onboarding_progress'])
+            user_profile.onboarding_progress = progress_data
+            user_profile.save(update_fields=['onboarding_progress'])
             
             return Response({
                 "success": True,
@@ -693,3 +670,109 @@ def farm_onboarding(request):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Making it accessible for debugging
+def debug_onboarding(request):
+    """
+    Debug view to log all details about an onboarding request
+    """
+    print("\n\n===== DEBUG ONBOARDING =====")
+    print(f"Request method: {request.method}")
+    print(f"User: {request.user}")
+    print(f"Is authenticated: {request.user.is_authenticated}")
+    
+    if request.user.is_authenticated:
+        print(f"Username: {request.user.username}")
+        print(f"Has profile: {hasattr(request.user, 'profile')}")
+        if hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            print(f"User type: {profile.user_type}")
+            print(f"Is farmer: {profile.is_farmer}")
+            print(f"Has farmer profile: {hasattr(profile, 'farmer_profile')}")
+            if hasattr(profile, 'farmer_profile'):
+                print(f"Farmer ID: {profile.farmer_profile.id}")
+    
+    print("\nRequest data:")
+    for key, value in request.data.items():
+        if key in ['boundary', 'farmBoundary']:
+            print(f"{key}: [GeoJSON data]")
+        else:
+            print(f"{key}: {value}")
+    
+    print("\nRequest headers:")
+    for header, value in request.headers.items():
+        if header.lower() == 'authorization':
+            print(f"{header}: [HIDDEN]")
+        else:
+            print(f"{header}: {value}")
+    
+    print("===========================\n\n")
+    
+    # Create a test farm
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        profile = request.user.profile
+        
+        # Ensure user is a farmer
+        if profile.user_type != 'FARMER':
+            profile.user_type = 'FARMER'
+            profile.save()
+        
+        # Ensure farmer profile exists
+        if not hasattr(profile, 'farmer_profile'):
+            from .models import Farmer
+            farmer = Farmer.objects.create(profile=profile)
+        else:
+            farmer = profile.farmer_profile
+        
+        # Create test farm
+        try:
+            from .models import Farm
+            farm_name = request.data.get('farm_name', 'Debug Test Farm')
+            
+            # Check if a farm with this name already exists
+            existing_farm = Farm.objects.filter(owner=farmer, name=farm_name).first()
+            if not existing_farm:
+                new_farm = Farm.objects.create(
+                    name=farm_name,
+                    owner=farmer,
+                    soil_type=request.data.get('soil_type', 'Loamy'),
+                    irrigation_type=request.data.get('irrigation_type', 'Drip'),
+                    farming_method=request.data.get('farming_method', 'Organic'),
+                    has_water_access=request.data.get('has_water_access', True),
+                    has_road_access=request.data.get('has_road_access', True),
+                    has_electricity=request.data.get('has_electricity', True),
+                )
+                
+                # Mark onboarding as completed
+                profile.onboarding_completed = True
+                profile.save()
+                
+                print(f"Created test farm: {new_farm.name} (ID: {new_farm.id})")
+                
+                return Response({
+                    'success': True,
+                    'message': 'Debug farm created successfully',
+                    'farm_id': new_farm.id,
+                    'farm_name': new_farm.name
+                })
+            else:
+                print(f"Farm already exists: {existing_farm.name} (ID: {existing_farm.id})")
+                return Response({
+                    'success': True,
+                    'message': 'Farm already exists',
+                    'farm_id': existing_farm.id,
+                    'farm_name': existing_farm.name
+                })
+        except Exception as e:
+            print(f"Error creating test farm: {str(e)}")
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    return Response({
+        'success': True,
+        'message': 'Debug information logged to server console',
+        'authenticated': request.user.is_authenticated
+    })

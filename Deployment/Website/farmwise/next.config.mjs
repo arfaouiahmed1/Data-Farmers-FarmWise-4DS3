@@ -15,6 +15,10 @@ export default withBundleAnalyzer({
   async rewrites() {
     return [
       {
+        source: '/core/:path*',
+        destination: 'http://localhost:8000/core/:path*', // Proxy /core paths to Django backend
+      },
+      {
         source: '/api/:path*',
         destination: 'http://localhost:8000/api/:path*', // Proxy to Django backend
       },

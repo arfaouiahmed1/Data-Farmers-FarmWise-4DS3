@@ -512,11 +512,21 @@ def save_user_profile(sender, instance, **kwargs):
 @receiver(post_save, sender=UserProfile)
 def create_role_specific_profile(sender, instance, created, **kwargs):
     """Create specific profile based on user type"""
-    # Only create the role-specific profile if it doesn't exist yet
-    if instance.is_farmer and not hasattr(instance, 'farmer_profile'):
-        Farmer.objects.create(profile=instance)
-    elif instance.is_admin and not hasattr(instance, 'admin_profile'):
-        Admin.objects.create(profile=instance)
+    # Create the role-specific profile if it doesn't exist yet or if the user type has changed
+    if instance.is_farmer:
+        # Always ensure farmer profile exists for FARMER type
+        if not hasattr(instance, 'farmer_profile'):
+            Farmer.objects.create(profile=instance)
+    elif instance.is_admin:
+        # Always ensure admin profile exists for ADMIN type  
+        if not hasattr(instance, 'admin_profile'):
+            Admin.objects.create(profile=instance)
+    
+    # Clean up any profiles that shouldn't exist based on current user_type
+    if not instance.is_farmer and hasattr(instance, 'farmer_profile'):
+        instance.farmer_profile.delete()
+    if not instance.is_admin and hasattr(instance, 'admin_profile'):
+        instance.admin_profile.delete()
 
 @receiver(post_save, sender=UserProfile)
 def save_role_specific_profile(sender, instance, **kwargs):

@@ -181,15 +181,17 @@ export default function LoginPage() {
     setError('');
     
     try {
-      // Determine if we're logging in with email or username
+      // Determine if input is email or username based on format
       const isEmail = usernameOrEmail.includes('@') && isValidEmail(usernameOrEmail);
       
-      // If it's an email, we need to get the username first
-      let username = usernameOrEmail;
+      // Send the appropriate credential type
+      const loginData = {
+        [isEmail ? 'email' : 'username']: usernameOrEmail,
+        password
+      };
       
-      // For now, we'll use username for login
-      // In a real app, you'd have a backend endpoint that accepts either username or email
-      await authService.login({ username, password });
+      // Send login request
+      await authService.login(loginData);
       
       // Successful login, redirect to dashboard
       router.push('/dashboard');
@@ -226,7 +228,7 @@ export default function LoginPage() {
         </Box>
 
         <Paper withBorder shadow="md" p={30} mt={30} radius="lg" className={classes.formWrapper} bg="var(--mantine-color-body)">
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} name="login-form" id="login-form" method="post" autoComplete="on">
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -328,6 +330,9 @@ export default function LoginPage() {
                     radius="md"
                     className={classes.input}
                     error={getIdentityErrorMessage()}
+                    autoComplete={loginMethod === 'username' ? 'username' : 'email'}
+                    name={loginMethod === 'username' ? 'username' : 'email'}
+                    id={loginMethod === 'username' ? 'username' : 'email'}
                   />
                 </motion.div>
                 
@@ -345,6 +350,9 @@ export default function LoginPage() {
                     }
                     radius="md"
                     className={classes.input}
+                    autoComplete="current-password"
+                    name="password"
+                    id="password"
                   />
                 </motion.div>
                 

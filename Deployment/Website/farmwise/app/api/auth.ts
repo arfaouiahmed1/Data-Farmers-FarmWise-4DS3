@@ -25,7 +25,8 @@ api.interceptors.request.use(
 );
 
 export interface LoginCredentials {
-  username: string;
+  username?: string;
+  email?: string;
   password: string;
 }
 

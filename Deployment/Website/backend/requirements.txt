@@ -3,6 +3,7 @@ django>=4.0 # Or your specific Django version
 
 # API Framework
 djangorestframework>=3.14
+drf-yasg>=1.21.0  # Swagger/OpenAPI documentation
 
 # Machine Learning - PyTorch & YOLOv8
 # Specify versions matching your environment if possible

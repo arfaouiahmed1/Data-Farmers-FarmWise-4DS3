@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from . import views
 
@@ -26,14 +26,17 @@ urlpatterns = [
     path('profile/', views.profile_detail, name='profile-detail'),
     
     # Complete onboarding endpoint
-    path('complete-onboarding/', views.complete_onboarding, name='complete-onboarding'),
+    # path('complete-onboarding/', views.complete_onboarding, name='complete-onboarding'),
     
     # Farm from onboarding data
     path('add-farm-from-onboarding/', views.add_farm_from_onboarding, name='add-farm-from-onboarding'),
     
     # Enhanced onboarding with progress saving
-    path('farm/onboarding/', views.farm_onboarding, name='farm-onboarding'),
+    re_path(r'^farm/onboarding/?$', views.farm_onboarding, name='farm-onboarding'),
     
     # Farm boundary update endpoint
     path('farms/<int:farm_id>/update-boundary/', views.update_farm_boundary, name='update-farm-boundary'),
+    
+    # Debug onboarding endpoint
+    path('debug/onboarding/', views.debug_onboarding, name='debug-onboarding'),
 ] 

@@ -111,28 +111,19 @@ export async function POST(request: NextRequest) {
       has_electricity: data.hasElectricity,
       storage_capacity: data.storageCapacity,
       year_established: data.yearEstablished,
-      boundary: data.farmBoundary
+      boundary: data.farmBoundary,
+      farmBoundary: data.farmBoundary
     };
     
     // Forward the request to the Django backend
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     
-    // Use a different endpoint based on what the backend expects
     console.log('Sending data to backend:', JSON.stringify(backendData));
     
-    const backendResponse = await fetch(`${apiUrl}/core/farm/onboarding/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader
-      },
-      body: JSON.stringify(backendData)
-    });
-    
-    // If that endpoint fails, try the secondary endpoint
-    if (!backendResponse.ok && backendResponse.status === 404) {
-      console.log('Primary endpoint not found, trying alternative endpoint');
-      const secondaryResponse = await fetch(`${apiUrl}/api/complete-onboarding/`, {
+    // Try the primary endpoint first
+    let backendResponse: Response | null = null;
+    try {
+      backendResponse = await fetch(`${apiUrl}/core/farm/onboarding/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,54 +131,96 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify(backendData)
       });
-      
-      const responseData = await secondaryResponse.json();
-      
-      // Explicitly mark onboarding as completed if farm creation was successful
-      if (secondaryResponse.ok) {
-        try {
-          console.log('Farm created successfully, marking onboarding as completed');
-          await fetch(`${apiUrl}/core/complete-onboarding/`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': authHeader
-            }
-          });
-        } catch (completeError) {
-          console.error('Error marking onboarding as completed:', completeError);
-          // Continue anyway since the farm was created successfully
-        }
-      }
-      
-      return NextResponse.json(responseData, { status: secondaryResponse.status });
+    } catch (error) {
+      console.error('Error with primary endpoint:', error);
     }
     
-    // Parse the response from the backend
-    const responseData = await backendResponse.json();
-    
-    // Explicitly mark onboarding as completed if farm creation was successful
-    if (backendResponse.ok) {
+    // If that endpoint fails, try the secondary endpoint
+    if (!backendResponse || !backendResponse.ok) {
+      const statusText = backendResponse ? `status ${backendResponse.status}` : 'unknown error';
+      console.log(`Primary endpoint failed with ${statusText}, trying alternative endpoint`);
+      let secondaryResponse: Response | null = null;
+      
       try {
-        console.log('Farm created successfully, marking onboarding as completed');
-        await fetch(`${apiUrl}/core/complete-onboarding/`, {
-          method: 'PUT',
+        secondaryResponse = await fetch(`${apiUrl}/api/complete-onboarding/`, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': authHeader
-          }
+          },
+          body: JSON.stringify(backendData)
         });
-      } catch (completeError) {
-        console.error('Error marking onboarding as completed:', completeError);
-        // Continue anyway since the farm was created successfully
+      } catch (error) {
+        console.error('Error with secondary endpoint:', error);
+      }
+      
+      // If both regular endpoints fail, try the debug endpoint as a final fallback
+      if (!secondaryResponse || !secondaryResponse.ok) {
+        const statusText = secondaryResponse ? `status ${secondaryResponse.status}` : 'unknown error';
+        console.log(`Secondary endpoint failed with ${statusText}, trying debug endpoint`);
+        
+        try {
+          const debugResponse = await fetch(`${apiUrl}/core/debug/onboarding/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader
+            },
+            body: JSON.stringify(backendData)
+          });
+          
+          const debugResponseData = await debugResponse.json();
+          
+          if (debugResponse.ok) {
+            console.log('Debug endpoint created farm successfully');
+            
+            return NextResponse.json({
+              success: true,
+              message: 'Farm created successfully via debug endpoint',
+              farm_id: debugResponseData.farm_id || debugResponseData.id,
+              farm_name: debugResponseData.farm_name || data.farmName
+            });
+          } else {
+            console.error('Debug endpoint also failed:', debugResponseData);
+            return NextResponse.json(
+              { error: 'All endpoints failed to create farm', details: debugResponseData }, 
+              { status: 500 }
+            );
+          }
+        } catch (debugError) {
+          console.error('Error with debug endpoint:', debugError);
+          return NextResponse.json(
+            { error: 'All farm creation endpoints failed', message: 'Please try again or contact support' }, 
+            { status: 500 }
+          );
+        }
+      }
+      
+      try {
+        const responseData = await secondaryResponse.json();
+        
+        return NextResponse.json(responseData, { status: secondaryResponse.status });
+      } catch (jsonError) {
+        console.error('Error parsing secondary response:', jsonError);
+        return NextResponse.json(
+          { error: 'Failed to parse secondary endpoint response', message: 'Server returned invalid data' }, 
+          { status: 500 }
+        );
       }
     }
     
-    // Forward the response status and data
-    return NextResponse.json(
-      responseData, 
-      { status: backendResponse.status }
-    );
+    // If primary endpoint succeeds
+    try {
+      const responseData = await backendResponse.json();
+      
+      return NextResponse.json(responseData, { status: backendResponse.status });
+    } catch (jsonError) {
+      console.error('Error parsing primary response:', jsonError);
+      return NextResponse.json(
+        { error: 'Failed to parse primary endpoint response', message: 'Server returned invalid data' }, 
+        { status: 500 }
+      );
+    }
     
   } catch (error) {
     console.error('Error in complete-onboarding API:', error);

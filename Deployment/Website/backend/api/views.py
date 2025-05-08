@@ -1201,10 +1201,67 @@ def complete_onboarding(request):
     """
     API endpoint for completing the user onboarding process.
     Creates or updates a Farm with the provided details and marks the user's profile as onboarding_completed.
+    ---
+    parameters:
+        - name: farmName
+          description: Name of the farm
+          required: true
+          type: string
+          paramType: form
+        - name: soilType
+          description: Type of soil in the farm
+          required: true
+          type: string
+          paramType: form
+        - name: soilNitrogen
+          description: Nitrogen content in soil (PPM)
+          required: false
+          type: number
+          paramType: form
+        - name: soilPhosphorus
+          description: Phosphorus content in soil (PPM)
+          required: false
+          type: number
+          paramType: form
+        - name: soilPotassium
+          description: Potassium content in soil (PPM)
+          required: false
+          type: number
+          paramType: form
+        - name: soilPh
+          description: pH level of soil
+          required: false
+          type: number
+          paramType: form
+    responses:
+        200:
+            description: Farm created successfully
+            schema:
+                type: object
+                properties:
+                    success:
+                        type: boolean
+                    message:
+                        type: string
+                    farm:
+                        type: object
+        400:
+            description: Validation error or missing required fields
+        500:
+            description: Server error
     """
     try:
         # Get the user profile
         user_profile = request.user.profile
+        
+        # Debug logging
+        print("===== API COMPLETE ONBOARDING DEBUG =====")
+        print(f"Request data: {request.data}")
+        print(f"User: {request.user.username}, Profile: {user_profile}, Is farmer: {user_profile.is_farmer}")
+        print(f"Has farmer profile: {hasattr(user_profile, 'farmer_profile')}")
+        if hasattr(user_profile, 'farmer_profile'):
+            print(f"Farmer profile: {user_profile.farmer_profile}")
+        print("=========================================")
         
         # Get the farmer profile through the user profile
         try:
@@ -1322,6 +1379,20 @@ def complete_onboarding(request):
                 # If area_hectares is in the properties, extract it
                 if data['farmBoundary'].get('properties', {}).get('area_hectares'):
                     farm_data['size_hectares'] = data['farmBoundary']['properties']['area_hectares']
+                    
+                    # Set size category based on area
+                    if farm_data['size_hectares'] < 10:
+                        farm_data['size_category'] = 'S'  # Small
+                    elif farm_data['size_hectares'] < 50:
+                        farm_data['size_category'] = 'M'  # Medium
+                    else:
+                        farm_data['size_category'] = 'L'  # Large
+            # Also check for 'boundary' field for consistency
+            elif 'boundary' in data and data['boundary']:
+                farm_data['boundary_geojson'] = data['boundary']
+                # If area_hectares is in the properties, extract it
+                if data['boundary'].get('properties', {}).get('area_hectares'):
+                    farm_data['size_hectares'] = data['boundary']['properties']['area_hectares']
                     
                     # Set size category based on area
                     if farm_data['size_hectares'] < 10:
