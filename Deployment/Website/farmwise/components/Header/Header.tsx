@@ -47,6 +47,7 @@ export function AppHeader() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [logoutModalOpened, { open: openLogoutModal, close: closeLogoutModal }] = useDisclosure(false);
   // Add state for notifications
   const [notifications, setNotifications] = useState([
@@ -60,27 +61,64 @@ export function AppHeader() {
     // Don't run on the server
     if (typeof window === 'undefined') return;
     
-    const checkAuth = () => {
+    const checkAuth = async () => {
+      setIsLoadingUser(true);
       const isUserAuthenticated = authService.isAuthenticated();
       setIsAuthenticated(isUserAuthenticated);
       
       if (isUserAuthenticated) {
-        const user = authService.getCurrentUser();
-        setUserData(user);
+        try {
+          // Always try to get fresh data from the API first
+          const user = await authService.getProfile();
+          setUserData(user);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          // Fallback to cached user data if API call fails
+          const cachedUser = authService.getCurrentUser();
+          setUserData(cachedUser);
+        }
       } else {
         setUserData(null);
       }
+      setIsLoadingUser(false);
     };
     
     checkAuth();
+
+    // Listen for storage events (in case user data is updated in another tab)
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'user' || event.key === 'token') {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [pathname]);
 
   // Get user initials for avatar
   const getUserInitials = () => {
-    if (!userData || !userData.first_name) return 'U';
+    if (!userData) return 'U';
     
-    const first = userData.first_name.charAt(0);
+    // Check if first_name exists and is not empty
+    const first = userData.first_name ? userData.first_name.charAt(0) : '';
     const last = userData.last_name ? userData.last_name.charAt(0) : '';
+    
+    // If we have neither first nor last name, try username or email
+    if (!first && !last) {
+      if (userData.username) {
+        return userData.username.charAt(0).toUpperCase();
+      }
+      if (userData.email) {
+        return userData.email.charAt(0).toUpperCase();
+      }
+      return 'U'; // Default fallback
+    }
+    
     return (first + last).toUpperCase();
   };
 
@@ -283,10 +321,20 @@ export function AppHeader() {
                 <Menu.Target>
                   <UnstyledButton>
                     <Group gap={8}>
-                      <Avatar color="green" radius="xl">{getUserInitials()}</Avatar>
+                      {isLoadingUser ? (
+                        <Avatar color="gray" radius="xl">...</Avatar>
+                      ) : (
+                        <Avatar color="green" radius="xl">{getUserInitials()}</Avatar>
+                      )}
                       <Box style={{ flex: 1 }}>
-                        <Text size="sm" fw={500}>{userData?.first_name} {userData?.last_name}</Text>
-                        <Text c="dimmed" size="xs">{userData?.profile?.user_type || 'User'}</Text>
+                        {isLoadingUser ? (
+                          <Text size="sm" fw={500}>Loading...</Text>
+                        ) : (
+                          <>
+                            <Text size="sm" fw={500}>{userData?.first_name || ''} {userData?.last_name || ''}</Text>
+                            <Text c="dimmed" size="xs">{userData?.profile?.user_type || 'User'}</Text>
+                          </>
+                        )}
                       </Box>
                     </Group>
                   </UnstyledButton>

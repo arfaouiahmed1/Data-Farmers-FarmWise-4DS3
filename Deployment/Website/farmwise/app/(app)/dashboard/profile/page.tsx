@@ -24,9 +24,25 @@ import {
   Tooltip,
   LoadingOverlay,
   Alert,
+  Container,
+  ThemeIcon,
+  RingProgress,
+  List,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { IconUser, IconMail, IconBuildingWarehouse, IconPhone, IconSettings, IconPhoto, IconNote, IconRoad, IconBolt, IconDropletFilled, IconTexture, IconInfoCircle, IconAlertCircle, IconMapPin, IconGps } from '@tabler/icons-react';
+import { 
+  IconUser, IconMail, IconBuildingWarehouse, IconPhone, IconSettings, IconPhoto, IconNote, IconRoad, 
+  IconBolt, IconDropletFilled, IconTexture, IconInfoCircle, IconAlertCircle, IconMapPin, IconGps, 
+  IconCalendar, IconRulerMeasure, IconBuildingFortress, IconPencil, IconX, IconDeviceFloppy, IconError404,
+  IconTextCaption, // For Farm Description
+  IconTestPipe,   // For Soil Nutrients
+  IconFlask2,     // Alternative for Soil pH
+  IconLicense,    // For Certifications
+  IconTractor,    // For Equipment Owned
+  IconPlant2,     // For Preferred Crops
+  IconTimeline,   // For Farming Experience
+  IconTargetArrow // For Specialization
+} from '@tabler/icons-react';
 import dynamic from 'next/dynamic'; 
 import type { LatLngExpression } from 'leaflet';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
@@ -86,7 +102,7 @@ interface FarmUISettings {
 const FarmMapEditor = dynamic(
   () => import('@/components/Onboarding/FarmMapEditor'),
   { ssr: false, 
-    loading: () => <Text>Loading map...</Text>
+    loading: () => <Group justify="center" mt="md"><Text c="dimmed">🗺️ Loading map editor...</Text></Group>
   } 
 );
 
@@ -94,8 +110,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState<ExtendedUserData | null>(null);
   const [farmBoundary, setFarmBoundary] = useState<Feature<Polygon | MultiPolygon> | null>(null);
-  const [mapCenter, setMapCenter] = useState<LatLngExpression>([0, 0]);
-  const [mapZoom, setMapZoom] = useState(15);
+  const [mapCenter, setMapCenter] = useState<LatLngExpression>([20, 0]);
+  const [mapZoom, setMapZoom] = useState(5);
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +125,72 @@ export default function ProfilePage() {
 
   // Add a state variable to track when farm boundary changes
   const [boundaryChanged, setBoundaryChanged] = useState(false);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [missingInfoMessages, setMissingInfoMessages] = useState<string[]>([]);
+  
+  const calculateProfileCompletion = (currentValues: typeof form.values, currentFarmBoundary: Feature<Polygon | MultiPolygon> | null, currentUserData: ExtendedUserData | null) => {
+    const fieldsToTrack = [
+      // User Profile
+      { key: 'name', label: 'Full Name', category: 'User Profile' },
+      { key: 'phone', label: 'Phone Number', category: 'User Profile' },
+      { key: 'bio', label: 'Short Bio', category: 'User Profile' },
+      { key: 'profileImage', label: 'Profile Picture', category: 'User Profile', customCheck: () => !!(profileImageFile || currentUserData?.profile?.profile_image) },
+      // Farm Info
+      { key: 'farmName', label: 'Farm Name', category: 'Farm Information' },
+      { key: 'farmAddress', label: 'Farm Address', category: 'Farm Information' },
+      { key: 'farmDescription', label: 'Farm Description', category: 'Farm Information' },
+      { key: 'sizeHectares', label: 'Farm Size', category: 'Farm Information' },
+      { key: 'yearEstablished', label: 'Year Established', category: 'Farm Information' },
+      { key: 'soilType', label: 'Soil Type', category: 'Farm Information' },
+      { key: 'irrigationType', label: 'Irrigation Type', category: 'Farm Information' },
+      { key: 'farmingMethod', label: 'Farming Method', category: 'Farm Information' },
+      { key: 'farmBoundary', label: 'Farm Boundary', category: 'Farm Map', customCheck: () => !!currentFarmBoundary },
+      // Soil Composition
+      { key: 'soilNitrogen', label: 'Soil Nitrogen', category: 'Soil Composition' },
+      { key: 'soilPhosphorus', label: 'Soil Phosphorus', category: 'Soil Composition' },
+      { key: 'soilPotassium', label: 'Soil Potassium', category: 'Soil Composition' },
+      { key: 'soilPh', label: 'Soil pH', category: 'Soil Composition' },
+      // Farmer Specifics
+      { key: 'farmingExperienceYears', label: 'Farming Experience', category: 'Farmer Specifics' },
+      { key: 'specialization', label: 'Specialization', category: 'Farmer Specifics' },
+      { key: 'certification', label: 'Certifications', category: 'Farmer Specifics' },
+    ];
+
+    let filledFields = 0;
+    const newMissingMessages: string[] = [];
+
+    fieldsToTrack.forEach(field => {
+      let isFilled = false;
+      if (field.customCheck) {
+        isFilled = field.customCheck();
+      } else {
+        const value = currentValues[field.key as keyof typeof form.values];
+        isFilled = value !== null && value !== undefined && String(value).trim() !== '';
+      }
+
+      if (isFilled) {
+        filledFields++;
+      } else {
+        // Add to missing messages, maybe prioritize or limit how many are shown
+        if (newMissingMessages.length < 3) { // Show up to 3 specific missing fields
+          newMissingMessages.push(`${field.label} (in ${field.category})`);
+        }
+      }
+    });
+
+    const percentage = Math.round((filledFields / fieldsToTrack.length) * 100);
+    setCompletionPercentage(percentage);
+
+    if (percentage < 100 && newMissingMessages.length === 0 && filledFields > 0) {
+      // If not 100% but specific messages are full, add a generic one
+      newMissingMessages.push("Several optional details are missing. Consider completing them for a richer profile!")
+    } else if (percentage < 100 && filledFields === 0){
+      newMissingMessages.push("Your profile is currently empty. Please fill in your details.")
+    } else if (percentage === 100){
+      newMissingMessages.push("Profile complete! Well done. 🎉");
+    }
+    setMissingInfoMessages(newMissingMessages);
+  };
   
   // Function to handle boundary changes from the map editor
   const handleBoundaryChange = useCallback((newBoundary: Feature<Polygon | MultiPolygon> | null) => {
@@ -160,30 +242,53 @@ export default function ProfilePage() {
                 const avgLng = longitudes.reduce((a: number, b: number) => a + b, 0) / longitudes.length;
                 
                 setMapCenter([avgLat, avgLng]);
+                setMapZoom(16);
+              } else {
+                // If no coordinates, set a generic default or keep previous if meaningful
+                setMapCenter([20,0]); // A more global default
+                setMapZoom(5);
               }
             } catch (err) {
               console.error('Error calculating map center:', err);
-              // Fall back to a default center if needed
+              setMapCenter([20,0]); // Fallback if error
+              setMapZoom(5);
             }
+          } else {
+             // No boundary, set a wider view
+            setMapCenter([20,0]);
+            setMapZoom(5);
           }
           
           // Initialize form with user data
           form.setValues({
             name: `${extendedUser.first_name || ''} ${extendedUser.last_name || ''}`,
             email: extendedUser.email || '',
-            farmName: extendedUser.profile?.farmer_data?.farms?.[0]?.name || '',
+            farmName: farm?.name || '',
             phone: extendedUser.profile?.phone_number || '',
             bio: extendedUser.profile?.bio || '',
-            address: extendedUser.profile?.address || '',
-            waterAccess: extendedUser.profile?.farmer_data?.farms?.[0]?.has_water_access || false,
-            roadAccess: extendedUser.profile?.farmer_data?.farms?.[0]?.has_road_access || false,
-            electricityAccess: extendedUser.profile?.farmer_data?.farms?.[0]?.has_electricity || false,
-            storageCapacity: extendedUser.profile?.farmer_data?.farms?.[0]?.storage_capacity || 0,
-            soilType: extendedUser.profile?.farmer_data?.farms?.[0]?.soil_type || '',
-            irrigationType: extendedUser.profile?.farmer_data?.farms?.[0]?.irrigation_type || '',
-            farmingMethod: extendedUser.profile?.farmer_data?.farms?.[0]?.farming_method || '',
-            yearEstablished: extendedUser.profile?.farmer_data?.farms?.[0]?.year_established?.toString() || '',
+            farmAddress: farm?.address || extendedUser.profile?.address || '',
+            farmDescription: farm?.description || '',
+            sizeHectares: farm?.size_hectares !== null ? farm?.size_hectares : undefined,
+            waterAccess: farm?.has_water_access || false,
+            roadAccess: farm?.has_road_access || false,
+            electricityAccess: farm?.has_electricity || false,
+            storageCapacity: farm?.storage_capacity !== null ? farm?.storage_capacity : undefined,
+            soilType: farm?.soil_type || '',
+            irrigationType: farm?.irrigation_type || '',
+            farmingMethod: farm?.farming_method || '',
+            yearEstablished: farm?.year_established?.toString() || '',
+            soilNitrogen: farm?.soil_nitrogen !== null ? farm?.soil_nitrogen : undefined,
+            soilPhosphorus: farm?.soil_phosphorus !== null ? farm?.soil_phosphorus : undefined,
+            soilPotassium: farm?.soil_potassium !== null ? farm?.soil_potassium : undefined,
+            soilPh: farm?.soil_ph !== null ? farm?.soil_ph : undefined,
+            farmingExperienceYears: extendedUser.profile?.farmer_data?.farming_experience_years !== null ? extendedUser.profile?.farmer_data?.farming_experience_years : undefined,
+            specialization: extendedUser.profile?.farmer_data?.specialization || '',
+            certification: extendedUser.profile?.farmer_data?.certification || '',
+            equipmentOwned: extendedUser.profile?.farmer_data?.equipment_owned || '',
+            preferredCrops: extendedUser.profile?.farmer_data?.preferred_crops || '',
           });
+          // Calculate completion after form is set with user data
+          calculateProfileCompletion(form.values, farm?.boundary_geojson || null, extendedUser);
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
@@ -203,15 +308,26 @@ export default function ProfilePage() {
       farmName: '',
       phone: '',
       bio: '',
-      address: '',
+      farmAddress: '',
+      farmDescription: '',
+      sizeHectares: undefined as number | undefined,
       waterAccess: false,
       roadAccess: false,
       electricityAccess: false,
-      storageCapacity: 0,
+      storageCapacity: undefined as number | undefined,
       soilType: '',
       irrigationType: '',
       farmingMethod: '',
       yearEstablished: '',
+      soilNitrogen: undefined as number | undefined,
+      soilPhosphorus: undefined as number | undefined,
+      soilPotassium: undefined as number | undefined,
+      soilPh: undefined as number | undefined,
+      farmingExperienceYears: undefined as number | undefined,
+      specialization: '',
+      certification: '',
+      equipmentOwned: '',
+      preferredCrops: '',
     },
   });
 
@@ -236,7 +352,14 @@ export default function ProfilePage() {
         profile: {
           phone_number: values.phone,
           bio: values.bio,
-          address: values.address,
+          farmer_data: {
+            farming_experience_years: values.farmingExperienceYears !== undefined && values.farmingExperienceYears !== null ? parseInt(String(values.farmingExperienceYears)) : null,
+            specialization: values.specialization,
+            certification: values.certification,
+            equipment_owned: values.equipmentOwned,
+            preferred_crops: values.preferredCrops,
+            ...(userData?.profile?.farmer_data?.id && { id: userData.profile.farmer_data.id })
+          }
         }
       };
       
@@ -267,6 +390,27 @@ export default function ProfilePage() {
       // Update farm data if farm exists
       if (userData?.profile?.farmer_data?.farms?.[0]?.id) {
         const farmId = userData.profile.farmer_data.farms[0].id;
+        const farmPatchData: any = {
+          name: values.farmName,
+          address: values.farmAddress,
+          description: values.farmDescription,
+          size_hectares: values.sizeHectares !== undefined && values.sizeHectares !== null ? parseFloat(String(values.sizeHectares)) : null,
+          has_water_access: values.waterAccess,
+          has_road_access: values.roadAccess,
+          has_electricity: values.electricityAccess,
+          storage_capacity: values.storageCapacity !== undefined && values.storageCapacity !== null ? parseFloat(String(values.storageCapacity)) : null,
+          soil_type: values.soilType,
+          irrigation_type: values.irrigationType,
+          farming_method: values.farmingMethod,
+          year_established: values.yearEstablished ? parseInt(values.yearEstablished) : null,
+          soil_nitrogen: values.soilNitrogen !== undefined && values.soilNitrogen !== null ? parseFloat(String(values.soilNitrogen)) : null,
+          soil_phosphorus: values.soilPhosphorus !== undefined && values.soilPhosphorus !== null ? parseFloat(String(values.soilPhosphorus)) : null,
+          soil_potassium: values.soilPotassium !== undefined && values.soilPotassium !== null ? parseFloat(String(values.soilPotassium)) : null,
+          soil_ph: values.soilPh !== undefined && values.soilPh !== null ? parseFloat(String(values.soilPh)) : null,
+        };
+        
+        // Remove undefined properties to avoid sending them in PATCH
+        Object.keys(farmPatchData).forEach(key => farmPatchData[key] === undefined && delete farmPatchData[key]);
         
         try {
           await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/core/farms/${farmId}/`, {
@@ -275,17 +419,7 @@ export default function ProfilePage() {
               'Content-Type': 'application/json',
               'Authorization': `Token ${localStorage.getItem('token')}`,
             },
-            body: JSON.stringify({
-              name: values.farmName,
-              has_water_access: values.waterAccess,
-              has_road_access: values.roadAccess,
-              has_electricity: values.electricityAccess,
-              storage_capacity: values.storageCapacity,
-              soil_type: values.soilType,
-              irrigation_type: values.irrigationType,
-              farming_method: values.farmingMethod,
-              year_established: values.yearEstablished ? parseInt(values.yearEstablished) : null
-            }),
+            body: JSON.stringify(farmPatchData),
           });
         } catch (farmError) {
           console.error('Error updating farm data:', farmError);
@@ -322,7 +456,12 @@ export default function ProfilePage() {
       const updatedUser = authService.getCurrentUser();
       if (updatedUser) {
         // Cast to our extended type
-        setUserData(updatedUser as ExtendedUserData);
+        const extendedUpdatedUser = updatedUser as ExtendedUserData;
+        setUserData(extendedUpdatedUser);
+        // Recalculate completion with potentially new form values and updated user data
+        const currentFarm = extendedUpdatedUser.profile?.farmer_data?.farms?.[0];
+        const boundary = currentFarm?.boundary_geojson || farmBoundary; // Use newly saved boundary if available
+        calculateProfileCompletion(form.values, boundary, extendedUpdatedUser);
       }
       
       setIsEditing(false);
@@ -335,26 +474,44 @@ export default function ProfilePage() {
   };
 
   const handleCancelEdit = () => {
-    // Reset form to current user data
+    setIsEditing(false);
+    // Potentially reset form to original userData if changes were made but not saved
     if (userData) {
+      const farm = userData.profile?.farmer_data?.farms?.[0];
       form.setValues({
-        name: `${userData.first_name} ${userData.last_name}`,
-        email: userData.email,
-        farmName: userData.profile?.farmer_data?.farms?.[0]?.name || '',
+        name: `${userData.first_name || ''} ${userData.last_name || ''}`,
+        email: userData.email || '',
+        farmName: farm?.name || '',
         phone: userData.profile?.phone_number || '',
         bio: userData.profile?.bio || '',
-        address: userData.profile?.address || '',
-        waterAccess: false,
-        roadAccess: false,
-        electricityAccess: false,
-        storageCapacity: 0,
-        soilType: '',
-        irrigationType: '',
-        farmingMethod: '',
-        yearEstablished: '',
+        farmAddress: farm?.address || userData.profile?.address || '',
+        farmDescription: farm?.description || '',
+        sizeHectares: farm?.size_hectares !== null ? farm?.size_hectares : undefined,
+        waterAccess: farm?.has_water_access || false,
+        roadAccess: farm?.has_road_access || false,
+        electricityAccess: farm?.has_electricity || false,
+        storageCapacity: farm?.storage_capacity !== null ? farm?.storage_capacity : undefined,
+        soilType: farm?.soil_type || '',
+        irrigationType: farm?.irrigation_type || '',
+        farmingMethod: farm?.farming_method || '',
+        yearEstablished: farm?.year_established?.toString() || '',
+        soilNitrogen: farm?.soil_nitrogen !== null ? farm?.soil_nitrogen : undefined,
+        soilPhosphorus: farm?.soil_phosphorus !== null ? farm?.soil_phosphorus : undefined,
+        soilPotassium: farm?.soil_potassium !== null ? farm?.soil_potassium : undefined,
+        soilPh: farm?.soil_ph !== null ? farm?.soil_ph : undefined,
+        farmingExperienceYears: userData.profile?.farmer_data?.farming_experience_years !== null ? userData.profile?.farmer_data?.farming_experience_years : undefined,
+        specialization: userData.profile?.farmer_data?.specialization || '',
+        certification: userData.profile?.farmer_data?.certification || '',
+        equipmentOwned: userData.profile?.farmer_data?.equipment_owned || '',
+        preferredCrops: userData.profile?.farmer_data?.preferred_crops || '',
       });
+      if (farm && farm.boundary_geojson) {
+        setFarmBoundary(farm.boundary_geojson); // Reset boundary if it was changed in edit mode
+      }
+      setProfileImageFile(null); // Clear any staged profile image
+      setBoundaryChanged(false); // Reset boundary changed flag
+      calculateProfileCompletion(form.values, farm?.boundary_geojson || null, userData); // Recalculate on cancel
     }
-    setIsEditing(false);
   };
 
   const getUserInitials = () => {
@@ -366,522 +523,340 @@ export default function ProfilePage() {
   };
 
   return (
-    <Stack gap="lg" pos="relative">
-      <LoadingOverlay visible={isLoading} overlayProps={{ blur: 2 }} />
+    <Container fluid p="lg">
+      <LoadingOverlay visible={isLoading} overlayProps={{ radius: "sm", blur: 2 }} />
       
-      {error && (
-        <Alert color="red" title="Error" icon={<IconAlertCircle />}>
-          {error}
-        </Alert>
-      )}
-      
-      <Group justify="space-between">
-        <Title order={1}>Profile</Title>
+      <Group justify="space-between" mb="xl">
+        <Title order={2}>🧑‍🌾 User Profile & Farm Dashboard</Title>
         {!isEditing && (
-          <Button 
-            onClick={handleEditClick}
-            leftSection={<IconSettings size={18}/>}
-          >
+          <Button leftSection={<IconPencil size={16} />} onClick={handleEditClick} variant="light">
             Edit Profile
           </Button>
         )}
       </Group>
 
-      <Stack>
-        {!isEditing ? (
-          // VIEW MODE
-          <Stack gap="xl">
-            <Paper withBorder p="md" radius="md">
-              <Stack>
-                <Group wrap="nowrap" justify="space-between">
-                  <Group>
-                    <Avatar size="xl" color="blue" radius="xl">{getUserInitials()}</Avatar>
-                    <div>
-                      <Text size="xl" fw={500}>{userData?.first_name} {userData?.last_name}</Text>
-                      <Group gap={5}>
-                        <IconMail size={14} />
-                        <Text size="sm" c="dimmed">{userData?.email}</Text>
-                      </Group>
-                      {userData?.profile?.phone_number && (
-                        <Group gap={5}>
-                          <IconPhone size={14} />
-                          <Text size="sm" c="dimmed">{userData?.profile?.phone_number}</Text>
-                        </Group>
-                      )}
-                    </div>
-                  </Group>
-                </Group>
+      {missingInfoMessages.length > 0 && (
+        <Alert 
+          icon={false}
+          title={completionPercentage === 100 ? "Profile Status" : "Profile Incomplete"} 
+          color={completionPercentage === 100 ? "teal" : "orange"} 
+          withCloseButton 
+          onClose={() => setMissingInfoMessages([])} 
+          mb="lg"
+          radius="md"
+        >
+          <Group wrap="nowrap">
+            <Box style={{ flexGrow: 1 }}>
+              {missingInfoMessages.length === 1 ? missingInfoMessages[0] :
+                <List size="sm">
+                  {missingInfoMessages.map((msg, index) => <List.Item key={index} icon={<IconInfoCircle size={16} />}>{msg}</List.Item>)}
+                </List>
+              }
+            </Box>
+            <RingProgress
+              size={100}
+              thickness={10}
+              roundCaps
+              label={
+                <Text c={completionPercentage > 80 ? "teal" : completionPercentage > 50 ? "yellow" : "red"} fw={700} ta="center" size="md">
+                  {completionPercentage}%
+                </Text>
+              }
+              sections={[
+                { value: completionPercentage, color: completionPercentage > 80 ? 'teal' : completionPercentage > 50 ? 'yellow' : 'red' },
+              ]}
+              rootColor="gray.2"
+            />
+          </Group>
+        </Alert>
+      )}
 
-                {userData?.profile?.bio && (
-                  <>
-                    <Divider my="xs" />
-                    <Text size="sm">{userData.profile.bio}</Text>
-                  </>
-                )}
-              </Stack>
-            </Paper>
+      {error && (
+        <Alert 
+          icon={<IconAlertCircle size="1.2rem" />} 
+          title="Error" 
+          color="red" 
+          withCloseButton 
+          onClose={() => setError(null)} 
+          mb="lg"
+          radius="md"
+        >
+          {error}
+        </Alert>
+      )}
 
-            {/* Farm Information */}
-            <Paper withBorder p="md" radius="md">
-              <Title order={3} mb="md">Farm Information</Title>
+      <form onSubmit={form.onSubmit(handleProfileSubmit)}>
+        <Grid gutter="xl">
+          {/* User Profile Section */}
+          <Grid.Col span={{ base: 12, md: 4 }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
+              <Group justify="center" mb="md">
+                <Avatar
+                  src={profileImageFile ? URL.createObjectURL(profileImageFile) : userData?.profile?.profile_image}
+                  alt={userData?.first_name || 'User Avatar'}
+                  size={120}
+                  radius="50%"
+                >
+                  {getUserInitials()}
+                </Avatar>
+              </Group>
+              {isEditing && (
+                <FileInput
+                  label="Change Profile Picture"
+                  placeholder="Upload new image"
+                  leftSection={<IconPhoto size={16} />}
+                  onChange={setProfileImageFile}
+                  mb="md"
+                  accept="image/png,image/jpeg"
+                />
+              )}
+              <TextInput
+                label="Full Name"
+                placeholder="Your full name"
+                leftSection={<IconUser size={16} />}
+                {...form.getInputProps('name')}
+                readOnly={!isEditing}
+                mb="sm"
+              />
+              <TextInput
+                label="Email Address"
+                placeholder="your@email.com"
+                leftSection={<IconMail size={16} />}
+                {...form.getInputProps('email')}
+                readOnly={!isEditing}
+                mb="sm"
+              />
+              <TextInput
+                label="Phone Number"
+                placeholder="Your phone number"
+                leftSection={<IconPhone size={16} />}
+                {...form.getInputProps('phone')}
+                readOnly={!isEditing}
+                mb="sm"
+              />
+              <Textarea
+                label="Short Bio"
+                placeholder="Tell us a bit about yourself"
+                leftSection={<IconNote size={16} />}
+                {...form.getInputProps('bio')}
+                readOnly={!isEditing}
+                autosize
+                minRows={2}
+                mb="sm"
+              />
+            </Card>
+          </Grid.Col>
+
+          {/* Farm Details Section */}
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
+              <Title order={3} mb="lg">🚜 Farm Information</Title>
+              <SimpleGrid cols={1} spacing="md">
+                <TextInput
+                  label="Farm Name"
+                  placeholder="Name of your farm"
+                  leftSection={<IconBuildingWarehouse size={16} />}
+                  {...form.getInputProps('farmName')}
+                  readOnly={!isEditing}
+                />
+                <TextInput
+                  label="Farm Address"
+                  placeholder="Full address of your farm"
+                  leftSection={<IconMapPin size={16} />}
+                  {...form.getInputProps('farmAddress')}
+                  readOnly={!isEditing}
+                />
+                <Textarea
+                  label="Farm Description"
+                  placeholder="Brief description of your farm, its main activities, etc."
+                  leftSection={<IconTextCaption size={16} />}
+                  {...form.getInputProps('farmDescription')}
+                  readOnly={!isEditing}
+                  minRows={2}
+                  autosize
+                />
+                <NumberInput
+                  label="Farm Size (Hectares)"
+                  placeholder="e.g., 15.5"
+                  leftSection={<IconRulerMeasure size={16} />}
+                  min={0}
+                  decimalScale={2}
+                  step={0.1}
+                  {...form.getInputProps('sizeHectares')}
+                  readOnly={!isEditing}
+                />
+                <NumberInput
+                  label="Year Established"
+                  placeholder="e.g., 2005"
+                  leftSection={<IconCalendar size={16} />}
+                  {...form.getInputProps('yearEstablished')}
+                  readOnly={!isEditing}
+                  min={1800}
+                  max={new Date().getFullYear()}
+                />
+              </SimpleGrid>
               
-              <Grid>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <Stack gap="md">
-                    <Group wrap="nowrap" align="flex-start">
-                      <IconBuildingWarehouse size={20} />
+              <Title order={4} mt="xl" mb="md">🌾 Farm Infrastructure & Access</Title>
+              <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" mb="md">
+                {isEditing ? (
+                  <Switch
+                    label="Water Access"
+                    checked={form.values.waterAccess}
+                    onChange={(event) => form.setFieldValue('waterAccess', event.currentTarget.checked)}
+                    thumbIcon={form.values.waterAccess ? <IconDropletFilled size={12} /> : <IconX size={12} />}
+                    color="teal"
+                  />
+                ) : (
+                  <Paper p="xs" withBorder radius="sm">
+                    <Group>
+                      <ThemeIcon variant="light" size="lg" color={userData?.profile?.farmer_data?.farms?.[0]?.has_water_access ? 'teal' : 'gray'}>
+                        <IconDropletFilled size={20} />
+                      </ThemeIcon>
                       <div>
-                        <Text fw={500}>Farm Name</Text>
-                        <Text>{userData?.profile?.farmer_data?.farms?.[0]?.name || 'No farm registered'}</Text>
+                        <Text size="sm" fw={500}>Water Access</Text>
+                        <Badge color={userData?.profile?.farmer_data?.farms?.[0]?.has_water_access ? 'teal' : 'gray'}>
+                          {userData?.profile?.farmer_data?.farms?.[0]?.has_water_access ? 'Available' : 'Not Available'}
+                        </Badge>
                       </div>
                     </Group>
-                    
-                    {userData?.profile?.address && (
-                      <Group wrap="nowrap" align="flex-start">
+                  </Paper>
+                )}
+                {isEditing ? (
+                  <Switch
+                    label="Road Access"
+                    checked={form.values.roadAccess}
+                    onChange={(event) => form.setFieldValue('roadAccess', event.currentTarget.checked)}
+                    thumbIcon={form.values.roadAccess ? <IconRoad size={12} /> : <IconX size={12} />}
+                    color="blue"
+                  />
+                ) : (
+                  <Paper p="xs" withBorder radius="sm">
+                    <Group>
+                      <ThemeIcon variant="light" size="lg" color={userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'blue' : 'gray'}>
                         <IconRoad size={20} />
-                        <div>
-                          <Text fw={500}>Address</Text>
-                          <Text>{userData.profile.address}</Text>
-                        </div>
-                      </Group>
-                    )}
-                    
-                    {userData?.profile?.farmer_data?.farms?.[0]?.size_hectares && (
-                      <Group wrap="nowrap" align="flex-start">
-                        <IconInfoCircle size={20} />
-                        <div>
-                          <Text fw={500}>Farm Size</Text>
-                          <Text>{userData.profile.farmer_data.farms[0].size_hectares} hectares</Text>
-                        </div>
-                      </Group>
-                    )}
-                  </Stack>
-                </Grid.Col>
-                
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <Box h={300} style={{ overflow: 'hidden', borderRadius: 'var(--mantine-radius-md)' }}>
-                    {farmBoundary ? (
-                      <FarmMapEditor
-                        boundary={farmBoundary}
-                        center={mapCenter}
-                        zoom={mapZoom}
-                        readOnly={true}
-                        hideAttribution={false}
-                      />
-                    ) : (
-                      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '20px', textAlign: 'center' }}>
-                        <Text c="dimmed">No farm boundary data available</Text>
-                      </Box>
-                    )}
-                  </Box>
-                </Grid.Col>
-              </Grid>
-              
-              {/* Soil Information */}
-              {userData?.profile?.farmer_data?.farms?.[0] && (
-                <>
-                  <Title order={4} mt="xl" mb="md">Soil Information</Title>
-                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Nitrogen (N)</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].soil_nitrogen ?
-                          `${userData.profile.farmer_data.farms[0].soil_nitrogen} ppm` :
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-                    
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Phosphorus (P)</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].soil_phosphorus ?
-                          `${userData.profile.farmer_data.farms[0].soil_phosphorus} ppm` :
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-                    
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Potassium (K)</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].soil_potassium ?
-                          `${userData.profile.farmer_data.farms[0].soil_potassium} ppm` :
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-                    
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>pH Level</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].soil_ph ?
-                          userData.profile.farmer_data.farms[0].soil_ph :
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Soil Type</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].soil_type ?
-                          userData.profile.farmer_data.farms[0].soil_type :
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-                  </SimpleGrid>
-                </>
-              )}
-              
-              {/* Farm utilities */}
-              <SimpleGrid cols={{ base: 3, sm: 3 }} spacing="md" mt="lg">
-                <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(0, 150, 255, 0.08)' }}>
-                  <Group mb={6} justify="apart">
-                    <Group gap={6}>
-                      <IconDropletFilled size={18} color="#0096ff" />
-                      <Text fw={500}>Water:</Text>
+                      </ThemeIcon>
+                      <div>
+                        <Text size="sm" fw={500}>Road Access</Text>
+                        <Badge color={userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'blue' : 'gray'}>
+                          {userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'Available' : 'Not Available'}
+                        </Badge>
+                      </div>
                     </Group>
-                  </Group>
-                  <Text fw={500} c="blue.5" size="md">
-                    {userData?.profile?.farmer_data?.farms?.[0]?.has_water_access ? 'Available' : 'Not Available'}
-                  </Text>
-                </Card>
-                
-                <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.08)' }}>
-                  <Group mb={6} justify="apart">
-                    <Group gap={6}>
-                      <IconRoad size={18} color={userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? '#616161' : 'gray'} />
-                      <Text fw={500}>Road:</Text>
+                  </Paper>
+                )}
+                {isEditing ? (
+                  <Switch
+                    label="Electricity Access"
+                    checked={form.values.electricityAccess}
+                    onChange={(event) => form.setFieldValue('electricityAccess', event.currentTarget.checked)}
+                    thumbIcon={form.values.electricityAccess ? <IconBolt size={12} /> : <IconX size={12} />}
+                    color="yellow"
+                  />
+                ) : (
+                  <Paper p="xs" withBorder radius="sm">
+                    <Group>
+                      <ThemeIcon variant="light" size="lg" color={userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'yellow' : 'gray'}>
+                        <IconBolt size={20} />
+                      </ThemeIcon>
+                      <div>
+                        <Text size="sm" fw={500}>Electricity</Text>
+                        <Badge color={userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'yellow' : 'gray'}>
+                          {userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'Available' : 'Not Available'}
+                        </Badge>
+                      </div>
                     </Group>
-                  </Group>
-                  <Text fw={500} c={userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'gray.7' : 'gray.6'} size="md">
-                    {userData?.profile?.farmer_data?.farms?.[0]?.has_road_access ? 'Available' : 'Not Available'}
-                  </Text>
-                </Card>
-                
-                <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(255, 193, 7, 0.08)' }}>
-                  <Group mb={6} justify="apart">
-                    <Group gap={6}>
-                      <IconBolt size={18} color={userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? '#ffc107' : 'gray'} />
-                      <Text fw={500}>Power:</Text>
-                    </Group>
-                  </Group>
-                  <Text fw={500} c={userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'yellow.5' : 'gray.6'} size="md">
-                    {userData?.profile?.farmer_data?.farms?.[0]?.has_electricity ? 'Available' : 'Not Available'}
-                  </Text>
-                </Card>
+                  </Paper>
+                )}
               </SimpleGrid>
+            </Card>
+          </Grid.Col>
+          
+          {/* New Farmer Details Section */}
+          <Grid.Col span={{ base: 12, md: 3 }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ height: '100%' }}>
+              <Title order={3} mb="lg">👨‍🌾 Farmer Specifics</Title>
+              <SimpleGrid cols={1} spacing="md">
+                <NumberInput
+                  label="Farming Experience (Years)"
+                  placeholder="e.g., 10"
+                  leftSection={<IconTimeline size={16} />}
+                  min={0}
+                  {...form.getInputProps('farmingExperienceYears')}
+                  readOnly={!isEditing}
+                />
+                <TextInput
+                  label="Specialization"
+                  placeholder="e.g., Dairy, Organic Vegetables"
+                  leftSection={<IconTargetArrow size={16} />}
+                  {...form.getInputProps('specialization')}
+                  readOnly={!isEditing}
+                />
+                <TextInput
+                  label="Certifications"
+                  placeholder="e.g., Organic Certified, GlobalG.A.P."
+                  leftSection={<IconLicense size={16} />}
+                  {...form.getInputProps('certification')}
+                  readOnly={!isEditing}
+                />
+                <Textarea
+                  label="Equipment Owned"
+                  placeholder="List key equipment, e.g., Tractor, Combine Harvester"
+                  leftSection={<IconTractor size={16} />}
+                  {...form.getInputProps('equipmentOwned')}
+                  readOnly={!isEditing}
+                  minRows={2}
+                  autosize
+                />
+                <Textarea
+                  label="Preferred Crops / Livestock"
+                  placeholder="e.g., Corn, Soybeans, Cattle"
+                  leftSection={<IconPlant2 size={16} />}
+                  {...form.getInputProps('preferredCrops')}
+                  readOnly={!isEditing}
+                  minRows={2}
+                  autosize
+                />
+              </SimpleGrid>
+            </Card>
+          </Grid.Col>
 
-              {/* Additional Farm Information */}
-              {userData?.profile?.farmer_data?.farms?.[0] && (
-                <>
-                  <Title order={4} mt="xl" mb="md">Farming Details</Title>
-                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Irrigation Type</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].irrigation_type ? 
-                          (() => {
-                            const typeMap: {[key: string]: string} = {
-                              'Drip': 'Drip Irrigation',
-                              'Sprinkler': 'Sprinkler System',
-                              'Flood': 'Flood Irrigation',
-                              'Furrow': 'Furrow Irrigation',
-                              'None': 'No Irrigation'
-                            };
-                            return typeMap[userData.profile.farmer_data.farms[0].irrigation_type as string] || userData.profile.farmer_data.farms[0].irrigation_type;
-                          })() : 
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-                    
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Farming Method</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].farming_method ? 
-                          (() => {
-                            const methodMap: {[key: string]: string} = {
-                              'Organic': 'Organic Farming',
-                              'Conventional': 'Conventional Farming',
-                              'Mixed': 'Mixed Methods',
-                              'Permaculture': 'Permaculture',
-                              'Hydroponic': 'Hydroponic'
-                            };
-                            return methodMap[userData.profile.farmer_data.farms[0].farming_method as string] || userData.profile.farmer_data.farms[0].farming_method;
-                          })() : 
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-                    
-                    <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                      <Text fw={500}>Year Established</Text>
-                      <Text size="lg">
-                        {userData.profile.farmer_data.farms[0].year_established ?
-                          userData.profile.farmer_data.farms[0].year_established :
-                          'Not recorded'}
-                      </Text>
-                    </Card>
-
-                    {userData.profile.farmer_data.farms[0].storage_capacity ? (
-                      <Card p="xs" withBorder radius="md" style={{ backgroundColor: 'rgba(97, 97, 97, 0.05)' }}>
-                        <Text fw={500}>Storage Capacity</Text>
-                        <Text size="lg">
-                          {userData.profile.farmer_data.farms[0].storage_capacity} sq m
-                        </Text>
-                      </Card>
-                    ) : null}
-                  </SimpleGrid>
-                </>
+          {/* Farm Map Section */}
+          <Grid.Col span={12}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder>
+              <Title order={3} mb="md">🗺️ Farm Boundary Map</Title>
+              <Text c="dimmed" size="sm" mb="md">
+                {isEditing ? "Click on the map to define or update your farm's boundary. You can draw a polygon to mark your area." : "Current farm boundary is displayed below. Click 'Edit Profile' to update."}
+              </Text>
+              <Box style={{ height: '400px', width: '100%', borderRadius: 'var(--mantine-radius-md)', overflow: 'hidden' }}>
+                <FarmMapEditor
+                  boundary={farmBoundary}
+                  setBoundary={handleBoundaryChange}
+                  center={mapCenter}
+                  zoom={mapZoom}
+                  readOnly={!isEditing}
+                />
+              </Box>
+              {isEditing && boundaryChanged && (
+                <Text c="blue" size="sm" mt="sm">
+                  <IconInfoCircle size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  Farm boundary has been modified. Remember to save your changes.
+                </Text>
               )}
-            </Paper>
-          </Stack>
-        ) : (
-          // EDIT MODE
-          <form onSubmit={form.onSubmit(handleProfileSubmit)}>
-            <Stack>
-              <Paper withBorder p="md" radius="md">
-                <Title order={3} mb="md">Personal Information</Title>
-                
-                <Grid>
-                  <Grid.Col span={{ base: 12, md: 3 }}>
-                    <Stack align="center" gap="sm">
-                      <Avatar size={120} color="blue" radius={120}>{getUserInitials()}</Avatar>
-                      <FileInput
-                        label="Profile Image"
-                        placeholder="Upload new image"
-                        accept="image/png,image/jpeg"
-                        value={profileImageFile}
-                        onChange={setProfileImageFile}
-                        style={{ maxWidth: 200 }}
-                        clearable
-                      />
-                    </Stack>
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, md: 9 }}>
-                    <Stack>
-                      <TextInput
-                        label="Full Name"
-                        placeholder="Your name"
-                        leftSection={<IconUser size={16} />}
-                        {...form.getInputProps('name')}
-                      />
-                      
-                      <TextInput
-                        label="Email"
-                        placeholder="your.email@example.com"
-                        leftSection={<IconMail size={16} />}
-                        {...form.getInputProps('email')}
-                      />
-                      
-                      <TextInput
-                        label="Phone Number"
-                        placeholder="+1 (555) 123-4567"
-                        leftSection={<IconPhone size={16} />}
-                        {...form.getInputProps('phone')}
-                      />
-                      
-                      <Textarea
-                        label="Bio"
-                        placeholder="Tell us about yourself"
-                        minRows={3}
-                        {...form.getInputProps('bio')}
-                      />
-                      
-                      <TextInput
-                        label="Address"
-                        placeholder="Your address"
-                        leftSection={<IconRoad size={16} />}
-                        {...form.getInputProps('address')}
-                      />
-                    </Stack>
-                  </Grid.Col>
-                </Grid>
-              </Paper>
-              
-              <Paper withBorder p="md" radius="md">
-                <Title order={3} mb="md">Farm Details</Title>
-                
-                <Grid>
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <TextInput
-                      label="Farm Name"
-                      placeholder="Farm name"
-                      leftSection={<IconBuildingWarehouse size={16} />}
-                      {...form.getInputProps('farmName')}
-                    />
-                  </Grid.Col>
-                </Grid>
-                
-                {/* Add farm boundary editing map */}
-                <Title order={4} mt="lg" mb="sm">Farm Boundary</Title>
-                <Box h={400} style={{ position: 'relative', borderRadius: 'var(--mantine-radius-md)', overflow: 'hidden', marginBottom: '1rem' }}>
-                  {farmBoundary ? (
-                    <FarmMapEditor
-                      boundary={farmBoundary}
-                      setBoundary={handleBoundaryChange}
-                      center={mapCenter}
-                      zoom={mapZoom}
-                      readOnly={false}
-                      allowToggleEdit={true}
-                      hideAttribution={false}
-                      editableBoundaryKey={Date.now()} // Force remount when editing
-                    />
-                  ) : (
-                    <Box style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      height: '100%', 
-                      padding: '20px', 
-                      textAlign: 'center',
-                      backgroundColor: 'var(--mantine-color-gray-1)'
-                    }}>
-                      <IconMapPin size={48} color="var(--mantine-color-gray-5)" />
-                      <Text size="lg" mt="md" c="dimmed">No farm boundary set</Text>
-                      <Text size="sm" mt="xs" c="dimmed">Click to draw your farm boundary</Text>
-                      <Button 
-                        leftSection={<IconGps size={16} />} 
-                        mt="md"
-                        variant="light"
-                        onClick={() => {
-                          // Create an empty boundary to activate the editor
-                          handleBoundaryChange({
-                            type: "Feature",
-                            properties: {},
-                            geometry: {
-                              type: "Polygon",
-                              coordinates: [[
-                                // Cast mapCenter to the correct type for coordinates
-                                // Leaflet uses [lat, lng] but GeoJSON uses [lng, lat]
-                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng - 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat - 0.01],
-                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng + 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat - 0.01],
-                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng + 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat + 0.01],
-                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng - 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat + 0.01],
-                                [Array.isArray(mapCenter) ? mapCenter[1] : mapCenter.lng - 0.01, Array.isArray(mapCenter) ? mapCenter[0] : mapCenter.lat - 0.01]
-                              ]]
-                            }
-                          })
-                        }}
-                      >
-                        Create Farm Boundary
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
-                
-                <Title order={4} mt="lg" mb="sm">Infrastructure</Title>
-                
-                <Grid>
-                  <Grid.Col span={{ base: 12, sm: 4 }}>
-                    <Switch
-                      label="Water Access"
-                      {...form.getInputProps('waterAccess', { type: 'checkbox' })}
-                    />
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, sm: 4 }}>
-                    <Switch
-                      label="Road Access"
-                      {...form.getInputProps('roadAccess', { type: 'checkbox' })}
-                    />
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, sm: 4 }}>
-                    <Switch
-                      label="Electricity Access"
-                      {...form.getInputProps('electricityAccess', { type: 'checkbox' })}
-                    />
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <NumberInput
-                      label="Storage Capacity (sq units)"
-                      placeholder="0"
-                      min={0}
-                      {...form.getInputProps('storageCapacity')}
-                    />
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <Select
-                      label="Soil Type"
-                      placeholder="Select soil type"
-                      data={[
-                        { value: 'Clay', label: 'Clay' },
-                        { value: 'Sandy', label: 'Sandy' },
-                        { value: 'Loamy', label: 'Loamy' },
-                        { value: 'Silty', label: 'Silty' },
-                        { value: 'Peaty', label: 'Peaty' },
-                        { value: 'Chalky', label: 'Chalky' },
-                      ]}
-                      {...form.getInputProps('soilType')}
-                    />
-                  </Grid.Col>
-                </Grid>
-              </Paper>
-              
-              <Paper withBorder p="md" radius="md">
-                <Title order={3} mb="md">Irrigation and Farming Method</Title>
-                
-                <Grid>
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <Select
-                      label="Irrigation Type"
-                      placeholder="Select irrigation type"
-                      data={[
-                        { value: 'Drip', label: 'Drip Irrigation' },
-                        { value: 'Sprinkler', label: 'Sprinkler System' },
-                        { value: 'Flood', label: 'Flood Irrigation' },
-                        { value: 'Furrow', label: 'Furrow Irrigation' },
-                        { value: 'None', label: 'No Irrigation' },
-                      ]}
-                      {...form.getInputProps('irrigationType')}
-                    />
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <Select
-                      label="Farming Method"
-                      placeholder="Select farming method"
-                      data={[
-                        { value: 'Organic', label: 'Organic Farming' },
-                        { value: 'Conventional', label: 'Conventional Farming' },
-                        { value: 'Mixed', label: 'Mixed Methods' },
-                        { value: 'Permaculture', label: 'Permaculture' },
-                        { value: 'Hydroponic', label: 'Hydroponic' },
-                      ]}
-                      {...form.getInputProps('farmingMethod')}
-                    />
-                  </Grid.Col>
-                </Grid>
-              </Paper>
-              
-              <Paper withBorder p="md" radius="md">
-                <Title order={3} mb="md">Year Established</Title>
-                
-                <Grid>
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <TextInput
-                      label="Year Established"
-                      placeholder="e.g., 2015"
-                      type="number"
-                      {...form.getInputProps('yearEstablished')}
-                    />
-                  </Grid.Col>
-                </Grid>
-              </Paper>
-              
-              <Group justify="flex-end" mt="xl">
-                <Button variant="default" onClick={handleCancelEdit}>
-                  Cancel
-                </Button>
-                <Button type="submit" color="blue">
-                  Save Changes
-                </Button>
-              </Group>
-            </Stack>
-          </form>
+            </Card>
+          </Grid.Col>
+        </Grid>
+        
+        {isEditing && (
+          <Group justify="flex-end" mt="xl" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)', position: 'sticky', bottom: 0, background: 'var(--mantine-color-body)', zIndex: 10 }}>
+            <Button variant="default" onClick={handleCancelEdit} leftSection={<IconX size={16}/>}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={isLoading} leftSection={<IconDeviceFloppy size={16}/>}>
+              Save Changes
+            </Button>
+          </Group>
         )}
-      </Stack>
-    </Stack>
+      </form>
+    </Container>
   );
 }

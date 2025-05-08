@@ -1168,59 +1168,145 @@ export default function OnboardingPage() {
             
             <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
               {[
-                { value: 'Clay', label: 'Clay', icon: <IconTexture size={32} />, description: 'Heavy, sticky when wet, forms hard clumps when dry' },
-                { value: 'Sandy', label: 'Sandy', icon: <IconTexture size={32} />, description: 'Gritty, loose, drains quickly, warms up fast' },
-                { value: 'Loamy', label: 'Loamy', icon: <IconTexture size={32} />, description: 'Perfect balance, crumbly, retains moisture but drains well' },
-                { value: 'Silty', label: 'Silty', icon: <IconTexture size={32} />, description: 'Smooth like flour when dry, slippery when wet' },
-                { value: 'Peaty', label: 'Peaty', icon: <IconTexture size={32} />, description: 'Dark, spongy, high in organic matter' },
-                { value: 'Chalky', label: 'Chalky', icon: <IconTexture size={32} />, description: 'Alkaline, stony, free-draining, often shallow' },
+                { 
+                  value: 'Clay', 
+                  label: 'Clay', 
+                  emoji: '🧱', 
+                  icon: <IconTexture size={32} />, 
+                  description: 'Heavy, sticky when wet, forms hard clumps when dry',
+                  color: '#b25d40', // Reddish-brown clay color
+                  textColor: 'white'
+                },
+                { 
+                  value: 'Sandy', 
+                  label: 'Sandy', 
+                  emoji: '🏝️', 
+                  icon: <IconTexture size={32} />, 
+                  description: 'Gritty, loose, drains quickly, warms up fast',
+                  color: '#e6c388', // Sandy beige color
+                  textColor: '#333'
+                },
+                { 
+                  value: 'Loamy', 
+                  label: 'Loamy', 
+                  emoji: '🌱', 
+                  icon: <IconTexture size={32} />, 
+                  description: 'Perfect balance, crumbly, retains moisture but drains well',
+                  color: '#7d5d3b', // Rich loam brown
+                  textColor: 'white'
+                },
+                { 
+                  value: 'Silty', 
+                  label: 'Silty', 
+                  emoji: '💨', 
+                  icon: <IconTexture size={32} />, 
+                  description: 'Smooth like flour when dry, slippery when wet',
+                  color: '#c2b280', // Silt tan color
+                  textColor: '#333'
+                },
+                { 
+                  value: 'Peaty', 
+                  label: 'Peaty', 
+                  emoji: '🌿', 
+                  icon: <IconTexture size={32} />, 
+                  description: 'Dark, spongy, high in organic matter',
+                  color: '#4f3b22', // Dark peaty brown
+                  textColor: 'white'
+                },
+                { 
+                  value: 'Chalky', 
+                  label: 'Chalky', 
+                  emoji: '⚪', 
+                  icon: <IconTexture size={32} />, 
+                  description: 'Alkaline, stony, free-draining, often shallow',
+                  color: '#e6e6e6', // Chalk white
+                  textColor: '#333'
+                },
               ].map((item) => (
                 <Card 
                   key={item.value} 
                   withBorder
                   padding="lg"
-                  radius="md"
+                  radius="xl"
                   className={`${classes.card} ${soilType === item.value ? classes.cardHighlight : ''}`}
                   onClick={() => handleSoilTypeSelect(item.value as SoilTypeKey)}
                   style={{
                     cursor: 'pointer',
                     position: 'relative',
-                    overflow: 'visible'
+                    overflow: 'visible',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    transform: soilType === item.value ? 'translateY(-8px)' : 'none',
+                    boxShadow: soilType === item.value 
+                      ? `0 8px 20px rgba(0, 0, 0, 0.15), 0 0 0 3px ${item.color}40` 
+                      : '0 2px 4px rgba(0, 0, 0, 0.05)',
+                    border: soilType === item.value 
+                      ? `2px solid ${item.color}` 
+                      : '1px solid var(--mantine-color-gray-3)'
                   }}
                 >
                   {soilType === item.value && (
                     <div style={{
                       position: 'absolute',
-                      top: -10,
-                      right: -10,
-                      background: 'var(--primary-color)',
-                      color: 'white',
+                      top: -12,
+                      right: -12,
+                      backgroundColor: item.color,
+                      color: item.textColor,
                       borderRadius: '50%',
-                      width: 26,
-                      height: 26,
+                      width: 32,
+                      height: 32,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       zIndex: 2,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      border: '2px solid white'
                     }}>
-                      <IconCheck size={16} />
+                      <IconCheck size={18} />
                     </div>
                   )}
                   
-                  <Card.Section p="md" bg={soilType === item.value ? 'rgba(92, 184, 92, 0.15)' : theme.colors.gray[0]}>
+                  <Card.Section p="md" style={{ 
+                    backgroundColor: soilType === item.value ? `${item.color}25` : 'var(--mantine-color-gray-0)',
+                    borderTopLeftRadius: 'calc(var(--mantine-radius-xl) - 2px)', 
+                    borderTopRightRadius: 'calc(var(--mantine-radius-xl) - 2px)',
+                    borderBottom: soilType === item.value ? `2px dashed ${item.color}40` : '1px solid var(--mantine-color-gray-2)'
+                  }}>
                     <Center>
                       <div className={classes.soilTypeIcon} style={{
-                        backgroundColor: soilType === item.value ? 'rgba(92, 184, 92, 0.25)' : undefined
+                        backgroundColor: soilType === item.value ? `${item.color}30` : `${item.color}20`,
+                        boxShadow: soilType === item.value ? `0 0 0 4px ${item.color}30` : 'none',
+                        position: 'relative'
                       }}>
-                        {item.icon}
+                        <div style={{ 
+                          fontSize: '32px',
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)'
+                        }}>
+                          {item.emoji}
+                        </div>
                       </div>
                     </Center>
                   </Card.Section>
                   
                   <Stack mt="md" gap="xs">
-                    <Text fw={700} ta="center">{item.label}</Text>
-                    <Text size="sm" c="dimmed" ta="center">{item.description}</Text>
+                    <Text fw={700} ta="center" style={{ 
+                      color: soilType === item.value ? item.color : 'inherit',
+                      fontSize: '1.1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}>
+                      {item.label}
+                    </Text>
+                    <Text size="sm" c="dimmed" ta="center" 
+                      style={{
+                        lineHeight: 1.4,
+                        padding: '0 8px'
+                      }}
+                    >{item.description}</Text>
                   </Stack>
                 </Card>
               ))}
