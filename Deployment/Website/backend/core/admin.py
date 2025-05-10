@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Farm, Farmer, Admin, DetectedWeed, Weather, Crop, FarmCrop, Scan, Recommendation, InventoryItem
+from .models import UserProfile, Farm, Farmer, Admin, DetectedWeed, Weather, Crop, FarmCrop, Scan, Recommendation, InventoryItem, Equipment
 
 # Register the UserProfile model
 @admin.register(UserProfile)
@@ -70,3 +70,9 @@ class InventoryItemAdmin(admin.ModelAdmin):
     list_filter = ('category', 'farmer')
     search_fields = ('name', 'category')
     readonly_fields = ('created_at', 'updated_at')
+
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    list_display = ['name', 'type', 'status', 'purchase_date', 'next_maintenance']
+    search_fields = ['name', 'type']
+    list_filter = ['status', 'purchase_date']

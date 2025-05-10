@@ -541,8 +541,18 @@ class Equipment(models.Model):
         ('Out of Service', 'Out of Service'),
     ]
     
+    TYPE_CHOICES = [
+        ('Tractor', 'Tractor'),
+        ('Harvester', 'Harvester'),
+        ('Seeder', 'Seeder'),
+        ('Sprayer', 'Sprayer'),
+        ('Trailer', 'Trailer'),
+        ('Tillage', 'Tillage'),
+        ('Other', 'Other'),
+    ]
+    
     name = models.CharField(max_length=100)
-    type = models.CharField(max_length=50)  # e.g., Tractor, Harvester, Seeder
+    type = models.CharField(max_length=50, choices=TYPE_CHOICES)  # Now using predefined choices
     purchase_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Operational')
     next_maintenance = models.DateField(null=True, blank=True)
@@ -557,6 +567,12 @@ class Equipment(models.Model):
     @property
     def needs_maintenance(self):
         return self.status == 'Maintenance Needed'
+    
+    def save(self, *args, **kwargs):
+        # Check if next_maintenance date is passed and update status accordingly
+        if self.next_maintenance and self.next_maintenance < timezone.now().date():
+            self.status = 'Maintenance Needed'
+        super().save(*args, **kwargs)
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

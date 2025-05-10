@@ -23,10 +23,10 @@ import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { IconTractor, IconPlus, IconPencil, IconTrash, IconDotsVertical, IconTool, IconCalendarEvent, IconCircleCheck, IconCircleX, IconEngineOff } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import equipmentService, { Equipment } from '@/app/api/equipment';
+import equipmentService, { Equipment, EquipmentType, EquipmentStatus } from '@/app/api/equipment';
 
 // Helper to get status badge color and icon
-const getStatusProps = (status: Equipment['status']) => {
+const getStatusProps = (status: EquipmentStatus) => {
   switch (status) {
     case 'Operational':
       return { color: 'green', icon: <IconCircleCheck size={14} /> };
@@ -45,19 +45,21 @@ export default function EquipmentPage() {
   const [opened, setOpened] = useState(false);
   const [editingItem, setEditingItem] = useState<Equipment | null>(null);
 
+  const EQUIPMENT_TYPES: EquipmentType[] = ['Tractor', 'Harvester', 'Seeder', 'Sprayer', 'Trailer', 'Tillage', 'Other'];
+  const EQUIPMENT_STATUSES: EquipmentStatus[] = ['Operational', 'Maintenance Needed', 'Out of Service'];
+
   const form = useForm<Omit<Equipment, 'id' | 'farmer' | 'created_at' | 'updated_at'>>({
     initialValues: {
       name: '',
-      type: '',
+      type: 'Tractor',
       purchaseDate: null,
-      status: 'Operational', // Default status
+      status: 'Operational',
       nextMaintenance: null,
       notes: '',
     },
     validate: {
       name: (value) => (value.trim().length > 0 ? null : 'Equipment name is required'),
       type: (value) => (value ? null : 'Equipment type is required'),
-      // Add more specific validation if needed
     },
   });
 
@@ -67,7 +69,16 @@ export default function EquipmentPage() {
       try {
         setLoading(true);
         const data = await equipmentService.getEquipment();
-        setEquipment(data);
+        
+        // Check for maintenance dates that have passed and update UI accordingly
+        const updatedData = data.map(item => {
+          if (item.nextMaintenance && new Date(item.nextMaintenance) < new Date()) {
+            return { ...item, status: 'Maintenance Needed' as EquipmentStatus };
+          }
+          return item;
+        });
+        
+        setEquipment(updatedData);
       } catch (error) {
         console.error('Error fetching equipment:', error);
         notifications.show({
@@ -286,8 +297,8 @@ export default function EquipmentPage() {
           />
           <Select
             label="Equipment Type"
-            placeholder="Select or type equipment type"
-            data={['Tractor', 'Harvester', 'Seeder', 'Sprayer', 'Trailer', 'Tillage', 'Other']} // Example types
+            placeholder="Select equipment type"
+            data={EQUIPMENT_TYPES}
             required
             searchable
             {...form.getInputProps('type')}
@@ -310,7 +321,7 @@ export default function EquipmentPage() {
           <Select
             label="Status"
             placeholder="Select status"
-            data={['Operational', 'Maintenance Needed', 'Out of Service']}
+            data={EQUIPMENT_STATUSES}
             required
             {...form.getInputProps('status')}
             mb="md"

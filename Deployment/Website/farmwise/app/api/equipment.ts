@@ -3,12 +3,15 @@ import { API_BASE_URL } from './config';
 import authService from './auth';
 
 // Define types
+export type EquipmentType = 'Tractor' | 'Harvester' | 'Seeder' | 'Sprayer' | 'Trailer' | 'Tillage' | 'Other';
+export type EquipmentStatus = 'Operational' | 'Maintenance Needed' | 'Out of Service';
+
 export interface Equipment {
   id?: string;
   name: string;
-  type: string;
+  type: EquipmentType;
   purchaseDate: string | null;
-  status: 'Operational' | 'Maintenance Needed' | 'Out of Service';
+  status: EquipmentStatus;
   nextMaintenance: string | null;
   notes?: string;
   farmer?: number;
