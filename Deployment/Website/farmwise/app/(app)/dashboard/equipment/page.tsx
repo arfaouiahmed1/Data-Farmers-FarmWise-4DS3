@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Title,
   Text,
@@ -16,32 +16,17 @@ import {
   ActionIcon,
   Menu,
   Textarea,
-  rem
+  rem,
+  LoadingOverlay
 } from '@mantine/core';
-import { DatePickerInput } from '@mantine/dates'; // Ensure @mantine/dates is installed
+import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { IconTractor, IconPlus, IconPencil, IconTrash, IconDotsVertical, IconTool, IconCalendarEvent, IconCircleCheck, IconCircleX, IconEngineOff } from '@tabler/icons-react';
-
-// Sample data structure
-interface EquipmentItem {
-  id: string;
-  name: string;
-  type: string; // e.g., Tractor, Harvester, Seeder, Sprayer
-  purchaseDate: Date | null;
-  status: 'Operational' | 'Maintenance Needed' | 'Out of Service';
-  nextMaintenance: Date | null;
-  notes?: string;
-}
-
-const sampleEquipmentData: EquipmentItem[] = [
-  { id: '1', name: 'John Deere 8R', type: 'Tractor', purchaseDate: new Date(2021, 5, 15), status: 'Operational', nextMaintenance: new Date(2024, 11, 1) },
-  { id: '2', name: 'Claas Lexion 760', type: 'Harvester', purchaseDate: new Date(2020, 7, 1), status: 'Maintenance Needed', nextMaintenance: new Date(2024, 6, 20), notes: 'Check belts' },
-  { id: '3', name: 'Amazone Sprayer UX', type: 'Sprayer', purchaseDate: new Date(2022, 2, 10), status: 'Operational', nextMaintenance: new Date(2025, 1, 15) },
-  { id: '4', name: 'Old Massey Ferguson', type: 'Tractor', purchaseDate: new Date(2010, 0, 5), status: 'Out of Service', nextMaintenance: null, notes: 'Engine needs overhaul' },
-];
+import { notifications } from '@mantine/notifications';
+import equipmentService, { Equipment } from '@/app/api/equipment';
 
 // Helper to get status badge color and icon
-const getStatusProps = (status: EquipmentItem['status']) => {
+const getStatusProps = (status: Equipment['status']) => {
   switch (status) {
     case 'Operational':
       return { color: 'green', icon: <IconCircleCheck size={14} /> };
@@ -55,11 +40,12 @@ const getStatusProps = (status: EquipmentItem['status']) => {
 };
 
 export default function EquipmentPage() {
-  const [equipment, setEquipment] = useState<EquipmentItem[]>(sampleEquipmentData);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [opened, setOpened] = useState(false);
-  const [editingItem, setEditingItem] = useState<EquipmentItem | null>(null);
+  const [editingItem, setEditingItem] = useState<Equipment | null>(null);
 
-  const form = useForm<Omit<EquipmentItem, 'id'>>({
+  const form = useForm<Omit<Equipment, 'id' | 'farmer' | 'created_at' | 'updated_at'>>({
     initialValues: {
       name: '',
       type: '',
@@ -75,44 +61,112 @@ export default function EquipmentPage() {
     },
   });
 
+  // Fetch equipment data on component mount
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      try {
+        setLoading(true);
+        const data = await equipmentService.getEquipment();
+        setEquipment(data);
+      } catch (error) {
+        console.error('Error fetching equipment:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to load equipment data',
+          color: 'red',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEquipment();
+  }, []);
+
   const handleAddItem = () => {
     setEditingItem(null);
     form.reset();
     setOpened(true);
   };
 
-  const handleEditItem = (item: EquipmentItem) => {
+  const handleEditItem = (item: Equipment) => {
     setEditingItem(item);
     form.setValues({
       name: item.name,
       type: item.type,
-      purchaseDate: item.purchaseDate ? new Date(item.purchaseDate) : null,
+      purchaseDate: item.purchaseDate || null,
       status: item.status,
-      nextMaintenance: item.nextMaintenance ? new Date(item.nextMaintenance) : null,
+      nextMaintenance: item.nextMaintenance || null,
       notes: item.notes || '',
     });
     setOpened(true);
   };
 
-  const handleDeleteItem = (id: string) => {
-    // Add confirmation logic here
-    setEquipment((current) => current.filter((item) => item.id !== id));
+  const handleDeleteItem = async (id: string) => {
+    try {
+      setLoading(true);
+      const success = await equipmentService.deleteEquipment(id);
+      
+      if (success) {
+        setEquipment((current) => current.filter((item) => item.id !== id));
+        notifications.show({
+          title: 'Success',
+          message: 'Equipment deleted successfully',
+          color: 'green',
+        });
+      } else {
+        throw new Error('Failed to delete equipment');
+      }
+    } catch (error) {
+      console.error('Error deleting equipment:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete equipment',
+        color: 'red',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = form.onSubmit((values) => {
-    if (editingItem) {
-      setEquipment((current) =>
-        current.map((item) =>
-          item.id === editingItem.id ? { ...item, ...values, id: item.id } : item
-        )
-      );
-    } else {
-      setEquipment((current) => [
-        ...current,
-        { ...values, id: Math.random().toString(36).substring(7) }, // Simple ID
-      ]);
+  const handleSubmit = form.onSubmit(async (values) => {
+    try {
+      setLoading(true);
+      let updatedEquipment: Equipment;
+      
+      if (editingItem) {
+        // Update existing equipment
+        updatedEquipment = await equipmentService.updateEquipment(editingItem.id!, values);
+        setEquipment((current) =>
+          current.map((item) => (item.id === editingItem.id ? updatedEquipment : item))
+        );
+        notifications.show({
+          title: 'Success',
+          message: 'Equipment updated successfully',
+          color: 'green',
+        });
+      } else {
+        // Add new equipment
+        updatedEquipment = await equipmentService.addEquipment(values);
+        setEquipment((current) => [...current, updatedEquipment]);
+        notifications.show({
+          title: 'Success',
+          message: 'Equipment added successfully',
+          color: 'green',
+        });
+      }
+      
+      setOpened(false);
+    } catch (error) {
+      console.error('Error saving equipment:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save equipment',
+        color: 'red',
+      });
+    } finally {
+      setLoading(false);
     }
-    setOpened(false);
   });
 
   const totalEquipment = equipment.length;
@@ -134,7 +188,7 @@ export default function EquipmentPage() {
                <Menu.Item leftSection={<IconPencil style={{ width: rem(14), height: rem(14) }} />} onClick={() => handleEditItem(item)}>
                  Edit
                </Menu.Item>
-               <Menu.Item color="red" leftSection={<IconTrash style={{ width: rem(14), height: rem(14) }} />} onClick={() => handleDeleteItem(item.id)}>
+               <Menu.Item color="red" leftSection={<IconTrash style={{ width: rem(14), height: rem(14) }} />} onClick={() => handleDeleteItem(item.id!)}>
                  Delete
                </Menu.Item>
              </Menu.Dropdown>
@@ -157,13 +211,13 @@ export default function EquipmentPage() {
         <Group gap="xs" mb="xs">
            <IconCalendarEvent size={16} opacity={0.7} />
            <Text size="sm" c="dimmed">
-             Purchased: {item.purchaseDate ? item.purchaseDate.toLocaleDateString() : 'N/A'}
+             Purchased: {item.purchaseDate ? new Date(item.purchaseDate).toLocaleDateString() : 'N/A'}
            </Text>
         </Group>
         <Group gap="xs">
            <IconTool size={16} opacity={0.7} />
            <Text size="sm" c="dimmed">
-             Next Maintenance: {item.nextMaintenance ? item.nextMaintenance.toLocaleDateString() : 'N/A'}
+             Next Maintenance: {item.nextMaintenance ? new Date(item.nextMaintenance).toLocaleDateString() : 'N/A'}
            </Text>
         </Group>
          {item.notes && (
@@ -177,6 +231,7 @@ export default function EquipmentPage() {
 
   return (
     <Container fluid>
+      <LoadingOverlay visible={loading} />
       <Group justify="space-between" mb="lg">
         <Title order={2}>
            <IconTractor size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
@@ -269,10 +324,8 @@ export default function EquipmentPage() {
              minRows={2}
            />
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setOpened(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">{editingItem ? 'Save Changes' : 'Add Equipment'}</Button>
+            <Button variant="outline" onClick={() => setOpened(false)}>Cancel</Button>
+            <Button type="submit">Save</Button>
           </Group>
         </form>
       </Modal>

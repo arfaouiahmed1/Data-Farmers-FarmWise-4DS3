@@ -316,12 +316,22 @@ export const authService = {
   
   // Logout with safer browser environment check
   logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // For cross-tab communication
+    window.dispatchEvent(new Event('authlogout'));
+    
+    // Redirect to login page after logout
+    window.location.href = '/login';
+  },
+  
+  // Get authentication token
+  getToken(): string | null {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Redirect to login page if needed
-      window.location.href = '/login';
+      return localStorage.getItem('token');
     }
+    return null;
   },
   
   // Check if user is authenticated

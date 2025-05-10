@@ -498,6 +498,66 @@ class Scan(models.Model):
         self.save()
         return True
 
+class InventoryItem(models.Model):
+    CATEGORY_CHOICES = [
+        ('Seeds', 'Seeds'),
+        ('Fertilizers', 'Fertilizers'),
+        ('Pesticides', 'Pesticides'),
+        ('Fuel', 'Fuel'),
+        ('Parts', 'Parts'),
+        ('Tools', 'Tools'),
+    ]
+    
+    # Define unit choices for each category
+    CATEGORY_UNITS = {
+        'Seeds': [('kg', 'Kilograms'), ('g', 'Grams'), ('bags', 'Bags')],
+        'Fertilizers': [('kg', 'Kilograms'), ('L', 'Liters'), ('bags', 'Bags')],
+        'Pesticides': [('L', 'Liters'), ('ml', 'Milliliters'), ('bottles', 'Bottles')],
+        'Fuel': [('L', 'Liters'), ('gal', 'Gallons')],
+        'Parts': [('units', 'Units'), ('boxes', 'Boxes')],
+        'Tools': [('units', 'Units'), ('sets', 'Sets')],
+    }
+    
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit = models.CharField(max_length=20, default='units')
+    low_stock_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name='inventory_items')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.quantity} {self.unit}) - {self.farmer.profile.user.username}"
+    
+    @property
+    def is_low_stock(self):
+        return self.quantity <= self.low_stock_threshold
+
+class Equipment(models.Model):
+    STATUS_CHOICES = [
+        ('Operational', 'Operational'),
+        ('Maintenance Needed', 'Maintenance Needed'),
+        ('Out of Service', 'Out of Service'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=50)  # e.g., Tractor, Harvester, Seeder
+    purchase_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Operational')
+    next_maintenance = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name='equipment')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.type}) - {self.farmer.profile.user.username}"
+    
+    @property
+    def needs_maintenance(self):
+        return self.status == 'Maintenance Needed'
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """Create a UserProfile whenever a User is created"""

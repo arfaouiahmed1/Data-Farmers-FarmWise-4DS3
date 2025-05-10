@@ -5,9 +5,15 @@ from . import views
 # Create a router and register our viewsets with it
 router = DefaultRouter()
 router.register(r'users', views.UserViewSet)
+# router.register(r'profiles', views.UserProfileViewSet)  # Commented out as this doesn't exist
 router.register(r'farms', views.FarmViewSet, basename='farm')
 router.register(r'farmers', views.FarmerViewSet, basename='farmer')
 router.register(r'admins', views.AdminViewSet, basename='admin')
+# router.register(r'weather', views.WeatherViewSet, basename='weather')  # Commented out as this doesn't exist
+# router.register(r'crops', views.CropViewSet)  # Commented out as this doesn't exist
+# router.register(r'farm-crops', views.FarmCropViewSet, basename='farm-crop')  # Commented out as this doesn't exist
+router.register(r'inventory', views.InventoryItemViewSet, basename='inventory')
+router.register(r'equipment', views.EquipmentViewSet, basename='equipment')
 
 # URL patterns for the core app
 urlpatterns = [

@@ -10,8 +10,9 @@ from rest_framework.authtoken.models import Token
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
-from .models import UserProfile, Farm, Farmer, Admin
-from .serializers import UserSerializer, UserProfileSerializer, FarmSerializer, FarmerSerializer, AdminSerializer
+from .models import UserProfile, Farm, Farmer, Admin, Weather, Crop, FarmCrop, InventoryItem, Equipment, DetectedWeed, Scan, Recommendation
+from .serializers import UserSerializer, UserProfileSerializer, FarmSerializer, FarmerSerializer, AdminSerializer, WeatherSerializer, FarmCropSerializer, CropSerializer, InventoryItemSerializer, EquipmentSerializer, DetectedWeedSerializer, ScanSerializer, RecommendationSerializer
+from django.db import models
 
 # Create your views here.
 
@@ -776,3 +777,119 @@ def debug_onboarding(request):
         'message': 'Debug information logged to server console',
         'authenticated': request.user.is_authenticated
     })
+
+class InventoryItemViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing farmer's inventory items
+    """
+    serializer_class = InventoryItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Filter items by current user's farmer profile
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            return InventoryItem.objects.filter(farmer=user_profile.farmer_profile)
+        return InventoryItem.objects.none()
+    
+    def perform_create(self, serializer):
+        # Automatically assign the current user's farmer profile
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            serializer.save(farmer=user_profile.farmer_profile)
+        else:
+            raise serializers.ValidationError("User is not a farmer")
+    
+    @action(detail=False, methods=['get'])
+    def low_stock(self, request):
+        # Filter for low stock items
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            queryset = InventoryItem.objects.filter(farmer=user_profile.farmer_profile)
+            # Use the model's property to filter
+            low_stock_items = [item for item in queryset if item.is_low_stock]
+            serializer = self.get_serializer(low_stock_items, many=True)
+            return Response(serializer.data)
+        return Response([])
+    
+    @action(detail=False, methods=['get'])
+    def by_category(self, request):
+        category = request.query_params.get('category', None)
+        if not category:
+            return Response({"error": "Category parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            queryset = InventoryItem.objects.filter(
+                farmer=user_profile.farmer_profile,
+                category=category
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return Response([])
+    
+    @action(detail=False, methods=['get'])
+    def category_units(self, request):
+        # Return the available categories and their units
+        categories = {choice[0]: choice[1] for choice in InventoryItem.CATEGORY_CHOICES}
+        
+        return Response({
+            "categories": categories,
+            "category_units": InventoryItem.CATEGORY_UNITS
+        })
+
+class EquipmentViewSet(viewsets.ModelViewSet):
+    serializer_class = EquipmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Filter items by current user's farmer profile
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            return Equipment.objects.filter(farmer=user_profile.farmer_profile)
+        return Equipment.objects.none()
+    
+    def perform_create(self, serializer):
+        # Automatically assign the current user's farmer profile
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            serializer.save(farmer=user_profile.farmer_profile)
+        else:
+            raise serializers.ValidationError("User is not a farmer")
+    
+    @action(detail=False, methods=['get'])
+    def maintenance_needed(self, request):
+        # Filter for equipment needing maintenance
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            queryset = Equipment.objects.filter(
+                farmer=user_profile.farmer_profile,
+                status='Maintenance Needed'
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return Response([])
+    
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        equipment_type = request.query_params.get('type', None)
+        if not equipment_type:
+            return Response({"error": "Type parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user_profile = UserProfile.objects.get(user=request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            queryset = Equipment.objects.filter(
+                farmer=user_profile.farmer_profile,
+                type=equipment_type
+            )
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        return Response([])

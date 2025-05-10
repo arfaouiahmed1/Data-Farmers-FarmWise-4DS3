@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, Farm, Farmer, Admin, Weather, DetectedWeed, Crop, FarmCrop, Scan, Recommendation
+from .models import UserProfile, Farm, Farmer, Admin, Weather, DetectedWeed, Crop, FarmCrop, Scan, Recommendation, InventoryItem, Equipment
 
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,7 +9,8 @@ class FarmSerializer(serializers.ModelSerializer):
                   'soil_type', 'soil_nitrogen', 'soil_phosphorus', 'soil_potassium', 'soil_ph',
                   'has_water_access', 'irrigation_type', 'has_road_access', 'has_electricity', 
                   'storage_capacity', 'farming_method', 'year_established',
-                  'estimated_price', 'boundary_geojson', 'created_at', 'updated_at']
+                  'estimated_price', 'boundary_geojson', 'created_at', 'updated_at', 'owner']
+        read_only_fields = ['created_at', 'updated_at', 'owner']
     
     def validate_boundary_geojson(self, value):
         """
@@ -83,13 +84,33 @@ class RecommendationSerializer(serializers.ModelSerializer):
         model = Recommendation
         fields = '__all__'
 
+class InventoryItemSerializer(serializers.ModelSerializer):
+    is_low_stock = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = InventoryItem
+        fields = ['id', 'name', 'category', 'quantity', 'unit', 'low_stock_threshold', 
+                 'farmer', 'is_low_stock', 'created_at', 'updated_at']
+
+class EquipmentSerializer(serializers.ModelSerializer):
+    needs_maintenance = serializers.ReadOnlyField()
+    purchase_date = serializers.DateField(format="%Y-%m-%d", input_formats=['%Y-%m-%d', 'iso-8601'], allow_null=True)
+    next_maintenance = serializers.DateField(format="%Y-%m-%d", input_formats=['%Y-%m-%d', 'iso-8601'], allow_null=True)
+    
+    class Meta:
+        model = Equipment
+        fields = ['id', 'name', 'type', 'purchase_date', 'status', 'next_maintenance', 
+                  'notes', 'farmer', 'needs_maintenance', 'created_at', 'updated_at']
+
 class FarmerSerializer(serializers.ModelSerializer):
     farms = FarmSerializer(many=True, read_only=True)
+    inventory_items = InventoryItemSerializer(many=True, read_only=True)
+    equipment = EquipmentSerializer(many=True, read_only=True)
     
     class Meta:
         model = Farmer
         fields = ['id', 'farming_experience_years', 'specialization', 'certification',
-                 'equipment_owned', 'preferred_crops', 'farms']
+                 'equipment_owned', 'preferred_crops', 'farms', 'inventory_items', 'equipment']
 
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
