@@ -1,10 +1,12 @@
 import '@mantine/core/styles.css';
 import '@mantine/charts/styles.css';
 import '@mantine/carousel/styles.css';
+import '@mantine/dates/styles.css'; // Import Mantine dates styles
 import './globals.css'; // Import global styles
 // --- Add Leaflet and Geoman CSS imports ---
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import '@/styles/custom-calendar.css'; // Import custom calendar styles
 
 import React from 'react';
 import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';

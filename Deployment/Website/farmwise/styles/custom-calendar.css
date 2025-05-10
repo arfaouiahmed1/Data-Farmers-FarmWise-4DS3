@@ -1,5 +1,36 @@
 /* farmwise/styles/custom-calendar.css */
 
+/* Fix oversized calendar buttons */
+.mantine-DatePickerInput-calendarHeader button {
+    width: auto !important;
+    height: auto !important;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px;
+}
+
+.mantine-DatePickerInput-calendarHeaderControl {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px;
+}
+
+.mantine-DatePickerInput-calendarHeaderLevel {
+    font-size: 14px;
+}
+
+.mantine-DatePickerInput-monthCell button {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 13px;
+}
+
+.mantine-DatePickerInput-day {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 13px;
+}
+
 /* Add padding to Agenda view rows */
 .rbc-agenda-view table tbody tr {
     padding: 10px 0; /* Add vertical padding */

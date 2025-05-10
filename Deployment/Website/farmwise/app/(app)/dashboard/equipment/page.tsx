@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Title,
   Text,
@@ -17,25 +17,86 @@ import {
   Menu,
   Textarea,
   rem,
-  LoadingOverlay
+  LoadingOverlay,
+  SegmentedControl,
+  Input,
+  Box,
+  Flex,
+  ThemeIcon,
+  Divider,
+  RingProgress,
+  Tooltip,
+  useMantineTheme,
+  Grid,
+  ScrollArea,
+  ColorSwatch,
+  Tabs,
+  Progress
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { IconTractor, IconPlus, IconPencil, IconTrash, IconDotsVertical, IconTool, IconCalendarEvent, IconCircleCheck, IconCircleX, IconEngineOff } from '@tabler/icons-react';
+import { 
+  IconTractor, 
+  IconPlus, 
+  IconPencil, 
+  IconTrash, 
+  IconDotsVertical, 
+  IconTool, 
+  IconCalendarEvent, 
+  IconCircleCheck, 
+  IconCircleX, 
+  IconEngineOff,
+  IconSearch,
+  IconFilter,
+  IconLayoutCards,
+  IconLayoutList,
+  IconSortAscending,
+  IconSortDescending,
+  IconAlertTriangle,
+  IconChartPie,
+  IconChevronDown,
+  IconArrowsSort,
+  IconCheck
+} from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { useLocalStorage } from '@mantine/hooks';
 import equipmentService, { Equipment, EquipmentType, EquipmentStatus } from '@/app/api/equipment';
 
 // Helper to get status badge color and icon
 const getStatusProps = (status: EquipmentStatus) => {
   switch (status) {
     case 'Operational':
-      return { color: 'green', icon: <IconCircleCheck size={14} /> };
+      return { color: 'teal', icon: <IconCircleCheck size={14} /> };
     case 'Maintenance Needed':
       return { color: 'orange', icon: <IconTool size={14} /> };
     case 'Out of Service':
       return { color: 'red', icon: <IconEngineOff size={14} /> };
     default:
       return { color: 'gray', icon: <IconCircleX size={14} /> };
+  }
+};
+
+// Equipment type to color mapping
+const typeColors: Record<EquipmentType, string> = {
+  'Tractor': '#FF6B6B',
+  'Harvester': '#4ECDC4',
+  'Seeder': '#FFD166',
+  'Sprayer': '#6A0572',
+  'Trailer': '#F76E11',
+  'Tillage': '#1A5D1A',
+  'Other': '#5F7161'
+};
+
+// Helper for equipment type icon
+const getTypeIcon = (type: EquipmentType) => {
+  switch(type) {
+    case 'Tractor': return <IconTractor size={18} />;
+    case 'Harvester': return <IconTractor size={18} />;
+    case 'Seeder': return <IconTool size={18} />;
+    case 'Sprayer': return <IconTool size={18} />;
+    case 'Trailer': return <IconTractor size={18} />;
+    case 'Tillage': return <IconTool size={18} />;
+    case 'Other': return <IconTool size={18} />;
   }
 };
 
@@ -70,6 +131,10 @@ export default function EquipmentPage() {
         setLoading(true);
         const data = await equipmentService.getEquipment();
         
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid data format received');
+        }
+        
         // Check for maintenance dates that have passed and update UI accordingly
         const updatedData = data.map(item => {
           if (item.nextMaintenance && new Date(item.nextMaintenance) < new Date()) {
@@ -83,7 +148,7 @@ export default function EquipmentPage() {
         console.error('Error fetching equipment:', error);
         notifications.show({
           title: 'Error',
-          message: 'Failed to load equipment data',
+          message: 'Failed to load equipment data. Please try refreshing the page.',
           color: 'red',
         });
       } finally {
@@ -102,37 +167,77 @@ export default function EquipmentPage() {
 
   const handleEditItem = (item: Equipment) => {
     setEditingItem(item);
+    
+    // Parse date strings into proper Date objects for the date picker
+    let purchaseDate = null;
+    let nextMaintenance = null;
+    
+    // Safely parse the purchase date if it exists
+    if (item.purchaseDate) {
+      try {
+        purchaseDate = new Date(item.purchaseDate);
+        // Check if the date is valid
+        if (isNaN(purchaseDate.getTime())) {
+          purchaseDate = null;
+        }
+      } catch (e) {
+        console.error("Error parsing purchase date:", e);
+        purchaseDate = null;
+      }
+    }
+    
+    // Safely parse the next maintenance date if it exists
+    if (item.nextMaintenance) {
+      try {
+        nextMaintenance = new Date(item.nextMaintenance);
+        // Check if the date is valid
+        if (isNaN(nextMaintenance.getTime())) {
+          nextMaintenance = null;
+        }
+      } catch (e) {
+        console.error("Error parsing next maintenance date:", e);
+        nextMaintenance = null;
+      }
+    }
+    
     form.setValues({
       name: item.name,
       type: item.type,
-      purchaseDate: item.purchaseDate || null,
+      purchaseDate: purchaseDate,
       status: item.status,
-      nextMaintenance: item.nextMaintenance || null,
+      nextMaintenance: nextMaintenance,
       notes: item.notes || '',
     });
+    
     setOpened(true);
   };
 
   const handleDeleteItem = async (id: string) => {
+    if (!id) {
+      notifications.show({
+        title: 'Error',
+        message: 'Invalid equipment ID',
+        color: 'red',
+      });
+      return;
+    }
+    
     try {
       setLoading(true);
-      const success = await equipmentService.deleteEquipment(id);
+      await equipmentService.deleteEquipment(id);
       
-      if (success) {
-        setEquipment((current) => current.filter((item) => item.id !== id));
-        notifications.show({
-          title: 'Success',
-          message: 'Equipment deleted successfully',
-          color: 'green',
-        });
-      } else {
-        throw new Error('Failed to delete equipment');
-      }
-    } catch (error) {
+      // If no error was thrown, deletion was successful
+      setEquipment((current) => current.filter((item) => item.id !== id));
+      notifications.show({
+        title: 'Success',
+        message: 'Equipment deleted successfully',
+        color: 'green',
+      });
+    } catch (error: any) {
       console.error('Error deleting equipment:', error);
       notifications.show({
         title: 'Error',
-        message: 'Failed to delete equipment',
+        message: error.response?.data?.detail || 'Failed to delete equipment',
         color: 'red',
       });
     } finally {
@@ -145,9 +250,58 @@ export default function EquipmentPage() {
       setLoading(true);
       let updatedEquipment: Equipment;
       
+      // Safely convert dates to ISO format without risking type errors
+      let purchaseDate = null;
+      let nextMaintenance = null;
+      
+      if (values.purchaseDate) {
+        try {
+          // Make sure we have a valid Date object
+          const dateObj = values.purchaseDate instanceof Date 
+            ? values.purchaseDate 
+            : new Date(String(values.purchaseDate));
+          
+          if (!isNaN(dateObj.getTime())) {
+            purchaseDate = dateObj.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          console.error('Error formatting purchase date:', e);
+        }
+      }
+      
+      if (values.nextMaintenance) {
+        try {
+          // Make sure we have a valid Date object
+          const dateObj = values.nextMaintenance instanceof Date 
+            ? values.nextMaintenance 
+            : new Date(String(values.nextMaintenance));
+          
+          if (!isNaN(dateObj.getTime())) {
+            nextMaintenance = dateObj.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          console.error('Error formatting maintenance date:', e);
+        }
+      }
+      
+      // Create form data with properly formatted dates
+      const formData = {
+        ...values,
+        purchaseDate,
+        nextMaintenance
+      };
+      
+      console.log("Submitting form data:", formData);
+      
       if (editingItem) {
         // Update existing equipment
-        updatedEquipment = await equipmentService.updateEquipment(editingItem.id!, values);
+        updatedEquipment = await equipmentService.updateEquipment(editingItem.id!, formData);
+        
+        // Check if update was successful (should have an id)
+        if (!updatedEquipment || !updatedEquipment.id) {
+          throw new Error('Failed to update equipment');
+        }
+        
         setEquipment((current) =>
           current.map((item) => (item.id === editingItem.id ? updatedEquipment : item))
         );
@@ -158,7 +312,13 @@ export default function EquipmentPage() {
         });
       } else {
         // Add new equipment
-        updatedEquipment = await equipmentService.addEquipment(values);
+        updatedEquipment = await equipmentService.addEquipment(formData);
+        
+        // Check if creation was successful (should have an id)
+        if (!updatedEquipment || !updatedEquipment.id) {
+          throw new Error('Failed to create equipment');
+        }
+        
         setEquipment((current) => [...current, updatedEquipment]);
         notifications.show({
           title: 'Success',
@@ -168,11 +328,11 @@ export default function EquipmentPage() {
       }
       
       setOpened(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving equipment:', error);
       notifications.show({
         title: 'Error',
-        message: 'Failed to save equipment',
+        message: error.response?.data?.detail || 'Failed to save equipment',
         color: 'red',
       });
     } finally {
@@ -309,12 +469,22 @@ export default function EquipmentPage() {
               label="Purchase Date"
               placeholder="Select date"
               valueFormat="YYYY-MM-DD"
+              clearable
+              type="default"
+              firstDayOfWeek={0}
+              allowDeselect
+              maxLevel="month"
               {...form.getInputProps('purchaseDate')}
             />
             <DatePickerInput
               label="Next Maintenance Date"
               placeholder="Select date"
               valueFormat="YYYY-MM-DD"
+              clearable
+              type="default"
+              firstDayOfWeek={0}
+              allowDeselect
+              maxLevel="month"
               {...form.getInputProps('nextMaintenance')}
             />
           </Group>
@@ -342,4 +512,4 @@ export default function EquipmentPage() {
       </Modal>
     </Container>
   );
-} 
+}
