@@ -40,9 +40,24 @@ export function AuthRedirect() {
         // This helps prevent redirect loops when onboarding status has changed
         if (authService.isAuthenticated()) {
           try {
-            await authService.refreshUserData();
+            // Set a timeout for the refresh operation to avoid hanging
+            const refreshPromise = authService.refreshUserData();
+            
+            // Race the refresh with a timeout of 5 seconds
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Refresh user data timed out')), 5000);
+            });
+            
+            // Use Promise.race to take whichever resolves/rejects first
+            await Promise.race([refreshPromise, timeoutPromise])
+              .catch(error => {
+                console.warn('Refresh user data failed or timed out:', error.message);
+                // Continue with cached data
+              });
           } catch (refreshError) {
+            // This catch handles any errors not caught in the Promise.race
             console.error('Error refreshing user data:', refreshError);
+            // Continue with the flow using cached data
           }
         }
 

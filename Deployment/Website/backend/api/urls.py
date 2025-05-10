@@ -12,4 +12,8 @@ urlpatterns = [
     path('chat-treatment/', TreatmentChatView.as_view(), name='chat_treatment_api'),
     path('chat-treatment', TreatmentChatView.as_view(), name='chat_treatment_api_no_slash'),
     path('complete-onboarding/', views.complete_onboarding, name='complete_onboarding'),
+    path('weather/data/', views.get_weather_data, name='get_weather_data'),
+    path('farm/boundary/<int:farm_id>/', views.get_farm_boundary, name='get_farm_boundary'),
+    path('farm/update-boundary/<int:farm_id>/', views.update_farm_boundary, name='update_farm_boundary'),
+    path('farm/update-boundary/', views.update_farm_boundary, name='update_farm_boundary_without_id'),
 ]

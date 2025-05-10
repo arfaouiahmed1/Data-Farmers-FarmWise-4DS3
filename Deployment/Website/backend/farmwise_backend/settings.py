@@ -147,6 +147,28 @@ CORS_ALLOWED_ORIGINS = [
     # "https://your-frontend-domain.com",
 ]
 
+# Add more permissive CORS settings for development
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 # Disable automatic slash appending to prevent POST redirect issues
 APPEND_SLASH = False
 

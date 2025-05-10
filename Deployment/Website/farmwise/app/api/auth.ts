@@ -2,24 +2,49 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Create an axios instance
+// Create an axios instance with improved configuration
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  // Set timeout to avoid hanging requests
+  timeout: 10000, // 10 seconds
+  // Enable credentials for CORS requests
+  withCredentials: true,
 });
 
 // Add a request interceptor to include auth token in requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
+    // Check if we're in browser environment
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
+      }
     }
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor to handle common errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Handle network errors gracefully
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout - server might be down');
+    } else if (!error.response) {
+      console.error('Network error - no response from server');
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -155,55 +180,75 @@ export const authService = {
     return response.data;
   },
   
-  // Get current user profile
+  // Get current user profile with improved error handling
   async getProfile(): Promise<UserData> {
     try {
+      // Check if we're in a browser environment before making a network request
+      if (typeof window === 'undefined') {
+        throw new Error('Cannot fetch profile in server environment');
+      }
+      
       const response = await api.get('/core/profile/');
       return response.data;
     } catch (error: any) {
       console.error('Error fetching user profile:', error);
       
+      // Handle network errors specifically
+      if (!error.response || error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
+        console.warn('Network connectivity issue - falling back to cached data');
+      }
+      
       // Check if we have cached user data to return instead
       const cachedUserData = this.getCurrentUser();
       if (cachedUserData) {
+        console.info('Using cached profile data');
         return cachedUserData;
       }
       
-      // If we get here, we have no cached data and the API call failed
-      if (error.response && error.response.status === 500) {
-        // Server error - likely an issue with the profile data
-        // Return a minimal user object to prevent UI errors
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            // Try to decode basic info from token
-            const tokenParts = token.split('.');
-            if (tokenParts.length === 3) {
-              const tokenPayload = JSON.parse(atob(tokenParts[1]));
-              if (tokenPayload.user_id) {
-                return {
-                  id: tokenPayload.user_id,
-                  username: 'user',
-                  email: '',
-                  first_name: 'User',
-                  last_name: '',
-                  profile: {
-                    user_type: 'FARMER',
-                    phone_number: null,
-                    address: null,
-                    bio: null,
-                    profile_image: null,
+      // Handle specific error cases
+      if (error.response) {
+        // Server returned an error response
+        if (error.response.status === 401) {
+          // Unauthorized - token might be invalid, clear it
+          console.warn('Unauthorized access, clearing authentication data');
+          this.logout();
+          throw new Error('Authentication required');
+        } else if (error.response.status === 500) {
+          // Server error - likely an issue with the profile data
+          // Return a minimal user object to prevent UI errors
+          const token = localStorage.getItem('token');
+          if (token) {
+            try {
+              // Try to decode basic info from token
+              const tokenParts = token.split('.');
+              if (tokenParts.length === 3) {
+                const tokenPayload = JSON.parse(atob(tokenParts[1]));
+                if (tokenPayload.user_id) {
+                  console.info('Generated minimal profile from token');
+                  return {
+                    id: tokenPayload.user_id,
+                    username: 'user',
+                    email: '',
+                    first_name: 'User',
+                    last_name: '',
+                    profile: {
+                      user_type: 'FARMER',
+                      phone_number: null,
+                      address: null,
+                      bio: null,
+                      profile_image: null,
+                      date_joined: new Date().toISOString(),
+                      last_updated: new Date().toISOString(),
+                      onboarding_completed: false
+                    },
                     date_joined: new Date().toISOString(),
-                    last_updated: new Date().toISOString(),
-                    onboarding_completed: false
-                  },
-                  date_joined: new Date().toISOString(),
-                  is_active: true
-                };
+                    is_active: true
+                  };
+                }
               }
+            } catch (decodeErr) {
+              console.error('Error decoding token:', decodeErr);
             }
-          } catch (decodeErr) {
-            console.error('Error decoding token:', decodeErr);
           }
         }
       }
@@ -223,23 +268,60 @@ export const authService = {
     return response.data;
   },
   
-  // Refresh user data in localStorage
+  // Refresh user data in localStorage with retry mechanism
   async refreshUserData(): Promise<void> {
-    try {
-      const userData = await this.getProfile();
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Failed to refresh user data:', error);
-      // Don't throw - allow the UI to continue with whatever data we have
+    const maxRetries = 2;
+    let retryCount = 0;
+    let lastError = null;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        // Only attempt refreshing if we're in a browser and have a token
+        if (typeof window === 'undefined' || !localStorage.getItem('token')) {
+          return;
+        }
+        
+        const userData = await this.getProfile();
+        localStorage.setItem('user', JSON.stringify(userData));
+        return; // Success, exit the function
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Failed to refresh user data (attempt ${retryCount + 1}/${maxRetries + 1}):`, error);
+        
+        // Don't retry for auth errors (401) - no point
+        if (error.response && error.response.status === 401) {
+          break;
+        }
+        
+        // Only retry for network-related errors
+        if (!error.response || error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
+          retryCount++;
+          if (retryCount <= maxRetries) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            continue;
+          }
+        }
+        
+        break; // Don't retry for other errors
+      }
+    }
+    
+    // All retries failed or we decided not to retry
+    // Don't throw - allow the UI to continue with whatever data we have
+    if (lastError) {
+      console.warn('All refresh attempts failed, using cached data if available');
     }
   },
   
-  // Logout
+  // Logout with safer browser environment check
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Redirect to login page if needed
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Redirect to login page if needed
+      window.location.href = '/login';
+    }
   },
   
   // Check if user is authenticated

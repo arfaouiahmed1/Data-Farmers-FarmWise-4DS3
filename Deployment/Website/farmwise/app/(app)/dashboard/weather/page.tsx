@@ -1,9 +1,8 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Title,
-  Text,
   Paper,
   SimpleGrid,
   Group,
@@ -11,14 +10,20 @@ import {
   Tooltip,
   Loader,
   Alert,
-  Skeleton,
   Box,
-  TextInput,
   Button,
   ThemeIcon,
   Stack,
-  List,
-  Grid
+  Text,
+  Card,
+  Badge,
+  Tabs,
+  Grid,
+  rem,
+  Progress,
+  Divider,
+  Skeleton,
+  List
 } from '@mantine/core';
 import {
   IconCloud,
@@ -36,401 +41,962 @@ import {
   IconDroplet,
   IconTemperatureMinus,
   IconTemperaturePlus,
-  IconShieldCheck
+  IconShieldCheck,
+  IconChevronRight,
+  IconThermometer,
+  IconUmbrella,
+  IconPlant,
+  IconPlant2,
+  IconSunHigh,
+  IconRefresh
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
+import { useMediaQuery } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
+import { motion } from 'framer-motion';
+
+// Improved fetch backend utility with proper error handling and authentication
+const fetchBackend = async (url: string, options: RequestInit = {}) => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  // Keep the URL as is - Next.js handles the rewrites in next.config.mjs
+  const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+  
+  // Get token from localStorage if available
+  let token = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token'); // Changed from 'authToken' to 'token' to match auth.ts
+  }
+  
+  // Include credentials and set default headers
+  const defaultOptions: RequestInit = {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Token ${token}` } : {}),
+      ...options.headers,
+    },
+    ...options,
+  };
+  
+  try {
+    const response = await fetch(fullUrl, defaultOptions);
+    
+    // Handle unauthorized errors - might need to redirect to login
+    if (response.status === 401) {
+      console.error('Authentication required. Please log in.');
+      // You can add redirect logic here if needed
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('Error calling API:', error);
+    throw error;
+  }
+};
 
 interface Coordinates {
   latitude: number;
   longitude: number;
 }
 
-// Mock data structures (replace with actual API response structure)
-interface CurrentWeather {
-  temp: number;
-  feelsLike: number;
+interface WeatherCondition {
+  temperature: number;
   humidity: number;
-  windSpeed: number;
-  windDirection: string;
-  description: string;
-  iconCode: string; // Example: '01d' for clear day
-  precipChance: number;
+  precipitation: number;
+  weather_code: number;
+  wind_speed: number;
+  wind_direction: number;
+  weather_description: string;
+  icon_code: string;
 }
 
-interface ForecastHour {
-  time: number; // timestamp
-  temp: number;
-  iconCode: string;
-  precipChance: number;
+interface HourlyForecast {
+  time: string;
+  temperature: number;
+  precipitation_probability: number;
+  weather_code: number;
+  wind_speed: number;
+  weather_description: string;
+  icon_code: string;
 }
 
-interface ForecastDay {
-  date: number; // timestamp
-  maxTemp: number;
-  minTemp: number;
-  iconCode: string;
-  description: string;
-  precipChance: number;
+interface DailyForecast {
+  date: string;
+  max_temp: number;
+  min_temp: number;
+  precipitation_sum: number;
+  precipitation_probability: number;
+  weather_code: number;
+  weather_description: string;
+  icon_code: string;
 }
 
-// --- Mock Data (Replace with API calls) ---
-const mockCurrentWeather: CurrentWeather = {
-  temp: 22,
-  feelsLike: 21,
-  humidity: 65,
-  windSpeed: 15,
-  windDirection: 'NW',
-  description: 'Partly Cloudy',
-  iconCode: '02d',
-  precipChance: 10
-};
+interface WeatherData {
+  current: WeatherCondition;
+  hourly: HourlyForecast[];
+  daily: DailyForecast[];
+}
 
-const mockHourlyForecast: ForecastHour[] = Array.from({ length: 8 }).map((_, i) => ({
-  time: dayjs().add(i + 1, 'hour').unix() * 1000,
-  temp: 22 + Math.round(Math.sin(i / 2) * 3),
-  iconCode: ['01d', '02d', '03d', '04d', '09d', '10d', '11d', '13d', '50d'][i % 9],
-  precipChance: Math.max(0, Math.min(100, 10 + Math.round(Math.sin(i) * 20)))
-}));
-
-const mockDailyForecast: ForecastDay[] = Array.from({ length: 5 }).map((_, i) => ({
-  date: dayjs().add(i + 1, 'day').unix() * 1000,
-  maxTemp: 25 + Math.round(Math.random() * 4) - 2,
-  minTemp: 15 + Math.round(Math.random() * 3) - 1,
-  iconCode: ['01d', '02d', '03d', '04d', '09d', '10d', '11d'][i % 7],
-  description: ['Sunny', 'Mostly Sunny', 'Partly Cloudy', 'Cloudy', 'Showers', 'Rain', 'Thunderstorm'][i % 7],
-  precipChance: Math.max(0, Math.min(100, 5 + Math.round(Math.random() * 50)))
-}));
-
-// Helper to get a weather icon (simplified)
-const getWeatherIcon = (iconCode: string, size = 24) => {
-  if (iconCode.includes('01')) return <IconSun size={size} color="orange" />;
-  if (iconCode.includes('02') || iconCode.includes('03') || iconCode.includes('04')) return <IconCloud size={size} color="gray" />;
-  if (iconCode.includes('09') || iconCode.includes('10')) return <IconCloudRain size={size} color="blue" />;
-  if (iconCode.includes('11')) return <IconCloudRain size={size} color="darkblue" />; // Placeholder for Thunderstorm
-  if (iconCode.includes('13')) return <IconSnowflake size={size} color="lightblue" />;
-  if (iconCode.includes('50')) return <IconCloud size={size} color="lightgray" />; // Placeholder for Mist
-  return <IconCloud size={size} color="gray" />;
-};
-
-// --- Recommendation Logic ---
 interface Recommendation {
-  text: string;
-  type: 'irrigation' | 'protection' | 'planting' | 'general';
-  icon: React.ReactNode;
+  type: string;
+  details: {
+    title: string;
+    description: string;
+    urgency: string;
+    [key: string]: any;
+  };
 }
 
-const generateRecommendations = (forecast: ForecastDay[]): Recommendation[] => {
-  const recommendations: Recommendation[] = [];
-  if (!forecast || forecast.length === 0) return recommendations;
+interface WeatherResponse {
+  farm_id: number;
+  farm_name: string;
+  coordinates: Coordinates;
+  weather_data: WeatherData;
+  recommendations: Recommendation[];
+}
 
-  // Simple checks for demo purposes
-  const nextRainyDay = forecast.find(day => day.precipChance > 50);
-  const hotDays = forecast.filter(day => day.maxTemp > 30); // Example threshold
-  const coldDays = forecast.filter(day => day.minTemp < 5); // Example threshold
+// Helper to get a weather icon based on icon_code from API
+const getWeatherIcon = (iconCode: string, size = 24) => {
+  if (iconCode.includes('01')) return <IconSun size={size} stroke={1.5} color="orange" />;
+  if (iconCode.includes('02') || iconCode.includes('03') || iconCode.includes('04')) return <IconCloud size={size} stroke={1.5} color="#6b7280" />;
+  if (iconCode.includes('09') || iconCode.includes('10')) return <IconCloudRain size={size} stroke={1.5} color="#3b82f6" />;
+  if (iconCode.includes('11')) return <IconCloudRain size={size} stroke={1.5} color="#1e40af" />; // Thunderstorm
+  if (iconCode.includes('13')) return <IconSnowflake size={size} stroke={1.5} color="#93c5fd" />;
+  if (iconCode.includes('50')) return <IconCloud size={size} stroke={1.5} color="#9ca3af" />; // Mist
+  return <IconCloud size={size} stroke={1.5} color="#6b7280" />;
+};
 
-  if (nextRainyDay) {
-    const daysUntilRain = dayjs(nextRainyDay.date).diff(dayjs(), 'day');
-    if (daysUntilRain <= 2) {
-        recommendations.push({
-            text: `Rain expected in ${daysUntilRain === 0 ? 'less than a day' : daysUntilRain + ' day' + (daysUntilRain > 1 ? 's' : '')} (${nextRainyDay.precipChance}% chance). Consider adjusting irrigation schedules.`,
-            type: 'irrigation',
-            icon: <IconDroplet size={16} />
-        });
-    }
+// Get background gradient based on weather and time
+const getWeatherGradient = (iconCode: string) => {
+  if (iconCode.includes('01')) return 'linear-gradient(135deg, #64B5F6 0%, #1E88E5 100%)'; // Clear sky
+  if (iconCode.includes('02')) return 'linear-gradient(135deg, #90CAF9 0%, #42A5F5 100%)'; // Few clouds
+  if (iconCode.includes('03') || iconCode.includes('04')) return 'linear-gradient(135deg, #BBDEFB 0%, #64B5F6 100%)'; // Cloudy
+  if (iconCode.includes('09') || iconCode.includes('10')) return 'linear-gradient(135deg, #78909C 0%, #546E7A 100%)'; // Rain
+  if (iconCode.includes('11')) return 'linear-gradient(135deg, #455A64 0%, #263238 100%)'; // Thunderstorm
+  if (iconCode.includes('13')) return 'linear-gradient(135deg, #CFD8DC 0%, #B0BEC5 100%)'; // Snow
+  if (iconCode.includes('50')) return 'linear-gradient(135deg, #B0BEC5 0%, #78909C 100%)'; // Mist
+  return 'linear-gradient(135deg, #64B5F6 0%, #1976D2 100%)'; // Default blue
+};
+
+const formatTime = (timeString: string) => {
+  return dayjs(timeString).format('h A'); // Format as "3 PM"
+};
+
+const formatDay = (dateString: string) => {
+  return dayjs(dateString).format('ddd, MMM D'); // Format as "Mon, Jul 24"
+};
+
+// Get icon for recommendation type
+const getRecommendationIcon = (type: string) => {
+  switch (type) {
+    case 'WATER':
+      return IconDroplet;
+    case 'WEATHER':
+      return IconCloud;
+    case 'CROP':
+      return IconPlant;
+    default:
+      return IconShieldCheck;
   }
+};
 
-  if (hotDays.length >= 2) {
-     recommendations.push({
-        text: `Upcoming hot weather (${hotDays.length} days > 30°C). Ensure vulnerable crops have adequate water and consider shade.`,
-        type: 'protection',
-        icon: <IconTemperaturePlus size={16} />
-    });
+// Get color for recommendation urgency
+const getUrgencyColor = (urgency: string) => {
+  switch (urgency.toLowerCase()) {
+    case 'high':
+      return 'red';
+    case 'medium':
+      return 'orange';
+    case 'low':
+      return 'green';
+    default:
+      return 'blue';
   }
-  
-  if (coldDays.length > 0) {
-     const nextColdDay = coldDays[0];
-      recommendations.push({
-        text: `Potential for low temperatures (${nextColdDay.minTemp}°C on ${dayjs(nextColdDay.date).format('ddd')}). Protect sensitive plants if necessary.`,
-        type: 'protection',
-        icon: <IconTemperatureMinus size={16} />
-    });
-  }
-
-  // Add a generic tip
-  if (recommendations.length === 0) {
-     recommendations.push({
-        text: `Weather conditions look stable. Continue standard monitoring.`,
-        type: 'general',
-        icon: <IconShieldCheck size={16} />
-    });
-  }
-
-  return recommendations;
 };
 
 export default function WeatherPage() {
-  const [coords, setCoords] = useState<Coordinates | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
-  const [manualLocation, setManualLocation] = useState('');
-  const [isWindyMapLoaded, setIsWindyMapLoaded] = useState(false);
-  const windyMapRef = useRef<HTMLIFrameElement>(null);
+  const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
+  const [farmBoundary, setFarmBoundary] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>('today');
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [updatingBoundary, setUpdatingBoundary] = useState<boolean>(false);
 
-  // --- Fetch Location --- 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCoords({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          setLocationError(null);
-          setIsLoadingLocation(false);
-        },
-        (error) => {
-          setLocationError(`Error getting location: ${error.message}. Please allow location access or enter manually.`);
-          setIsLoadingLocation(false);
-        },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-      );
+  const fetchWeatherData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Fetching weather data from backend...');
+      // Get auth token from localStorage
+      const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
+      if (!token) {
+        console.error('No authentication token found');
+        setError('Authentication required. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
+      // First, try to get weather data from the API
+      const response = await fetchBackend('/api/weather/data/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        // Successfully fetched data
+        const data = await response.json();
+        console.log('Weather data fetched successfully:', data);
+        setWeatherData(data);
+        setFarmBoundary(data.boundary || null);
+        
+        // Update localStorage cache to improve performance on future loads
+        try {
+          localStorage.setItem('weather_data_cache', JSON.stringify({
+            timestamp: new Date().getTime(),
+            data: data
+          }));
+        } catch (cacheError) {
+          console.warn('Failed to cache weather data:', cacheError);
+        }
     } else {
-      setLocationError('Geolocation is not supported by this browser. Please enter location manually.');
-      setIsLoadingLocation(false);
-    }
-  }, []);
-
-  // --- Fetch Weather Data (Placeholder) ---
-  // In a real app, fetch data based on `coords` or `manualLocation` here
-  const currentWeatherData = coords || manualLocation ? mockCurrentWeather : null;
-  const hourlyData = coords || manualLocation ? mockHourlyForecast : [];
-  const dailyData = coords || manualLocation ? mockDailyForecast : [];
-
-  // Generate recommendations based on daily data
-  const recommendations = generateRecommendations(dailyData);
-
-  // --- Windy Map Integration Point ---
-  const windyApiKey = "YOUR_WINDY_API_KEY"; // <-- IMPORTANT: Replace with your actual key
-  const windyMapUrl = coords
-    ? `https://embed.windy.com/embed2.html?lat=${coords.latitude}&lon=${coords.longitude}&detailLat=${coords.latitude}&detailLon=${coords.longitude}&width=100%&height=450&zoom=8&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`
-    : "https://embed.windy.com/embed2.html?lat=47.166&lon=19.502&zoom=5&width=100%&height=450"; // Default location if coords unavailable
-
-  const handleManualLocationSubmit = () => {
-    // Basic validation - a real app would use geocoding API
-    if (manualLocation.trim()) {
-      console.log("Fetching weather for manual location:", manualLocation);
-      setCoords(null); // Clear coords if manual location is used
-      setLocationError(null); // Clear error
-      // Trigger data fetching based on manualLocation here
-    } else {
-      setLocationError("Please enter a valid location (e.g., City, Country).");
+        // Handle error response from backend
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { error: `HTTP Error: ${response.status}` };
+        }
+        
+        console.error('Failed to fetch weather data:', errorData);
+        setError(errorData.error || `Failed to fetch weather data. Status: ${response.status}`);
+        
+        // Check if we have cached data that's less than 6 hours old
+        try {
+          const cachedData = localStorage.getItem('weather_data_cache');
+          if (cachedData) {
+            const { timestamp, data } = JSON.parse(cachedData);
+            const age = new Date().getTime() - timestamp;
+            const sixHoursInMs = 6 * 60 * 60 * 1000;
+            
+            if (age < sixHoursInMs) {
+              console.log('Using cached weather data from', new Date(timestamp));
+              setWeatherData(data);
+              setFarmBoundary(data.boundary || null);
+              setError('Using cached data - ' + errorData.error);
+              return;
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Failed to retrieve cached weather data:', cacheError);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching weather data:', err);
+      setError('Failed to connect to the server. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRetryLocation = () => {
-    setIsLoadingLocation(true);
-    setLocationError(null);
-    setCoords(null);
-    setManualLocation('');
-    // Re-trigger useEffect logic
-     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCoords({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          setLocationError(null);
-          setIsLoadingLocation(false);
-        },
-        (error) => {
-          setLocationError(`Error getting location: ${error.message}. Please allow location access or enter manually.`);
-          setIsLoadingLocation(false);
-        }
-      );
+  // New function to fetch farm boundary
+  const fetchFarmBoundary = async (farmId: number) => {
+    if (!farmId || farmId === 0) return;
+    
+    try {
+      const response = await fetchBackend(`/api/farm/boundary/${farmId}/`, {
+        method: 'GET',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Farm boundary data fetched successfully:', data);
+        setFarmBoundary(data.boundary);
     } else {
-      setLocationError('Geolocation is not supported by this browser. Please enter location manually.');
-      setIsLoadingLocation(false);
+        console.error('Failed to fetch farm boundary:', response.status);
+      }
+    } catch (err) {
+      console.error('Error fetching farm boundary:', err);
     }
+  };
+
+  useEffect(() => {
+    fetchWeatherData();
+  }, []);
+
+  // Fetch farm boundary when weather data is loaded
+  useEffect(() => {
+    if (weatherData && weatherData.farm_id) {
+      fetchFarmBoundary(weatherData.farm_id);
+    }
+  }, [weatherData?.farm_id]);
+
+  const handleRefresh = () => {
+    fetchWeatherData();
+    notifications.show({
+      title: 'Refreshing Weather Data',
+      message: 'Getting the latest weather information for your farm',
+      color: 'blue',
+      icon: <IconRefresh />,
+    });
+  };
+
+  const updateFarmBoundary = async () => {
+    setUpdatingBoundary(true);
+    try {
+      // Use the sample boundary provided
+      const sampleBoundary = {
+        "type": "Feature", 
+        "geometry": {
+          "type": "Polygon", 
+          "coordinates": [[[10.135041265430566, 36.9078367244124], [10.135041265430566, 36.907592160582176], [10.138616113605615, 36.90583471352312], [10.139037103710063, 36.907012032426756], [10.1387302804136, 36.907751411448366], [10.138280748607158, 36.90817228873759], [10.137417362121766, 36.90857041590307], [10.136496892232383, 36.90857041590307], [10.135041265430566, 36.9078367244124]]]
+        }, 
+        "properties": {
+          "id": 3, 
+          "area_hectares": 6.13, 
+          "size_category": "Standard Cultivation (1-10 Ha)", 
+          "message": "Detected a Standard Cultivation."
+        }
+      };
+      
+      console.log("Updating farm boundary with sample data...");
+      const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        return;
+      }
+      
+      // Call our Next.js API route to update the farm boundary
+      const response = await fetch('/api/update-farm-boundary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
+        body: JSON.stringify({
+          boundary: sampleBoundary
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log("Farm boundary updated successfully:", data);
+        // Now fetch the weather data again
+        await fetchWeatherData();
+        notifications.show({
+          title: 'Farm Boundary Updated',
+          message: 'Successfully updated farm boundary. Weather data has been refreshed.',
+          color: 'green',
+          autoClose: 3000,
+        });
+    } else {
+        console.error("Error updating farm boundary:", data);
+        setError(`Failed to update farm boundary: ${data.error || data.detail || 'Unknown error'}`);
+        notifications.show({
+          title: 'Error',
+          message: `Failed to update farm boundary: ${data.error || data.detail || 'Unknown error'}`,
+          color: 'red',
+          autoClose: 3000,
+        });
+      }
+    } catch (err) {
+      console.error('Error in updateFarmBoundary:', err);
+      setError('Failed to update farm boundary. Please try again later.');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to update farm boundary. Please try again later.',
+        color: 'red',
+        autoClose: 3000,
+      });
+    } finally {
+      setUpdatingBoundary(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container size="xl" px={isMobile ? 'xs' : 'md'} py="md">
+        <Paper shadow="sm" radius="md" p="md" mb="md">
+          <Skeleton height={50} width="50%" mb="md" />
+          <Skeleton height={200} mb="xl" />
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
+            <Skeleton height={100} />
+            <Skeleton height={100} />
+            <Skeleton height={100} />
+            <Skeleton height={100} />
+          </SimpleGrid>
+        </Paper>
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+          <Skeleton height={300} />
+          <Skeleton height={300} />
+        </SimpleGrid>
+      </Container>
+    );
   }
 
+  if (error) {
+    return (
+      <Container size="xl" px={isMobile ? 'xs' : 'md'} py="md">
+        <Alert
+          variant="filled"
+          color="red"
+          title="Error loading weather data"
+          icon={<IconAlertCircle />}
+        >
+          <Stack gap="md">
+            <Text size="sm">{error}</Text>
+            
+            {error.includes("coordinates unavailable") && (
+              <>
+                <Box my="md">
+                  <Text size="sm" fw={500}>Your farm needs location information for weather data.</Text>
+                  <Text size="xs">Weather forecasts require your farm's location. You can add this in two ways:</Text>
+                  
+                  <List size="sm" mt="sm">
+                    <List.Item>Go to the mapping page to draw your farm boundary</List.Item>
+                    <List.Item>Use the button below to set your farm boundary using the sample data</List.Item>
+                  </List>
+                </Box>
+                
+                <Group>
+                  <Button 
+                    component="a" 
+                    href="/dashboard/mapping" 
+                    variant="white" 
+                    color="red"
+                    leftSection={<IconMapPin size={16} />}
+                  >
+                    Go to Mapping
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    color="red"
+                    leftSection={<IconRefresh size={16} />}
+                    onClick={updateFarmBoundary}
+                    loading={updatingBoundary}
+                  >
+                    Set Sample Boundary
+                  </Button>
+                </Group>
+              </>
+            )}
+            
+            {(!error.includes("coordinates unavailable")) && (
+              <Button 
+                variant="white" 
+                color="red"
+                leftSection={<IconRefresh size={16} />}
+                onClick={fetchWeatherData}
+                mt="sm"
+              >
+                Try Again
+              </Button>
+            )}
+          </Stack>
+        </Alert>
+      </Container>
+    );
+  }
+
+  if (!weatherData) {
+    return (
+      <Container size="xl" px={isMobile ? 'xs' : 'md'} py="md">
+        <Alert
+          variant="filled"
+          color="blue"
+          title="No weather data available"
+          icon={<IconAlertCircle />}
+        >
+          <Text size="sm" mb="md">Please refresh to fetch the latest weather data.</Text>
+          <Button variant="white" color="blue" onClick={fetchWeatherData}>
+            Refresh Data
+          </Button>
+        </Alert>
+      </Container>
+    );
+    }
+
+  const { current, hourly, daily } = weatherData.weather_data;
+
   return (
-    <Container fluid>
+    <Container size="xl" px={isMobile ? 'xs' : 'md'} py="md">
+      <Paper
+        shadow="sm"
+        radius="md"
+        p="md"
+        mb="lg"
+        style={{
+          background: getWeatherGradient(current.icon_code),
+          color: 'white',
+        }}
+      >
       <Group justify="space-between" mb="lg">
-         <Title order={2}>
-             <IconCloud size={28} style={{ marginRight: '8px', verticalAlign: 'bottom' }} />
-            Weather Center
-         </Title>
-         {isLoadingLocation ? (
-            <Loader size="sm" />
-         ) : coords ? (
+          <div>
             <Group gap="xs">
-                <IconMapPin size={16} />
-                <Text size="sm">{coords.latitude.toFixed(3)}, {coords.longitude.toFixed(3)}</Text>
-                <Tooltip label="Get Current Location Again">
-                    <ActionIcon variant="subtle" onClick={handleRetryLocation}><IconCurrentLocation size={18} /></ActionIcon>
-                </Tooltip>
+              <IconMapPin size={20} stroke={1.5} />
+              <Text fw={500}>{weatherData.farm_name}</Text>
             </Group>
-         ) : null}
+            <Title order={2} mt="xs">{current.weather_description}</Title>
+          </div>
+          <Button 
+            variant="white" 
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleRefresh}
+          >
+            Refresh
+          </Button>
       </Group>
 
-      {locationError && (
-        <Alert title="Location Access Issue" color="orange" icon={<IconAlertCircle />} mb="lg" withCloseButton onClose={() => setLocationError(null)}>
-          <Text size="sm">{locationError}</Text>
-          <Group grow mt="sm">
-            <TextInput
-              placeholder="Enter City, Country or Zip Code"
-              value={manualLocation}
-              onChange={(e) => setManualLocation(e.currentTarget.value)}
-              rightSection={ <ActionIcon variant="filled" size="sm" onClick={handleManualLocationSubmit}><IconMapPin size={14}/></ActionIcon>}
-            />
-            <Button onClick={handleRetryLocation} variant='outline' size="sm">Retry Geolocation</Button>
+        <Grid gutter="xl">
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Group align="flex-start" gap="xl">
+              <div style={{ textAlign: 'center' }}>
+                {getWeatherIcon(current.icon_code, 60)}
+              </div>
+              <div>
+                <Text size="3.5rem" fw={600} lh={1}>
+                  {Math.round(current.temperature)}°C
+                </Text>
+                <Text size="md" c="white" opacity={0.9}>
+                  Feels like {Math.round(current.temperature)}°C
+                </Text>
+              </div>
+            </Group>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <SimpleGrid cols={{ base: 2, md: 2 }} spacing="xs">
+              <div>
+                <Group gap="xs">
+                  <IconDropletFilled size={18} />
+                  <Text size="sm">Humidity</Text>
+                </Group>
+                <Text fw={500}>{current.humidity}%</Text>
+              </div>
+              <div>
+                <Group gap="xs">
+                  <IconWind size={18} />
+                  <Text size="sm">Wind</Text>
+                </Group>
+                <Text fw={500}>{current.wind_speed} km/h</Text>
+              </div>
+              <div>
+                <Group gap="xs">
+                  <IconCloudRain size={18} />
+                  <Text size="sm">Precipitation</Text>
           </Group>
-        </Alert>
-      )}
-
-      {/* --- Current Weather & Recommendations Grid --- */} 
-      <Grid gutter="xl" mb="xl">
-           <Grid.Col span={{ base: 12, md: 7 }}>
-                <Paper withBorder p="lg" radius="md" shadow="sm" h="100%">
-                    <Title order={4} mb="md">Current Conditions</Title>
-                     {isLoadingLocation && !currentWeatherData && <Skeleton height={80} />}
-                     {!isLoadingLocation && !currentWeatherData && !locationError && <Text c="dimmed">Enter location above to view weather.</Text>}
-                     {currentWeatherData && (
-                         <SimpleGrid cols={{ base: 1, xs: 2, md: 2 }}>
-                             <Group wrap="nowrap">
-                                {getWeatherIcon(currentWeatherData.iconCode, 40)}
-                                <Box>
-                                    <Text size="xl" fw={600}>{currentWeatherData.temp}°C</Text>
-                                    <Text size="sm" c="dimmed">{currentWeatherData.description}</Text>
-                                </Box>
+                <Text fw={500}>{current.precipitation} mm</Text>
+              </div>
+              <div>
+                <Group gap="xs">
+                  <IconUmbrella size={18} />
+                  <Text size="sm">Chance of Rain</Text>
                             </Group>
-                             <StatItem icon={<IconTemperature size={24} />} label="Feels Like" value={`${currentWeatherData.feelsLike}°C`} />
-                             <StatItem icon={<IconDropletFilled size={24} />} label="Humidity" value={`${currentWeatherData.humidity}%`} />
-                             <StatItem icon={<IconWind size={24} />} label="Wind" value={`${currentWeatherData.windSpeed} km/h ${currentWeatherData.windDirection}`} />
+                <Text fw={500}>
+                  {hourly && hourly.length > 0 ? hourly[0].precipitation_probability : 0}%
+                </Text>
+              </div>
                          </SimpleGrid>
-                    )}
-                </Paper>
-           </Grid.Col>
-           <Grid.Col span={{ base: 12, md: 5 }}>
-                <Paper withBorder p="lg" radius="md" shadow="sm" h="100%">
-                    <Title order={4} mb="md">Recommendations</Title>
-                     {isLoadingLocation && !recommendations.length && <Skeleton height={80} />}
-                     {!isLoadingLocation && !recommendations.length && !locationError && <Text c="dimmed">Enter location above.</Text>}
-                     {!isLoadingLocation && recommendations.length > 0 && (
-                        <List
-                            spacing="sm"
-                            size="sm"
-                            center
-                            icon={
-                                <ThemeIcon color="blue" size={20} radius="xl">
-                                <IconAlertTriangle size={12} />
-                                </ThemeIcon>
-                            }
-                        >
-                            {recommendations.map((rec, index) => (
-                                <List.Item key={index} 
-                                     icon={
-                                        <ThemeIcon 
-                                            color={rec.type === 'irrigation' ? 'blue' : rec.type === 'protection' ? 'orange' : 'gray'} 
-                                            size={20} 
-                                            radius="xl"
-                                        >
-                                            {rec.icon}
-                                        </ThemeIcon>
-                                    }
-                                >
-                                    {rec.text}
-                                </List.Item>
-                            ))}
-                        </List>
-                     )}
-                 </Paper>
             </Grid.Col>
       </Grid>
-
-      <SimpleGrid cols={{ base: 1, lg: 2 }} mb="xl">
-        {/* --- Hourly Forecast --- */}
-        <Paper withBorder p="lg" radius="md" shadow="sm">
-            <Title order={4} mb="md">Hourly Forecast (Next 8 hours)</Title>
-             {isLoadingLocation && !hourlyData.length && <Skeleton height={100} />}
-             {!isLoadingLocation && !hourlyData.length && !locationError && <Text c="dimmed" ta="center">Enter location above.</Text>}
-            <Group wrap="nowrap" gap="xs" style={{ overflowX: 'auto' }}>
-            {hourlyData.map((hour) => (
-                <Paper key={hour.time} p="xs" radius="sm" style={{ textAlign: 'center', minWidth: '70px' }}>
-                <Text size="xs" c="dimmed">{dayjs(hour.time).format('ha')}</Text>
-                 {getWeatherIcon(hour.iconCode, 24)}
-                <Text size="sm" fw={500}>{hour.temp}°C</Text>
-                {hour.precipChance > 5 && <Text size="xs" c="blue">{hour.precipChance}%</Text>} 
                 </Paper>
+
+      <Tabs 
+        value={activeTab} 
+        onChange={setActiveTab}
+        mb="lg"
+        radius="md"
+      >
+        <Tabs.List>
+          <Tabs.Tab value="today" leftSection={<IconSun size={16} />}>
+            Today
+          </Tabs.Tab>
+          <Tabs.Tab value="week" leftSection={<IconCalendarTime size={16} />}>
+            7-Day Forecast
+          </Tabs.Tab>
+          <Tabs.Tab value="recommendations" leftSection={<IconPlant2 size={16} />}>
+            Recommendations
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="today" pt="md">
+          <Text fw={500} size="lg" mb="md">Today's Hourly Forecast</Text>
+          <Paper 
+            shadow="xs" 
+            radius="md" 
+            p="md" 
+            style={{ overflowX: 'auto' }} 
+            mb="lg"
+          >
+            <Group wrap="nowrap" gap="xl" style={{ minWidth: isMobile ? 800 : 'auto' }}>
+              {hourly.slice(0, 12).map((hour, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <Stack align="center" gap="xs">
+                    <Text size="sm" c="dimmed">
+                      {formatTime(hour.time)}
+                    </Text>
+                    {getWeatherIcon(hour.icon_code, 30)}
+                    <Text fw={500}>{Math.round(hour.temperature)}°C</Text>
+                    <Group gap={4}>
+                      <IconDroplet size={12} color="#3b82f6" />
+                      <Text size="xs">{hour.precipitation_probability}%</Text>
+                    </Group>
+                  </Stack>
+                </motion.div>
             ))}
             </Group>
         </Paper>
 
-        {/* --- Daily Forecast --- */}
-        <Paper withBorder p="lg" radius="md" shadow="sm">
-            <Title order={4} mb="md">Daily Forecast (Next 5 Days)</Title>
-             {isLoadingLocation && !dailyData.length && <Skeleton height={100} />}
-             {!isLoadingLocation && !dailyData.length && !locationError && <Text c="dimmed" ta="center">Enter location above.</Text>}
-            <Stack gap="xs">
-            {dailyData.map((day) => (
-                <Group key={day.date} justify="space-between" wrap="nowrap">
-                <Group gap="sm">
-                    {getWeatherIcon(day.iconCode, 24)}
-                     <Text size="sm" fw={500} miw={70}>{dayjs(day.date).format('ddd, MMM D')}</Text>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <Paper shadow="xs" radius="md" p="md" withBorder>
+              <Title order={4} mb="md">Weather Summary</Title>
+              <Box mb="lg">
+                <Grid>
+                  <Grid.Col span={6}>
+                    <Group gap="xs">
+                      <IconTemperaturePlus size={18} />
+                      <Text>High</Text>
                 </Group>
-                <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>{day.description}</Text>
-                 <Group gap="sm" justify="flex-end" miw={80}>
-                     <Text size="sm" fw={500}>{day.maxTemp}°</Text>
-                    <Text size="sm" c="dimmed">/ {day.minTemp}°</Text>
-                    {day.precipChance > 10 && <Text size="xs" c="blue">{day.precipChance}%</Text>} 
+                    <Text fw={500}>{Math.round(daily[0].max_temp)}°C</Text>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Group gap="xs">
+                      <IconTemperatureMinus size={18} />
+                      <Text>Low</Text>
                 </Group>
+                    <Text fw={500}>{Math.round(daily[0].min_temp)}°C</Text>
+                  </Grid.Col>
+                </Grid>
+              </Box>
+              <Divider mb="md" />
+              <Text size="sm">{daily[0].weather_description}. Precipitation probability is {daily[0].precipitation_probability}%.</Text>
+            </Paper>
+
+            <Paper shadow="xs" radius="md" p="md" withBorder>
+              <Title order={4} mb="md">Precipitation Chance</Title>
+              <Stack gap="md">
+                {hourly.slice(0, 6).map((hour, index) => (
+                  <Box key={index}>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm">{formatTime(hour.time)}</Text>
+                      <Text size="sm" fw={500}>{hour.precipitation_probability}%</Text>
                 </Group>
+                    <Progress 
+                      value={hour.precipitation_probability} 
+                      color={hour.precipitation_probability > 50 ? "blue" : "cyan"}
+                      size="sm"
+                    />
+                  </Box>
             ))}
             </Stack>
         </Paper>
       </SimpleGrid>
+        </Tabs.Panel>
 
-      {/* --- Windy Map Integration --- */}
-      <Paper withBorder p="lg" radius="md" shadow="sm" mb="xl">
-         <Title order={4} mb="md">Weather Map</Title>
-          <Alert color="blue" title="Integration Note" icon={<IconAlertCircle/>} mb="md">
-              This section uses an embedded map from Windy.com. For full functionality and customization (like removing branding or using advanced layers), 
-              you may need a <strong>Windy API key ({windyApiKey ? 'Key Found (Placeholder)' : 'Replace Placeholder Key'})</strong> and potentially use their API library instead of a simple embed. 
-              Refer to <a href="https://api.windy.com/" target="_blank" rel="noopener noreferrer">Windy API Documentation</a> for more details.
+        <Tabs.Panel value="week" pt="md">
+          <Text fw={500} size="lg" mb="md">7-Day Forecast</Text>
+          <Stack gap="md">
+            {daily.map((day, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <Paper shadow="xs" p="md" radius="md" withBorder>
+                  <Grid align="center">
+                    <Grid.Col span={{ base: 3, md: 2 }}>
+                      <Text fw={500}>{formatDay(day.date)}</Text>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 2, md: 1 }}>
+                      {getWeatherIcon(day.icon_code, 30)}
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 7, md: 3 }}>
+                      <Text>{day.weather_description}</Text>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 2 }} style={{ textAlign: isMobile ? 'left' : 'center' }}>
+                      <Group gap={4}>
+                        <IconDroplet size={16} color="#3b82f6" />
+                        <Text size="sm">{day.precipitation_probability}%</Text>
+                      </Group>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 4 }}>
+                      <Group gap="md" justify={isMobile ? "flex-start" : "flex-end"}>
+                        <Group gap={4}>
+                          <IconTemperatureMinus size={16} />
+                          <Text fw={500}>{Math.round(day.min_temp)}°C</Text>
+                        </Group>
+                        <Group gap={4}>
+                          <IconTemperaturePlus size={16} />
+                          <Text fw={500}>{Math.round(day.max_temp)}°C</Text>
+                        </Group>
+                      </Group>
+                    </Grid.Col>
+                  </Grid>
+                </Paper>
+              </motion.div>
+            ))}
+          </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="recommendations" pt="md">
+          <Text fw={500} size="lg" mb="md">Agricultural Recommendations</Text>
+          {weatherData.recommendations.length > 0 ? (
+            <Stack gap="md">
+              {weatherData.recommendations.map((recommendation, index) => {
+                const IconComponent = getRecommendationIcon(recommendation.type);
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Card shadow="sm" p="lg" radius="md" withBorder>
+                      <Group mb="xs">
+                        <ThemeIcon color={getUrgencyColor(recommendation.details.urgency)} size="lg" radius="md">
+                          <IconComponent size={18} />
+                        </ThemeIcon>
+                        <div>
+                          <Group mb={4}>
+                            <Text fw={700}>{recommendation.details.title}</Text>
+                            <Badge 
+                              color={getUrgencyColor(recommendation.details.urgency)}
+                              size="sm"
+                              radius="sm"
+                            >
+                              {recommendation.details.urgency}
+                            </Badge>
+                          </Group>
+                          <Text size="sm" c="dimmed">
+                            {recommendation.type.charAt(0) + recommendation.type.slice(1).toLowerCase()} Recommendation
+                          </Text>
+                        </div>
+                      </Group>
+                      <Text size="sm">{recommendation.details.description}</Text>
+                      
+                      {recommendation.details.affected_days && (
+                        <Box mt="md">
+                          <Text size="sm" fw={500}>Affected Days:</Text>
+                          <Group gap="xs" mt={4}>
+                            {recommendation.details.affected_days.map((day: string, i: number) => (
+                              <Badge key={i} size="sm" variant="light">
+                                {formatDay(day)}
+                              </Badge>
+                            ))}
+                          </Group>
+                        </Box>
+                      )}
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Alert
+              color="cyan"
+              title="No recommendations available"
+              icon={<IconShieldCheck />}
+            >
+              Weather conditions look stable. Continue standard monitoring.
             </Alert>
-         <Box style={{ position: 'relative', minHeight: '450px' }}>
-           {!isWindyMapLoaded && (
-             <Group justify="center" align="center" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
-               <Loader />
-               <Text>Loading Windy Map...</Text>
-             </Group>
-           )}
-           <iframe
-             ref={windyMapRef}
-             width="100%"
-             height="450"
-             src={windyMapUrl}
-             onLoad={() => setIsWindyMapLoaded(true)}
-             style={{ border: 0, display: isWindyMapLoaded ? 'block' : 'none' }} 
-             allowFullScreen
-           ></iframe>
-         </Box>
-      </Paper>
+          )}
+        </Tabs.Panel>
+      </Tabs>
 
+      <Paper shadow="xs" radius="md" p="md" withBorder>
+        <Group justify="space-between" mb="sm">
+          <Text fw={500} size="lg">Live Weather Map</Text>
+          {farmBoundary ? (
+            <Badge color="green" variant="light">Farm Boundary Available</Badge>
+          ) : (
+            <Badge color="gray" variant="light">No Farm Boundary</Badge>
+          )}
+             </Group>
+        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '0.5rem' }}>
+          {weatherData && weatherData.coordinates ? (
+           <iframe
+              src={getWindyMapUrl(weatherData.coordinates, weatherData.farm_id, farmBoundary)}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+             allowFullScreen
+            />
+          ) : (
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f0f2f5', borderRadius: '0.5rem' }}>
+              <Stack align="center" gap="md">
+                <IconCloud size={40} color="#666" />
+                <Text c="dimmed">Map data unavailable</Text>
+              </Stack>
+            </div>
+          )}
+        </div>
+      </Paper>
     </Container>
   );
 }
 
-// Helper component for stats
-const StatItem = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) => (
-  <Group wrap="nowrap">
-    <ThemeIcon variant="light" size="lg" radius="md">
-      {icon}
-    </ThemeIcon>
-    <Box>
-      <Text size="xs" c="dimmed">{label}</Text>
-      <Text fw={500}>{value}</Text>
-    </Box>
-  </Group>
-);
+// Missing component definition for IconCalendarTime
+const IconCalendarTime = (props: any) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={props.size || 24}
+      height={props.size || 24}
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={props.stroke || 2}
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+      <path d="M18 18m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+      <path d="M15 3v4" />
+      <path d="M7 3v4" />
+      <path d="M3 11h16" />
+      <path d="M18 16.496v1.504l1 1" />
+    </svg>
+  );
+};
+
+// Generate mock weather data for development
+const getMockWeatherData = (): WeatherResponse => {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  
+  return {
+    farm_id: 0,
+    farm_name: 'Development Farm',
+    coordinates: {
+      latitude: 40.7128,
+      longitude: -74.0060
+    },
+    weather_data: {
+      current: {
+        temperature: 22,
+        humidity: 65,
+        precipitation: 0,
+        weather_code: 1,
+        wind_speed: 15,
+        wind_direction: 180,
+        weather_description: 'Mainly clear',
+        icon_code: '02d'
+      },
+      hourly: Array.from({ length: 24 }).map((_, i) => ({
+        time: new Date(now.getTime() + i * 60 * 60 * 1000).toISOString(),
+        temperature: 22 + Math.round(Math.sin(i / 2) * 3),
+        precipitation_probability: Math.max(0, Math.min(100, 10 + Math.round(Math.sin(i) * 20))),
+        weather_code: i % 3 === 0 ? 1 : i % 3 === 1 ? 2 : 3,
+        wind_speed: 15 + Math.round(Math.sin(i) * 5),
+        weather_description: i % 3 === 0 ? 'Mainly clear' : i % 3 === 1 ? 'Partly cloudy' : 'Overcast',
+        icon_code: i % 3 === 0 ? '01d' : i % 3 === 1 ? '02d' : '03d'
+      })),
+      daily: Array.from({ length: 7 }).map((_, i) => {
+        const date = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
+        return {
+          date: date.toISOString().split('T')[0],
+          max_temp: 25 + Math.round(Math.random() * 4) - 2,
+          min_temp: 15 + Math.round(Math.random() * 3) - 1,
+          precipitation_sum: Math.round(Math.random() * 5),
+          precipitation_probability: Math.round(Math.random() * 100),
+          weather_code: i % 4,
+          weather_description: ['Clear sky', 'Mainly clear', 'Partly cloudy', 'Overcast'][i % 4],
+          icon_code: ['01d', '02d', '03d', '04d'][i % 4]
+        };
+      })
+    },
+    recommendations: [
+      {
+        type: 'WATER',
+        details: {
+          title: 'Adjust Irrigation Schedule',
+          description: 'Consider reducing irrigation for the next 2 days due to forecasted rainfall.',
+          urgency: 'medium',
+          days_until_rain: 2,
+          precipitation_probability: 75
+        }
+      },
+      {
+        type: 'WEATHER',
+        details: {
+          title: 'Heat Protection Reminder',
+          description: 'Temperatures will remain above 25°C for the next few days. Ensure your sensitive crops have adequate water.',
+          urgency: 'low',
+          affected_days: [today, new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]]
+        }
+      }
+    ]
+  };
+};
+
+function getWindyMapUrl(coordinates: Coordinates, farmId: number, farmBoundary: any = null) {
+  // Validate coordinates to prevent map errors
+  const lat = isValidCoordinate(coordinates.latitude) ? coordinates.latitude : 40.7128;
+  const lon = isValidCoordinate(coordinates.longitude) ? coordinates.longitude : -74.0060;
+  
+  // Set appropriate zoom level
+  const zoom = farmBoundary ? 12 : 10;
+  
+  // Add custom markers parameter if farm boundary is available
+  let markerParam = 'marker=true';
+  
+  if (farmBoundary && farmBoundary.features && farmBoundary.features.length > 0) {
+    try {
+      // For security, only include the first feature to avoid oversized URLs
+      const feature = farmBoundary.features[0];
+      if (feature.geometry && feature.geometry.type === 'Polygon' && feature.geometry.coordinates && feature.geometry.coordinates.length > 0) {
+        // Get the first ring of coordinates
+        const firstRing = feature.geometry.coordinates[0];
+        
+        // Sample up to 5 points to keep URL manageable
+        const sampledPoints = samplePoints(firstRing, 5);
+        
+        // Create marker string for Windy.com
+        // Format is: marker=latlon1|name1|desc1|icon1|latlon2|name2|desc2|icon2...
+        markerParam = sampledPoints.map((point, index) => 
+          index === 0 
+            ? `marker=${point[1]},${point[0]}|Farm Boundary|${farmBoundary.features[0].properties?.name || 'Your Farm'}|farm` 
+            : `${point[1]},${point[0]}||`
+        ).join('|');
+      }
+    } catch (e) {
+      console.error('Error processing farm boundary for map:', e);
+      markerParam = 'marker=true';
+    }
+  }
+  
+  // Generate URL with validated coordinates
+  return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=650&height=450&zoom=${zoom}&level=surface&overlay=rain&product=ecmwf&menu=&message=&${markerParam}&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+}
+
+function isValidCoordinate(coord: any): boolean {
+  return coord !== null && 
+         coord !== undefined && 
+         !isNaN(Number(coord)) && 
+         Math.abs(Number(coord)) <= 180;
+}
+
+// Helper function to sample points from array for a simpler map marker path
+function samplePoints(points: any[], maxPoints: number): any[] {
+  if (!points || points.length <= maxPoints) return points;
+  
+  const result = [];
+  const step = Math.floor(points.length / maxPoints);
+  
+  for (let i = 0; i < points.length; i += step) {
+    result.push(points[i]);
+    if (result.length >= maxPoints) break;
+  }
+  
+  return result;
+}

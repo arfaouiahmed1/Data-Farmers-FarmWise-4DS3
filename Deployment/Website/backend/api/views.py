@@ -11,10 +11,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt # Ensure csrf_exempt is imported
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.conf import settings # Make sure settings is imported
 import json
 import math # Import math for calculations
 import os # Add os import
-from django.conf import settings # Add settings import
 import csv # Import CSV module
 
 from ultralytics import YOLO
@@ -31,8 +31,10 @@ import re
 import random
 import uuid
 import time
+import requests
+from datetime import datetime, timedelta
 
-from core.models import UserProfile, Farm, Farmer
+from core.models import UserProfile, Farm, Farmer, Weather, FarmCrop, Recommendation
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
@@ -1201,54 +1203,6 @@ def complete_onboarding(request):
     """
     API endpoint for completing the user onboarding process.
     Creates or updates a Farm with the provided details and marks the user's profile as onboarding_completed.
-    ---
-    parameters:
-        - name: farmName
-          description: Name of the farm
-          required: true
-          type: string
-          paramType: form
-        - name: soilType
-          description: Type of soil in the farm
-          required: true
-          type: string
-          paramType: form
-        - name: soilNitrogen
-          description: Nitrogen content in soil (PPM)
-          required: false
-          type: number
-          paramType: form
-        - name: soilPhosphorus
-          description: Phosphorus content in soil (PPM)
-          required: false
-          type: number
-          paramType: form
-        - name: soilPotassium
-          description: Potassium content in soil (PPM)
-          required: false
-          type: number
-          paramType: form
-        - name: soilPh
-          description: pH level of soil
-          required: false
-          type: number
-          paramType: form
-    responses:
-        200:
-            description: Farm created successfully
-            schema:
-                type: object
-                properties:
-                    success:
-                        type: boolean
-                    message:
-                        type: string
-                    farm:
-                        type: object
-        400:
-            description: Validation error or missing required fields
-        500:
-            description: Server error
     """
     try:
         # Get the user profile
@@ -1374,30 +1328,47 @@ def complete_onboarding(request):
                 farm_data['year_established'] = data['yearEstablished']
             
             # Handle farm boundary geojson if provided
+            boundary_data = None
+            
+            # Check for "farmBoundary" field
             if 'farmBoundary' in data and data['farmBoundary']:
-                farm_data['boundary_geojson'] = data['farmBoundary']
-                # If area_hectares is in the properties, extract it
-                if data['farmBoundary'].get('properties', {}).get('area_hectares'):
-                    farm_data['size_hectares'] = data['farmBoundary']['properties']['area_hectares']
-                    
-                    # Set size category based on area
-                    if farm_data['size_hectares'] < 10:
-                        farm_data['size_category'] = 'S'  # Small
-                    elif farm_data['size_hectares'] < 50:
-                        farm_data['size_category'] = 'M'  # Medium
-                    else:
-                        farm_data['size_category'] = 'L'  # Large
+                boundary_data = data['farmBoundary']
             # Also check for 'boundary' field for consistency
             elif 'boundary' in data and data['boundary']:
-                farm_data['boundary_geojson'] = data['boundary']
-                # If area_hectares is in the properties, extract it
-                if data['boundary'].get('properties', {}).get('area_hectares'):
-                    farm_data['size_hectares'] = data['boundary']['properties']['area_hectares']
-                    
+                boundary_data = data['boundary']
+                
+            # Process boundary data if found
+            if boundary_data:
+                # Check if we got a string that needs to be parsed
+                if isinstance(boundary_data, str):
+                    try:
+                        boundary_data = json.loads(boundary_data)
+                    except json.JSONDecodeError:
+                        print("Failed to parse boundary JSON string")
+                
+                # Store the boundary data
+                farm_data['boundary_geojson'] = boundary_data
+                
+                # Extract area info if available
+                area_hectares = None
+                if isinstance(boundary_data, dict):
+                    # Try to get area from a Feature object directly
+                    if boundary_data.get('type') == 'Feature' and 'properties' in boundary_data:
+                        if 'area_hectares' in boundary_data['properties']:
+                            area_hectares = boundary_data['properties']['area_hectares']
+                    # Try to get area from first feature in a FeatureCollection
+                    elif 'features' in boundary_data and len(boundary_data['features']) > 0:
+                        feature = boundary_data['features'][0]
+                        if 'properties' in feature and 'area_hectares' in feature['properties']:
+                            area_hectares = feature['properties']['area_hectares']
+                
+                # Set area and size category if available
+                if area_hectares:
+                    farm_data['size_hectares'] = area_hectares
                     # Set size category based on area
-                    if farm_data['size_hectares'] < 10:
+                    if area_hectares < 10:
                         farm_data['size_category'] = 'S'  # Small
-                    elif farm_data['size_hectares'] < 50:
+                    elif area_hectares < 50:
                         farm_data['size_category'] = 'M'  # Medium
                     else:
                         farm_data['size_category'] = 'L'  # Large
@@ -1427,3 +1398,719 @@ def complete_onboarding(request):
             {"error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_weather_data(request):
+    """
+    Get weather data for a user's farm from Open-Meteo API.
+    Returns current weather, forecasts, and recommendations.
+    """
+    try:
+        print("🌧️ Weather API called by user:", request.user.username)
+        # Get the user's farms
+        user = request.user
+        
+        # Ensure user has a farmer profile
+        if not hasattr(user, 'profile'):
+            return Response({"error": "User profile not found"}, status=400)
+            
+        if not hasattr(user.profile, 'farmer_profile'):
+            return Response({"error": "User is not a farmer"}, status=400)
+        
+        # Get the first farm (can be extended to support multiple farms or a specific farm id)
+        farms = Farm.objects.filter(owner=user.profile.farmer_profile)
+        if not farms.exists():
+            return Response({"error": "No farms found for this user. Please set up a farm first."}, status=404)
+        
+        farm = farms.first()
+        print(f"🚜 Farm found: {farm.name} (ID: {farm.id})")
+        
+        # Extract coordinates from the farm's boundary GeoJSON if available
+        coordinates = None
+        if farm.boundary_geojson:
+            try:
+                print(f"🗺️ Farm boundary found, type: {type(farm.boundary_geojson)}")
+                # For JSON string format support
+                if isinstance(farm.boundary_geojson, str):
+                    try:
+                        boundary_data = json.loads(farm.boundary_geojson)
+                        print("📌 Converted string boundary to JSON")
+                    except json.JSONDecodeError:
+                        print("❌ Failed to parse boundary JSON string")
+                        boundary_data = None
+                else:
+                    boundary_data = farm.boundary_geojson
+                
+                if boundary_data:
+                    # Direct GeoJSON Feature access for single feature
+                    if boundary_data.get('type') == 'Feature' and boundary_data.get('geometry'):
+                        feature = boundary_data
+                        if feature['geometry']['type'] == 'Polygon':
+                            coords = feature['geometry']['coordinates'][0]  # Get the outer ring
+                            # Calculate centroid 
+                            lat_sum = sum(coord[1] for coord in coords)
+                            lon_sum = sum(coord[0] for coord in coords)
+                            coordinates = {
+                                'latitude': lat_sum / len(coords),
+                                'longitude': lon_sum / len(coords)
+                            }
+                            print(f"📍 Using single feature boundary centroid: {coordinates}")
+                    # FeatureCollection access for multiple features        
+                    elif boundary_data.get('features') and len(boundary_data.get('features', [])) > 0:
+                        # Try to get center coordinates from the first feature
+                        feature = boundary_data['features'][0]
+                        if feature.get('geometry') and feature['geometry'].get('type') == 'Polygon':
+                            coords = feature['geometry']['coordinates'][0]  # Get the outer ring
+                            # Calculate centroid
+                            lat_sum = sum(coord[1] for coord in coords)
+                            lon_sum = sum(coord[0] for coord in coords)
+                            coordinates = {
+                                'latitude': lat_sum / len(coords),
+                                'longitude': lon_sum / len(coords)
+                            }
+                            print(f"📍 Using feature collection centroid: {coordinates}")
+            except (KeyError, IndexError, TypeError, ValueError) as e:
+                # Log the error but continue
+                print(f"❌ Error extracting coordinates from boundary: {e}")
+        
+        # If no coordinates from boundary, check if location_address has coordinates
+        if not coordinates and farm.location_address:
+            # This would typically involve geocoding, but for now we'll check if location_address
+            # already contains geocoded data in a custom format like "lat,lng"
+            try:
+                if ',' in farm.location_address:
+                    parts = farm.location_address.split(',')
+                    if len(parts) == 2:
+                        lat, lng = float(parts[0].strip()), float(parts[1].strip())
+                        if -90 <= lat <= 90 and -180 <= lng <= 180:
+                            coordinates = {'latitude': lat, 'longitude': lng}
+                            print(f"📍 Using coordinates from location_address: {coordinates}")
+            except (ValueError, TypeError) as e:
+                print(f"❌ Error parsing coordinates from location_address: {e}")
+        
+        # Use a hardcoded fallback for development if needed
+        if not coordinates and settings.DEBUG:
+            # Default coords for testing - Tunis
+            coordinates = {'latitude': 36.8065, 'longitude': 10.1815}
+            print(f"🔄 Using fallback coordinates for debugging: {coordinates}")
+        
+        # If still no coordinates, return an error response
+        if not coordinates:
+            print(f"❌ No coordinates found. Address: {farm.address}, Location address: {farm.location_address}")
+            return Response({
+                "error": "Farm location coordinates unavailable. Please update your farm with valid boundary information."
+            }, status=400)
+            
+        # Call Open-Meteo API
+        print(f"🌦️ Calling Open-Meteo API with coordinates: {coordinates}")
+        weather_data = fetch_open_meteo_data(coordinates['latitude'], coordinates['longitude'])
+        
+        if not weather_data or (isinstance(weather_data, dict) and weather_data.get('error')):
+            error_msg = weather_data.get('error') if isinstance(weather_data, dict) else "Failed to fetch weather data"
+            print(f"❌ Error from Open-Meteo API: {error_msg}")
+            return Response({"error": error_msg}, status=500)
+        
+        # Save weather data to the database (only if valid)
+        if weather_data and 'current' in weather_data:
+            save_weather_data(farm, weather_data)
+            
+            # Generate recommendations based on weather data and farm crops
+            recommendations = generate_weather_recommendations(farm, weather_data)
+            
+            # Prepare the boundary data for the response
+            boundary_data = farm.boundary_geojson
+            
+            # Return complete response
+            response_data = {
+                'farm_id': farm.id,
+                'farm_name': farm.name,
+                'coordinates': coordinates,
+                'weather_data': weather_data,
+                'recommendations': recommendations,
+                'boundary': boundary_data
+            }
+            
+            print(f"✅ Successfully fetched weather data for farm: {farm.name}")
+            return Response(response_data)
+        else:
+            print("❌ Invalid weather data format received from Open-Meteo")
+            return Response({"error": "Invalid weather data received from the weather service"}, status=500)
+        
+    except Exception as e:
+        print(f"❌ Unhandled error in get_weather_data: {e}")
+        # Provide detailed error for debugging in development
+        if settings.DEBUG:
+            import traceback
+            traceback_str = traceback.format_exc()
+            print(f"🔍 Traceback: {traceback_str}")
+            return Response({
+                "error": str(e),
+                "traceback": traceback_str,
+            }, status=500)
+        return Response({"error": "An internal error occurred"}, status=500)
+
+def fetch_open_meteo_data(latitude, longitude):
+    """
+    Fetch weather data from Open-Meteo API with improved error handling
+    """
+    # Validate coordinates
+    if not latitude or not longitude:
+        print("❌ Invalid coordinates provided to Open-Meteo API")
+        return {'error': 'Invalid coordinates provided'}
+        
+    try:
+        # Convert to float and validate range
+        lat = float(latitude)
+        lon = float(longitude)
+        
+        if lat < -90 or lat > 90 or lon < -180 or lon > 180:
+            print(f"❌ Coordinates out of valid range: lat={lat}, lon={lon}")
+            return {'error': 'Coordinates out of valid range'}
+            
+        # Prepare API parameters
+        base_url = "https://api.open-meteo.com/v1/forecast"
+        
+        # Current date and time
+        now = datetime.now()
+        
+        # Parameters for the API request
+        params = {
+            'latitude': lat,
+            'longitude': lon,
+            'current': 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m',
+            'hourly': 'temperature_2m,precipitation_probability,weather_code,wind_speed_10m',
+            'daily': 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max',
+            'timezone': 'auto',
+            'forecast_days': 7,
+        }
+        
+        print(f"🌐 Sending request to Open-Meteo API: {base_url}")
+        response = requests.get(base_url, params=params, timeout=10)  # Add timeout
+        
+        # Check for successful status code
+        if response.status_code != 200:
+            print(f"❌ Open-Meteo API returned error status: {response.status_code}")
+            return {'error': f'Weather API returned status code: {response.status_code}'}
+            
+        # Parse JSON response
+        try:
+            data = response.json()
+        except ValueError:
+            print("❌ Failed to parse Open-Meteo API response as JSON")
+            return {'error': 'Failed to parse weather data response'}
+            
+        # Validate response structure
+        if 'current' not in data or 'hourly' not in data or 'daily' not in data:
+            print("❌ Invalid response format from Open-Meteo API")
+            return {'error': 'Invalid response format from weather API'}
+            
+        # Process and reformat the data for our needs
+        processed_data = {
+            'current': {
+                'temperature': data['current']['temperature_2m'],
+                'humidity': data['current']['relative_humidity_2m'],
+                'precipitation': data['current']['precipitation'],
+                'weather_code': data['current']['weather_code'],
+                'wind_speed': data['current']['wind_speed_10m'],
+                'wind_direction': data['current']['wind_direction_10m'],
+                'weather_description': get_weather_description(data['current']['weather_code']),
+                'icon_code': get_weather_icon_code(data['current']['weather_code'])
+            },
+            'hourly': [],
+            'daily': []
+        }
+        
+        # Process hourly data - next 24 hours
+        if 'hourly' in data and all(key in data['hourly'] for key in ['time', 'temperature_2m', 'precipitation_probability', 'weather_code', 'wind_speed_10m']):
+            hour_limit = min(24, len(data['hourly']['time']))
+            for i in range(hour_limit):
+                processed_data['hourly'].append({
+                    'time': data['hourly']['time'][i],
+                    'temperature': data['hourly']['temperature_2m'][i],
+                    'precipitation_probability': data['hourly']['precipitation_probability'][i],
+                    'weather_code': data['hourly']['weather_code'][i],
+                    'wind_speed': data['hourly']['wind_speed_10m'][i],
+                    'weather_description': get_weather_description(data['hourly']['weather_code'][i]),
+                    'icon_code': get_weather_icon_code(data['hourly']['weather_code'][i])
+                })
+        else:
+            print("⚠️ Missing or incomplete hourly data in Open-Meteo API response")
+            
+        # Process daily data
+        if 'daily' in data and all(key in data['daily'] for key in ['time', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'precipitation_probability_max', 'weather_code']):
+            for i in range(len(data['daily']['time'])):
+                processed_data['daily'].append({
+                    'date': data['daily']['time'][i],
+                    'max_temp': data['daily']['temperature_2m_max'][i],
+                    'min_temp': data['daily']['temperature_2m_min'][i],
+                    'precipitation_sum': data['daily']['precipitation_sum'][i],
+                    'precipitation_probability': data['daily']['precipitation_probability_max'][i],
+                    'weather_code': data['daily']['weather_code'][i],
+                    'weather_description': get_weather_description(data['daily']['weather_code'][i]),
+                    'icon_code': get_weather_icon_code(data['daily']['weather_code'][i])
+                })
+        else:
+            print("⚠️ Missing or incomplete daily data in Open-Meteo API response")
+            
+        print(f"✅ Successfully processed weather data from Open-Meteo API")
+        return processed_data
+        
+    except requests.exceptions.Timeout:
+        print("⏱️ Open-Meteo API request timed out")
+        return {'error': 'Weather API request timed out'}
+    except requests.exceptions.ConnectionError:
+        print("🔌 Connection error while fetching from Open-Meteo API")
+        return {'error': 'Connection error while fetching weather data'}
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Request error fetching weather data: {e}")
+        return {'error': f'Request error: {str(e)}'}
+    except Exception as e:
+        print(f"❌ Unexpected error fetching weather data: {e}")
+        return {'error': f'Unexpected error: {str(e)}'}
+
+def get_weather_description(weather_code):
+    """
+    Convert Open-Meteo weather code to human-readable description
+    Based on: https://open-meteo.com/en/docs/weather-codes
+    """
+    weather_codes = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Fog",
+        48: "Depositing rime fog",
+        51: "Light drizzle",
+        53: "Moderate drizzle",
+        55: "Dense drizzle",
+        56: "Light freezing drizzle",
+        57: "Dense freezing drizzle",
+        61: "Slight rain",
+        63: "Moderate rain",
+        65: "Heavy rain",
+        66: "Light freezing rain",
+        67: "Heavy freezing rain",
+        71: "Slight snow fall",
+        73: "Moderate snow fall",
+        75: "Heavy snow fall",
+        77: "Snow grains",
+        80: "Slight rain showers",
+        81: "Moderate rain showers",
+        82: "Violent rain showers",
+        85: "Slight snow showers",
+        86: "Heavy snow showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail"
+    }
+    
+    return weather_codes.get(weather_code, "Unknown")
+
+def get_weather_icon_code(weather_code):
+    """
+    Convert Open-Meteo weather code to icon code for frontend
+    Based on WMO weather codes 
+    """
+    # Map Open-Meteo weather codes to icon codes that the frontend can understand
+    if weather_code == 0:  # Clear sky
+        return "01d"  # Sunny
+    elif weather_code in [1, 2]:  # Mainly clear, partly cloudy
+        return "02d"  # Partly cloudy
+    elif weather_code == 3:  # Overcast
+        return "03d"  # Cloudy
+    elif weather_code in [45, 48]:  # Fog
+        return "50d"  # Fog
+    elif weather_code in [51, 53, 55, 56, 57]:  # Drizzle
+        return "09d"  # Drizzle
+    elif weather_code in [61, 63, 65, 66, 67, 80, 81, 82]:  # Rain
+        return "10d"  # Rain
+    elif weather_code in [71, 73, 75, 77, 85, 86]:  # Snow
+        return "13d"  # Snow
+    elif weather_code in [95, 96, 99]:  # Thunderstorm
+        return "11d"  # Thunderstorm
+    else:
+        return "03d"  # Default cloudy
+
+def save_weather_data(farm, weather_data):
+    """
+    Save weather data to the database with improved error handling and efficiency
+    """
+    if not farm or not weather_data:
+        print("❌ Missing farm or weather data - cannot save")
+        return False
+        
+    if not weather_data.get('current'):
+        print("❌ Missing current weather data - cannot save")
+        return False
+    
+    try:
+        # Get today's date
+        today = datetime.now().date()
+        
+        # Check if we already have weather data for today
+        try:
+            existing_weather = Weather.objects.filter(farm=farm, date=today).first()
+        except Exception as e:
+            print(f"❌ Database error when checking for existing weather: {e}")
+            return False
+        
+        # Map OpenMeteo weather codes to our model's weather conditions
+        weather_code_to_condition = {
+            0: 'SUNNY',  # Clear sky
+            1: 'SUNNY',  # Mainly clear
+            2: 'PARTLY_CLOUDY',  # Partly cloudy
+            3: 'CLOUDY',  # Overcast
+            45: 'FOGGY',  # Fog
+            48: 'FOGGY',  # Depositing rime fog
+            51: 'RAINY',  # Light drizzle
+            53: 'RAINY',  # Moderate drizzle
+            55: 'RAINY',  # Dense drizzle
+            56: 'RAINY',  # Light freezing drizzle
+            57: 'RAINY',  # Dense freezing drizzle
+            61: 'RAINY',  # Slight rain
+            63: 'RAINY',  # Moderate rain
+            65: 'RAINY',  # Heavy rain
+            66: 'RAINY',  # Light freezing rain
+            67: 'RAINY',  # Heavy freezing rain
+            71: 'SNOWY',  # Slight snow fall
+            73: 'SNOWY',  # Moderate snow fall
+            75: 'SNOWY',  # Heavy snow fall
+            77: 'SNOWY',  # Snow grains
+            80: 'RAINY',  # Slight rain showers
+            81: 'RAINY',  # Moderate rain showers
+            82: 'RAINY',  # Violent rain showers
+            85: 'SNOWY',  # Slight snow showers
+            86: 'SNOWY',  # Heavy snow showers
+            95: 'STORMY',  # Thunderstorm
+            96: 'STORMY',  # Thunderstorm with slight hail
+            99: 'STORMY',  # Thunderstorm with heavy hail
+        }
+        
+        # Extract data safely using get() with defaults
+        try:
+            # Get the condition from the weather code
+            weather_code = weather_data['current'].get('weather_code', 0)
+            condition = weather_code_to_condition.get(weather_code, 'CLOUDY')  # Default to CLOUDY
+            
+            # Get other data with defaults to prevent errors
+            current_temp = weather_data['current'].get('temperature', 0)
+            
+            # Get daily data for today if available
+            daily_data = None
+            if weather_data.get('daily'):
+                today_str = today.strftime('%Y-%m-%d')
+                for day in weather_data['daily']:
+                    if day.get('date') == today_str:
+                        daily_data = day
+                        break
+            
+            # Use daily data if available, otherwise fallback to current
+            temp_max = daily_data.get('max_temp', current_temp) if daily_data else current_temp
+            temp_min = daily_data.get('min_temp', current_temp) if daily_data else current_temp
+            
+            # Get other current values with defaults
+            precipitation = weather_data['current'].get('precipitation', 0)
+            wind_speed = weather_data['current'].get('wind_speed', 0)
+            humidity = weather_data['current'].get('humidity', 0)
+            
+            # Prepare data for database - convert all values to appropriate types
+            db_data = {
+                'condition': condition,
+                'temperature_max': float(temp_max),
+                'temperature_min': float(temp_min),
+                'precipitation': float(precipitation),
+                'wind_speed': float(wind_speed),
+                'humidity': float(humidity),
+                'forecast_data': weather_data
+            }
+            
+            # Create or update the weather record
+            if existing_weather:
+                # Update existing record
+                print(f"📊 Updating existing weather record for {farm.name} on {today}")
+                for key, value in db_data.items():
+                    setattr(existing_weather, key, value)
+                existing_weather.save()
+            else:
+                # Create new record
+                print(f"📊 Creating new weather record for {farm.name} on {today}")
+                Weather.objects.create(
+                    farm=farm,
+                    date=today,
+                    **db_data
+                )
+                
+            return True
+            
+        except KeyError as e:
+            print(f"❌ Missing key in weather data: {e}")
+            return False
+    except Exception as e:
+        print(f"❌ Error saving weather data: {e}")
+        if settings.DEBUG:
+            import traceback
+            print(f"🔍 Traceback: {traceback.format_exc()}")
+        return False
+
+def generate_weather_recommendations(farm, weather_data):
+    """
+    Generate weather-based recommendations for the farm
+    """
+    recommendations = []
+    
+    if not weather_data.get('daily') or len(weather_data['daily']) == 0:
+        return recommendations
+    
+    # Get farm crops
+    farm_crops = FarmCrop.objects.filter(farm=farm)
+    
+    # Check for rain in the forecast
+    rainy_days = [day for day in weather_data['daily'] if day['precipitation_probability'] > 50]
+    hot_days = [day for day in weather_data['daily'] if day['max_temp'] > 30]  # Days over 30°C
+    cold_days = [day for day in weather_data['daily'] if day['min_temp'] < 5]  # Days under 5°C
+    
+    # Irrigation recommendations based on precipitation forecast
+    if rainy_days:
+        first_rainy_day = rainy_days[0]
+        days_until_rain = (datetime.strptime(first_rainy_day['date'], '%Y-%m-%d').date() - datetime.now().date()).days
+        
+        if days_until_rain <= 2:
+            recommendation = {
+                'type': 'WATER',
+                'details': {
+                    'title': 'Adjust Irrigation Schedule',
+                    'description': f"Rain expected in {days_until_rain} day{'s' if days_until_rain != 1 else ''} with {first_rainy_day['precipitation_probability']}% probability. Consider reducing irrigation.",
+                    'urgency': 'medium',
+                    'days_until_rain': days_until_rain,
+                    'precipitation_probability': first_rainy_day['precipitation_probability']
+                }
+            }
+            
+            # Save to database
+            Recommendation.objects.create(
+                farm=farm,
+                recommendation_type='WATER',
+                details=recommendation['details']
+            )
+            
+            recommendations.append(recommendation)
+    
+    # Temperature-based recommendations
+    if hot_days:
+        recommendation = {
+            'type': 'WEATHER',
+            'details': {
+                'title': 'Heat Protection Needed',
+                'description': f"Upcoming hot weather ({len(hot_days)} days above 30°C). Ensure adequate irrigation and consider shade for sensitive crops.",
+                'urgency': 'high',
+                'affected_days': [day['date'] for day in hot_days]
+            }
+        }
+        
+        # Save to database
+        Recommendation.objects.create(
+            farm=farm,
+            recommendation_type='WEATHER',
+            details=recommendation['details']
+        )
+        
+        recommendations.append(recommendation)
+    
+    if cold_days:
+        recommendation = {
+            'type': 'WEATHER',
+            'details': {
+                'title': 'Frost Protection Alert',
+                'description': f"Low temperatures expected (below 5°C on {len(cold_days)} days). Protect frost-sensitive crops.",
+                'urgency': 'high',
+                'affected_days': [day['date'] for day in cold_days]
+            }
+        }
+        
+        # Save to database
+        Recommendation.objects.create(
+            farm=farm,
+            recommendation_type='WEATHER',
+            details=recommendation['details']
+        )
+        
+        recommendations.append(recommendation)
+    
+    # Crop-specific recommendations
+    for farm_crop in farm_crops:
+        # Example: Different recommendations based on crop growth stage
+        if farm_crop.growth_stage == 'Flowering':
+            # Flowering crops need stable weather
+            if hot_days:
+                recommendation = {
+                    'type': 'CROP',
+                    'details': {
+                        'title': f'Protect {farm_crop.crop.name} During Flowering',
+                        'description': f"High temperatures may affect flowering. Consider additional irrigation for your {farm_crop.crop.name}.",
+                        'urgency': 'high',
+                        'crop_id': farm_crop.id,
+                        'crop_name': farm_crop.crop.name
+                    }
+                }
+                
+                # Save to database
+                Recommendation.objects.create(
+                    farm_crop=farm_crop,
+                    recommendation_type='CROP',
+                    details=recommendation['details']
+                )
+                
+                recommendations.append(recommendation)
+    
+    # If no specific recommendations, provide a general one
+    if not recommendations:
+        recommendation = {
+            'type': 'WEATHER',
+            'details': {
+                'title': 'Weather Conditions Stable',
+                'description': "Weather conditions look favorable for the next few days. Continue regular farm operations.",
+                'urgency': 'low'
+            }
+        }
+        
+        # Save to database
+        Recommendation.objects.create(
+            farm=farm,
+            recommendation_type='WEATHER',
+            details=recommendation['details']
+        )
+        
+        recommendations.append(recommendation)
+    
+    return recommendations
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_farm_boundary(request, farm_id):
+    """
+    Returns the GeoJSON boundary of a specific farm.
+    This can be used to display farm boundaries on the weather map.
+    """
+    try:
+        # Get the farm
+        farm = Farm.objects.get(id=farm_id)
+        
+        # Check if user has permission to view this farm
+        if farm.owner.profile.user != request.user:
+            return Response({"error": "You don't have permission to view this farm"}, status=403)
+        
+        # If farm has a boundary, return it
+        if farm.boundary_geojson:
+            return Response({
+                'farm_id': farm.id,
+                'farm_name': farm.name,
+                'boundary': farm.boundary_geojson
+            })
+        else:
+            return Response({
+                'farm_id': farm.id,
+                'farm_name': farm.name,
+                'boundary': None,
+                'message': 'This farm has no defined boundary'
+            })
+            
+    except Farm.DoesNotExist:
+        return Response({"error": "Farm not found"}, status=404)
+    except Exception as e:
+        print(f"Error in get_farm_boundary: {e}")
+        if settings.DEBUG:
+            import traceback
+            return Response({
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+            }, status=500)
+        return Response({"error": "An internal error occurred"}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_farm_boundary(request, farm_id=None):
+    """
+    Update the farm boundary with the provided GeoJSON data.
+    This is useful for directly updating the boundary after detection.
+    """
+    try:
+        # Get the user's profile
+        user_profile = request.user.profile
+        
+        if not hasattr(user_profile, 'farmer_profile'):
+            return Response({"error": "User is not a farmer"}, status=400)
+        
+        farmer = user_profile.farmer_profile
+        
+        # Get farm by ID if provided, otherwise get the first farm
+        if farm_id:
+            try:
+                farm = Farm.objects.get(id=farm_id, owner=farmer)
+            except Farm.DoesNotExist:
+                return Response({"error": f"Farm with ID {farm_id} not found"}, status=404)
+        else:
+            # Get the first farm for this farmer
+            farm = Farm.objects.filter(owner=farmer).first()
+            if not farm:
+                return Response({"error": "No farms found for this user"}, status=404)
+            
+        # Get boundary data from request
+        boundary_data = request.data.get('boundary')
+        if not boundary_data:
+            return Response({"error": "No boundary data provided"}, status=400)
+            
+        # Handle string format if necessary
+        if isinstance(boundary_data, str):
+            try:
+                boundary_data = json.loads(boundary_data)
+            except json.JSONDecodeError:
+                return Response({"error": "Invalid JSON in boundary data"}, status=400)
+                
+        # Update the farm boundary
+        farm.boundary_geojson = boundary_data
+        
+        # If area_hectares is in the properties, extract and update it
+        area_hectares = None
+        if isinstance(boundary_data, dict):
+            # Try direct Feature
+            if boundary_data.get('type') == 'Feature' and 'properties' in boundary_data:
+                if 'area_hectares' in boundary_data['properties']:
+                    area_hectares = boundary_data['properties']['area_hectares']
+            # Try FeatureCollection
+            elif 'features' in boundary_data and len(boundary_data['features']) > 0:
+                feature = boundary_data['features'][0]
+                if 'properties' in feature and 'area_hectares' in feature['properties']:
+                    area_hectares = feature['properties']['area_hectares']
+                    
+        # Update size if available
+        if area_hectares:
+            farm.size_hectares = area_hectares
+            # Update size category based on area
+            if area_hectares < 10:
+                farm.size_category = 'S'  # Small
+            elif area_hectares < 50:
+                farm.size_category = 'M'  # Medium
+            else:
+                farm.size_category = 'L'  # Large
+                
+        # Save the farm
+        farm.save()
+        
+        # Return success response
+        return Response({
+            "message": "Farm boundary updated successfully",
+            "farm_id": farm.id,
+            "farm_name": farm.name,
+            "boundary": farm.boundary_geojson
+        })
+        
+    except Exception as e:
+        print(f"Error updating farm boundary: {e}")
+        if settings.DEBUG:
+            import traceback
+            return Response({
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+            }, status=500)
+        return Response({"error": "An internal error occurred"}, status=500)
