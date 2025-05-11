@@ -64,8 +64,8 @@ import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
 import authService from '../../app/api/auth';
 import classes from './Shell.module.css';
 
-interface NavItemProps {
-  icon: React.ElementType;
+interface NavItem {
+  icon: any;
   color: string;
   label: string;
   path: string;
@@ -73,10 +73,10 @@ interface NavItemProps {
     text: string;
     color: string;
   };
-  children?: {
+  children?: Array<{
     title: string;
     path: string;
-  }[];
+  }>;
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -120,29 +120,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Only use conditional colors when mounted (client-side)
   const logoTextColor = mounted ? (colorScheme === 'dark' ? 'white' : 'green.7') : textColor;
 
-  // Main navigation items
-  const mainNavItems: NavItemProps[] = [
+  // Core navigation items
+  const mainNavItems: NavItem[] = [
     { 
       icon: IconHome, 
       color: 'blue', 
       label: 'Dashboard', 
-      path: '/dashboard',
+      path: '/dashboard'
     },
     { 
-      icon: IconPlant2, 
-      color: 'green', 
-      label: 'Crop Health', 
-      path: '/dashboard/crop-health',
-      badge: {
-        text: '3',
-        color: 'red'
-      }
-    },
-    { 
-      icon: IconChartInfographic, 
-      color: 'teal', 
-      label: 'Analytics', 
-      path: '/dashboard/analytics'
+      icon: IconCalendarStats, 
+      color: 'grape', 
+      label: 'Planning', 
+      path: '/dashboard/planning',
+      children: [
+        { title: 'Crop Calendar', path: '/dashboard/planning/calendar' },
+        { title: 'Seasonal Planning', path: '/dashboard/planning/season' },
+        { title: 'Crop Health', path: '/dashboard/crop-health' }
+      ]
     },
     { 
       icon: IconCloud, 
@@ -155,16 +150,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       }
     },
     { 
-      icon: IconCalendarStats, 
-      color: 'grape', 
-      label: 'Planning', 
-      path: '/dashboard/planning',
-      children: [
-        { title: 'Crop Calendar', path: '/dashboard/planning/calendar' },
-        { title: 'Rotation Schedule', path: '/dashboard/planning/rotation' }
-      ]
-    },
-    {
       icon: IconFileAnalytics,
       color: 'indigo',
       label: 'Reports',
@@ -173,7 +158,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   ];
 
   // Farm management items
-  const managementNavItems: NavItemProps[] = [
+  const managementNavItems: NavItem[] = [
     {
       icon: IconTractor,
       color: 'yellow',

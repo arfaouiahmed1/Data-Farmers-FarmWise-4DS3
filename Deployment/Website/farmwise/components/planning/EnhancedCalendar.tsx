@@ -91,28 +91,24 @@ export function EnhancedCalendar({
 
   // Customize event appearance
   const eventStyleGetter = useCallback((event: FarmEvent) => {
-    let backgroundColor = '#3174ad'; // Default blue
-    let borderColor = '#195a91'; // Darker blue
-
-    if (event.type === 'planting') { backgroundColor = '#40c057'; borderColor = '#2f9e44'; } // Green
-    if (event.type === 'harvesting') { backgroundColor = '#fd7e14'; borderColor = '#e67700'; } // Orange
-    if (event.type === 'fertilization') { backgroundColor = '#7950f2'; borderColor = '#7048e8'; } // Violet
-    if (event.type === 'scouting') { backgroundColor = '#fab005'; borderColor = '#f59f00'; } // Yellow
-    if (event.type === 'equipment') { backgroundColor = '#4dabf7'; borderColor = '#339af0'; } // Blue
-    if (event.type === 'irrigation') { backgroundColor = '#15aabf'; borderColor = '#1098ad'; } // Cyan
+    let className = '';
+    
+    switch(event.type) {
+      case 'planting': className = 'planting-event'; break;
+      case 'harvesting': className = 'harvesting-event'; break;
+      case 'fertilization': className = 'fertilization-event'; break;
+      case 'scouting': className = 'scouting-event'; break;
+      case 'equipment': className = 'equipment-event'; break;
+      case 'irrigation': className = 'irrigation-event'; break;
+    }
 
     const style = {
-      backgroundColor,
-      borderColor,
-      borderRadius: '4px',
       opacity: 0.9,
-      color: 'white',
-      border: `1px solid ${borderColor}`,
+      fontSize: '0.875rem',
       display: 'block',
-      padding: '2px 4px',
-      fontSize: '0.8rem',
     };
-    return { style };
+
+    return { style, className };
   }, []);
 
   // Custom event component

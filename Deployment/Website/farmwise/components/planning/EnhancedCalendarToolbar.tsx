@@ -1,97 +1,81 @@
-import React from 'react';
-import { Group, Button, SegmentedControl, ActionIcon, Tooltip } from '@mantine/core';
-import { 
-  IconPlus, 
-  IconChevronLeft, 
-  IconChevronRight, 
-  IconCalendarEvent, 
-  IconLayoutGrid, 
-  IconLayoutList, 
-  IconLayoutColumns 
-} from '@tabler/icons-react';
-import { ToolbarProps, View } from 'react-big-calendar';
-import { FarmEvent } from '@/types/planning';
+'use client';
 
-interface EnhancedCalendarToolbarProps extends ToolbarProps<FarmEvent, object> {
+import React from 'react';
+import { Group, Button, ActionIcon, SegmentedControl, Text } from '@mantine/core';
+import { IconChevronLeft, IconChevronRight, IconPlus } from '@tabler/icons-react';
+import { ToolbarProps, View } from 'react-big-calendar';
+
+interface EnhancedCalendarToolbarProps extends ToolbarProps<any> {
   onAddEvent?: () => void;
 }
 
-export function EnhancedCalendarToolbar({ 
-  onNavigate, 
-  onView, 
-  label, 
-  view, 
-  views, 
-  onAddEvent 
+export function EnhancedCalendarToolbar({
+  onNavigate,
+  onView,
+  view,
+  date,
+  views,
+  onAddEvent
 }: EnhancedCalendarToolbarProps) {
-  
-  // Map view names to more user-friendly labels
-  const viewLabels: Record<string, string> = {
-    month: 'Month',
-    week: 'Week',
-    day: 'Day',
-    agenda: 'Agenda'
-  };
-  
-  // Create view options for the segmented control
-  const viewOptions = Object.keys(views).map((name: string) => ({
-    value: name,
-    label: viewLabels[name] || name,
-    icon: name === 'month' ? <IconLayoutGrid size={16} /> :
-          name === 'week' ? <IconLayoutColumns size={16} /> :
-          name === 'day' ? <IconCalendarEvent size={16} /> :
-          <IconLayoutList size={16} />
+  const viewOptions = Object.keys(views).map(v => ({
+    label: v.charAt(0).toUpperCase() + v.slice(1),
+    value: v
   }));
-  
+
   return (
-    <Group justify="space-between" mb="md" wrap="nowrap">
-      <Group gap="xs">
-        <Tooltip label="Previous">
-          <ActionIcon 
-            variant="light" 
+    <Group wrap="nowrap" justify="space-between" mb="md">
+      <Group gap="xs" wrap="nowrap">
+        <Button
+          variant="subtle"
+          onClick={() => onNavigate('TODAY')}
+          size="compact-sm"
+          radius="xl"
+          color="blue"
+        >
+          Today
+        </Button>
+
+        <Group gap={0}>
+          <ActionIcon
+            variant="subtle"
             onClick={() => onNavigate('PREV')}
             size="lg"
+            radius="xl"
           >
-            <IconChevronLeft size={18} />
+            <IconChevronLeft size={20} />
           </ActionIcon>
-        </Tooltip>
-        
-        <Tooltip label="Today">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onNavigate('TODAY')}
-          >
-            Today
-          </Button>
-        </Tooltip>
-        
-        <Tooltip label="Next">
-          <ActionIcon 
-            variant="light" 
+          <ActionIcon
+            variant="subtle"
             onClick={() => onNavigate('NEXT')}
             size="lg"
+            radius="xl"
           >
-            <IconChevronRight size={18} />
+            <IconChevronRight size={20} />
           </ActionIcon>
-        </Tooltip>
-        
-        <span style={{ fontWeight: 500, fontSize: '1rem' }}>{label}</span>
+        </Group>
+
+        <Text size="lg" fw={500}>
+          {new Date(date).toLocaleDateString('default', {
+            month: 'long',
+            year: 'numeric'
+          })}
+        </Text>
       </Group>
-      
-      <Group gap="xs">
+
+      <Group gap="md" wrap="nowrap">
         <SegmentedControl
-          data={viewOptions}
           value={view}
-          onChange={(value) => onView(value as View)}
+          onChange={(newView) => onView(newView as View)}
+          data={viewOptions}
           size="sm"
         />
-        
+
         {onAddEvent && (
-          <Button 
-            leftSection={<IconPlus size={16} />} 
+          <Button
+            leftSection={<IconPlus size={16} />}
             onClick={onAddEvent}
-            size="sm"
+            radius="xl"
+            variant="light"
           >
             Add Event
           </Button>

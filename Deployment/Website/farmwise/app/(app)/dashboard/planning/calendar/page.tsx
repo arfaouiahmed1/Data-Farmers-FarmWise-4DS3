@@ -3,108 +3,120 @@
 import React, { useState } from 'react';
 import {
     Container, Title, Text, Paper, Button, Modal,
-    Group, Stack, Box, Tabs, Badge, Divider
+    Group, Stack, Badge, Tabs, Select, Alert
 } from '@mantine/core';
-import { IconCalendarStats, IconFilter, IconPlus } from '@tabler/icons-react';
+import { IconCalendarStats, IconPlant2, IconAlertCircle } from '@tabler/icons-react';
 import type { FarmEvent } from '@/types/planning';
 import { EventForm } from '@/components/planning/EventForm';
 import { CropRecommendations } from '@/components/planning/CropRecommendations';
 import { EnhancedCalendar } from '@/components/planning/EnhancedCalendar';
 
-// Mock Event Data (Replace with actual data source)
-const now = new Date();
-const initialMockEvents: FarmEvent[] = [
-  {
-    id: 1,
-    title: 'Plant Corn - Field A',
-    start: new Date(now.getFullYear(), now.getMonth(), 2),
-    end: new Date(now.getFullYear(), now.getMonth(), 4),
-    resource: 'Planting Team',
-    type: 'planting',
-    description: 'Plant corn seeds at 1.5 inch depth with 30 inch row spacing.'
-  },
-  {
-    id: 2,
-    title: 'Fertilize Wheat - Field B',
-    start: new Date(now.getFullYear(), now.getMonth(), 8, 9, 0, 0),
-    end: new Date(now.getFullYear(), now.getMonth(), 8, 12, 0, 0),
-    resource: 'Fertilizer Spreader',
-    type: 'fertilization',
-    description: 'Apply nitrogen fertilizer at 40 lbs/acre.'
-  },
-  {
-    id: 3,
-    title: 'Scout for Pests - All Fields',
-    start: new Date(now.getFullYear(), now.getMonth(), 15),
-    end: new Date(now.getFullYear(), now.getMonth(), 15),
-    allDay: true,
-    resource: 'Agronomist',
-    type: 'scouting',
-    description: 'Check for aphids, corn borers, and other common pests.'
-  },
-   {
-    id: 4,
-    title: 'Harvest Soybeans - Field C',
-    start: new Date(now.getFullYear(), now.getMonth() + 1, 5),
-    end: new Date(now.getFullYear(), now.getMonth() + 1, 10),
-    type: 'harvesting',
-    description: 'Harvest soybeans when moisture content is between 13-15%.'
-  },
-  {
-    id: 5,
-    title: 'Tractor Maintenance',
-    start: new Date(now.getFullYear(), now.getMonth(), 20),
-    end: new Date(now.getFullYear(), now.getMonth(), 20),
-    resource: 'John Deere 8R',
-    type: 'equipment',
-    description: 'Regular maintenance: oil change, filter replacement, and general inspection.'
-  },
-  {
-    id: 6,
-    title: 'Irrigation - Field D',
-    start: new Date(now.getFullYear(), now.getMonth(), 12),
-    end: new Date(now.getFullYear(), now.getMonth(), 12),
-    resource: 'Center Pivot System',
-    type: 'irrigation',
-    description: 'Apply 0.75 inches of water.'
-  },
+// Mock crop types for the demo
+const cropTypes = [
+  { value: 'corn', label: 'Corn' },
+  { value: 'wheat', label: 'Wheat' },
+  { value: 'soybeans', label: 'Soybeans' },
+  { value: 'potatoes', label: 'Potatoes' },
 ];
 
+const now = new Date();
+
+// Sample crop events showing the lifecycle
+const getCropEvents = (selectedCrop: string): FarmEvent[] => {
+  const events: FarmEvent[] = [
+    {
+      id: '1',
+      title: `Plant ${selectedCrop}`,
+      start: new Date(now.getFullYear(), now.getMonth(), 2),
+      end: new Date(now.getFullYear(), now.getMonth(), 4),
+      type: 'planting',
+      description: `Plant ${selectedCrop} according to recommended spacing and depth.`
+    },
+    {
+      id: '2',
+      title: `First Fertilization - ${selectedCrop}`,
+      start: new Date(now.getFullYear(), now.getMonth(), 15),
+      end: new Date(now.getFullYear(), now.getMonth(), 15),
+      type: 'fertilization',
+      description: 'Apply starter fertilizer based on soil test results.'
+    },
+    {
+      id: '3',
+      title: 'Irrigation Check',
+      start: new Date(now.getFullYear(), now.getMonth(), 20),
+      end: new Date(now.getFullYear(), now.getMonth(), 20),
+      type: 'irrigation',
+      description: 'Monitor soil moisture and adjust irrigation schedule.'
+    },
+    {
+      id: '4',
+      title: `Pest Monitoring - ${selectedCrop}`,
+      start: new Date(now.getFullYear(), now.getMonth() + 1, 5),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 5),
+      type: 'monitoring',
+      description: 'Check for common pests and diseases.'
+    },
+    {
+      id: '5',
+      title: `Second Fertilization - ${selectedCrop}`,
+      start: new Date(now.getFullYear(), now.getMonth() + 2, 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 2, 1),
+      type: 'fertilization',
+      description: 'Apply growth-stage specific nutrients.'
+    },
+    {
+      id: '6',
+      title: `Harvest ${selectedCrop}`,
+      start: new Date(now.getFullYear(), now.getMonth() + 3, 15),
+      end: new Date(now.getFullYear(), now.getMonth() + 3, 20),
+      type: 'harvesting',
+      description: `Harvest ${selectedCrop} at optimal maturity.`
+    }
+  ];
+  return events;
+};
+
 export default function CropCalendarPage() {
-  const [events, setEvents] = useState<FarmEvent[]>(initialMockEvents);
+  const [activeTab, setActiveTab] = useState('calendar');
+  const [selectedCrop, setSelectedCrop] = useState<string | null>(null);
   const [formModalOpened, setFormModalOpened] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState<Partial<FarmEvent> | null>(null);
-  const [modalTitle, setModalTitle] = useState('Add New Event');
-  const [activeTab, setActiveTab] = useState<string>('calendar');
+  const [currentEvent, setCurrentEvent] = useState<FarmEvent | null>(null);
+  const [events, setEvents] = useState<FarmEvent[]>([]);
+
+  // Update events when crop changes
+  React.useEffect(() => {
+    if (selectedCrop) {
+      setEvents(getCropEvents(selectedCrop));
+    } else {
+      setEvents([]);
+    }
+  }, [selectedCrop]);
+
+  const modalTitle = currentEvent ? 'Edit Event' : 'Add New Event';
 
   const handleAddEventClick = () => {
     setCurrentEvent(null);
-    setModalTitle('Add New Event');
     setFormModalOpened(true);
   };
 
   const handleEditEvent = (event: FarmEvent) => {
     setCurrentEvent(event);
-    setModalTitle('Edit Event');
     setFormModalOpened(true);
   };
 
-  const handleDeleteEvent = (eventId: number | string) => {
+  const handleDeleteEvent = (eventId: string | number) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
       setEvents(events.filter(event => event.id !== eventId));
-      console.log(`Deleted event with ID: ${eventId}`);
     }
   };
 
   const handleSaveEvent = (eventData: FarmEvent) => {
     if (currentEvent && currentEvent.id) {
       setEvents(events.map(event => (event.id === eventData.id ? eventData : event)));
-      console.log('Updated event:', eventData);
     } else {
-      // Generate a unique ID for new events
-      const newId = Math.max(...events.map(e => typeof e.id === 'number' ? e.id : 0)) + 1;
+      // Generate a unique string ID
+      const newId = String(Date.now());
       setEvents([...events, { ...eventData, id: newId }]);
-      console.log('Added new event:', eventData);
     }
     setFormModalOpened(false);
     setCurrentEvent(null);
@@ -116,24 +128,68 @@ export default function CropCalendarPage() {
         <Title order={3}>
           <Group gap="xs">
             <IconCalendarStats size={24} stroke={1.5} />
-            <Text>Farm Calendar</Text>
+            <Text>Crop Calendar</Text>
           </Group>
         </Title>
       </Group>
 
+      <Paper withBorder p="md" radius="md" mb="xl">
+        <Stack>
+          <Group>
+            <Select
+              label="Select Crop"
+              placeholder="Choose a crop to see its calendar"
+              data={cropTypes}
+              value={selectedCrop}
+              onChange={setSelectedCrop}
+              style={{ minWidth: 200 }}
+            />
+            <Button 
+              onClick={handleAddEventClick} 
+              disabled={!selectedCrop}
+              mt={24}
+            >
+              Add Custom Event
+            </Button>
+          </Group>
+          
+          {!selectedCrop && (
+            <Alert icon={<IconAlertCircle size="1rem" />} color="blue">
+              Select a crop to view its recommended calendar events including planting, fertilization, irrigation, and harvest schedules.
+            </Alert>
+          )}
+        </Stack>
+      </Paper>
+
       <Tabs value={activeTab} onChange={(value) => value && setActiveTab(value)} mb="xl">
         <Tabs.List>
-          <Tabs.Tab value="calendar">Calendar</Tabs.Tab>
-          <Tabs.Tab value="recommendations">Planting Recommendations</Tabs.Tab>
+          <Tabs.Tab value="calendar" leftSection={<IconCalendarStats size="0.8rem" />}>
+            Calendar View
+          </Tabs.Tab>
+          <Tabs.Tab value="recommendations" leftSection={<IconPlant2 size="0.8rem" />}>
+            Crop Recommendations
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="calendar">
-          <EnhancedCalendar
-            events={events}
-            onAddEvent={handleAddEventClick}
-            onEditEvent={handleEditEvent}
-            onDeleteEvent={handleDeleteEvent}
-          />
+          {selectedCrop ? (
+            <EnhancedCalendar
+              events={events}
+              onAddEvent={handleAddEventClick}
+              onEditEvent={handleEditEvent}
+              onDeleteEvent={handleDeleteEvent}
+            />
+          ) : (
+            <Paper withBorder p="xl" radius="md">
+              <Stack gap="md" align="center">
+                <IconPlant2 size={48} stroke={1.5} />
+                <Text size="xl" fw={500}>No Crop Selected</Text>
+                <Text c="dimmed" ta="center">
+                  Select a crop from the dropdown above to view its recommended calendar events and manage your farming schedule.
+                </Text>
+              </Stack>
+            </Paper>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="recommendations">
@@ -151,4 +207,4 @@ export default function CropCalendarPage() {
       />
     </Container>
   );
-} 
+}
