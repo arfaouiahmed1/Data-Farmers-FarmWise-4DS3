@@ -1,363 +1,335 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Title,
   Text,
   Container,
-  Paper,
   Button,
   Group,
   SimpleGrid,
   Card,
-  Badge,
-  rem,
-  Grid,
-  ThemeIcon,
-  Anchor,
-  Box,
-  Tabs,
-  RingProgress,
   Stack,
+  Badge,
+  ThemeIcon,
+  rem,
+  Box,
+  Paper,
+  Divider,
   useMantineTheme,
-  Image,
-  List
+  List,
+  ActionIcon,
+  Flex,
+  RingProgress,
+  Center
 } from '@mantine/core';
 import { 
   IconCalendarStats, 
-  IconRotate, 
-  IconPlant2, 
-  IconChartBar, 
   IconSun, 
-  IconCloudRain,
-  IconPlus,
+  IconMicroscope, 
+  IconChartLine,
   IconArrowRight,
-  IconLeaf,
-  IconSeeding
+  IconCheck,
+  IconTargetArrow,
+  IconSettings,
+  IconInfoCircle,
+  IconExternalLink
 } from '@tabler/icons-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import classes from './planning.module.css';
 
-// Mock data for upcoming events
-const upcomingEvents = [
-  { id: 1, title: 'Plant Corn - Field A', date: '2024-06-10', type: 'planting', status: 'scheduled' },
-  { id: 2, title: 'Fertilize Wheat - Field B', date: '2024-06-12', type: 'fertilization', status: 'pending' },
-  { id: 3, title: 'Harvest Soybeans - Field C', date: '2024-06-15', type: 'harvesting', status: 'scheduled' },
-];
+// Define types
+interface PlanningTool {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  benefits: string[];
+  link: string;
+}
 
-// Mock data for recommended crops
-const recommendedCrops = [
-  { 
-    id: 1, 
-    name: 'Winter Wheat', 
-    field: 'Field A', 
-    confidence: 92, 
-    reasons: ['Soil conditions optimal', 'Previous crop compatibility', 'Market forecast positive'],
-    image: '/images/crops/wheat.jpg'
-  },
-  { 
-    id: 2, 
-    name: 'Soybeans', 
-    field: 'Field B', 
-    confidence: 87, 
-    reasons: ['Nitrogen fixation benefit', 'Rotation sequence optimal', 'Disease pressure low'],
-    image: '/images/crops/soybeans.jpg'
-  },
-  { 
-    id: 3, 
-    name: 'Cover Crop - Clover', 
-    field: 'Field C', 
-    confidence: 94, 
-    reasons: ['Soil health improvement', 'Erosion control needed', 'Nitrogen fixation'],
-    image: '/images/crops/clover.jpg'
-  },
-];
-
-// Mock data for rotation health
-const rotationHealth = [
-  { field: 'Field A', score: 85, status: 'good' },
-  { field: 'Field B', score: 92, status: 'excellent' },
-  { field: 'Field C', score: 68, status: 'needs attention' },
-  { field: 'Field D', score: 78, status: 'good' },
-];
+interface Activity {
+  date: string;
+  activity: string;
+  priority: 'High' | 'Medium' | 'Low';
+}
 
 export default function PlanningPage() {
   const theme = useMantineTheme();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<string>('overview');
-
-  // Helper function to get color based on status
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'scheduled': return 'blue';
-      case 'pending': return 'yellow';
-      case 'completed': return 'green';
-      case 'cancelled': return 'red';
-      default: return 'gray';
-    }
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Season overview data - this will be replaced with backend data later
+  const seasonData = {
+    progress: 45,
+    nextMilestone: 'Harvest Phase',
+    estimatedCompletion: 'Nov 15, 2023'
   };
 
-  // Helper function to get color based on event type
-  const getTypeColor = (type: string) => {
-    switch(type) {
-      case 'planting': return 'green';
-      case 'harvesting': return 'orange';
-      case 'fertilization': return 'violet';
-      case 'irrigation': return 'blue';
-      case 'scouting': return 'cyan';
-      default: return 'gray';
-    }
-  };
+  // Upcoming activities - This will be from the backend later
+  const upcomingActivities: Activity[] = [
+    { date: '2023-09-15', activity: 'Corn Harvest', priority: 'High' },
+    { date: '2023-09-18', activity: 'Soil Testing', priority: 'Medium' },
+    { date: '2023-09-25', activity: 'Irrigation Maintenance', priority: 'Low' }
+  ];
 
-  // Helper function to get color based on rotation health status
-  const getHealthColor = (status: string) => {
-    switch(status) {
-      case 'excellent': return theme.colors.green[6];
-      case 'good': return theme.colors.blue[6];
-      case 'needs attention': return theme.colors.yellow[6];
-      case 'poor': return theme.colors.red[6];
-      default: return theme.colors.gray[6];
+  useEffect(() => {
+    // Client-side check for dark mode. This is more reliable for dynamic theme changes.
+    // It checks the data-mantine-color-scheme attribute on the html element.
+    const observer = new MutationObserver(() => {
+      const colorScheme = document.documentElement.getAttribute('data-mantine-color-scheme');
+      setIsDarkMode(colorScheme === 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mantine-color-scheme'] });
+    // Initial check
+    setIsDarkMode(document.documentElement.getAttribute('data-mantine-color-scheme') === 'dark');
+    return () => observer.disconnect();
+  }, []);
+
+  const planningTools: PlanningTool[] = [
+    {
+      id: 'classification',
+      title: 'Crop Classification',
+      description: 'Identify optimal crops for your land with AI-driven soil and climate analysis.',
+      icon: IconMicroscope,
+      color: 'indigo',
+      benefits: ['Precise soil matching', 'Climate suitability reports', 'Rotation recommendations'],
+      link: '/dashboard/planning/classification'
+    },
+    {
+      id: 'season',
+      title: 'Season Planning',
+      description: 'Plan your planting and harvesting schedules using localized climate intelligence.',
+      icon: IconSun,
+      color: 'orange',
+      benefits: ['Optimized event timing', 'Frost risk assessment', 'Growth stage tracking'],
+      link: '/dashboard/planning/season'
+    },
+    {
+      id: 'yield-forecast',
+      title: 'Yield Forecast',
+      description: 'Predict harvest outcomes with advanced analytics and historical data.',
+      icon: IconChartLine,
+      color: 'blue',
+      benefits: ['Accurate yield predictions', 'Resource planning insights', 'Market timing advantage'],
+      link: '/dashboard/planning/yield-forecast'
+    },
+    {
+      id: 'crop-calendar',
+      title: 'Crop Calendar',
+      description: 'Manage all farm activities with an interactive, AI-enhanced calendar.',
+      icon: IconCalendarStats,
+      color: 'green',
+      benefits: ['Centralized task management', 'Automated reminders', 'Seasonal activity overview'],
+      link: '/dashboard/planning/crop-calendar'
+    }
+  ];
+
+  // Define colors and styles based on isDarkMode state
+  const pageHeaderBg = isDarkMode ? theme.colors.dark[7] : theme.colors.gray[0];
+  const pageHeaderTitleColor = isDarkMode ? theme.white : theme.black;
+
+  const cardStyles = (toolColor: string) => ({
+    bg: isDarkMode ? theme.colors.dark[6] : theme.white,
+    textColor: isDarkMode ? theme.colors.dark[0] : theme.black,
+    headerBg: isDarkMode ? theme.colors[toolColor][8] : theme.colors[toolColor][0],
+    headerTitleColor: isDarkMode ? theme.white : theme.colors[toolColor][9],
+    badgeVariant: isDarkMode ? 'filled' : 'light',
+    benefitIconColor: theme.colors[toolColor][isDarkMode ? 4 : 6],
+    buttonVariant: isDarkMode ? 'outline' : 'light',
+  });
+
+  // Helper function to determine badge color based on priority
+  const getPriorityColor = (priority: 'High' | 'Medium' | 'Low'): string => {
+    switch (priority) {
+      case 'High': return 'red';
+      case 'Medium': return 'orange';
+      case 'Low': return 'blue';
+      default: return 'gray';
     }
   };
 
   return (
     <Container fluid>
-      <Group justify="space-between" mb="lg">
-        <Title order={2} fw={700}>
-          <Group gap="xs">
-            <IconCalendarStats size={28} stroke={1.5} />
-            <Text>Farm Planning Hub</Text>
-          </Group>
+      <Paper p="xl" radius="md" mb={rem(30)} bg={pageHeaderBg} shadow="sm">
+        <Title order={2} mb={rem(5)} style={{ color: pageHeaderTitleColor }}>
+          Farm Planning Center
         </Title>
-      </Group>
+        <Text size="md" c="dimmed">
+          Leverage AI-powered tools to enhance your farm's productivity and decision-making.
+        </Text>
+      </Paper>
 
-      <Tabs value={activeTab} onChange={(value) => value && setActiveTab(value)} mb="xl">
-        <Tabs.List>
-          <Tabs.Tab value="overview" leftSection={<IconChartBar size="0.8rem" />}>
-            Overview
-          </Tabs.Tab>
-          <Tabs.Tab value="recommendations" leftSection={<IconLeaf size="0.8rem" />}>
-            Crop Recommendations
-          </Tabs.Tab>
-        </Tabs.List>
+      {/* Two-column layout for planning tools and sidebar */}
+      <Flex gap="xl" direction={{ base: 'column', md: 'row' }}>
+        {/* Main content - Planning Tools */}
+        <Box style={{ flex: 2 }}>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
+            {planningTools.map((tool) => {
+              const styles = cardStyles(tool.color);
+              const ToolIcon = tool.icon;
 
-        <Tabs.Panel value="overview">
-          <Grid gutter="md">
-            {/* Main planning navigation cards */}
-            <Grid.Col span={{ base: 12, md: 8 }}>
-              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-                <Card shadow="sm" padding="lg" radius="md" withBorder component={Link} href="/dashboard/planning/calendar" style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <Group justify="space-between" mb="md">
-                    <ThemeIcon size="xl" radius="md" color="blue" variant="light">
-                      <IconCalendarStats size={28} stroke={1.5} />
-                    </ThemeIcon>
-                    <Badge color="blue" variant="light">Enhanced</Badge>
-                  </Group>
-                  <Text fw={500} size="lg" mb="xs">Farm Calendar</Text>
-                  <Text size="sm" c="dimmed" mb="md">
-                    Plan and visualize all farm activities with our enhanced calendar. Track planting, harvesting, and maintenance schedules.
-                  </Text>
-                  <Button variant="light" color="blue" fullWidth mt="md" rightSection={<IconArrowRight size={16} />}>
-                    Open Calendar
-                  </Button>
-                </Card>
-
-                <Card shadow="sm" padding="lg" radius="md" withBorder component={Link} href="/dashboard/planning/rotation" style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <Group justify="space-between" mb="md">
-                    <ThemeIcon size="xl" radius="md" color="green" variant="light">
-                      <IconRotate size={28} stroke={1.5} />
-                    </ThemeIcon>
-                    <Badge color="green" variant="light">Redesigned</Badge>
-                  </Group>
-                  <Text fw={500} size="lg" mb="xs">Crop Rotation</Text>
-                  <Text size="sm" c="dimmed" mb="md">
-                    Optimize your crop rotation strategy to improve soil health, reduce pests, and increase yields over time.
-                  </Text>
-                  <Button variant="light" color="green" fullWidth mt="md" rightSection={<IconArrowRight size={16} />}>
-                    Manage Rotations
-                  </Button>
-                </Card>
-              </SimpleGrid>
-
-              {/* Weather and soil conditions card */}
-              <Paper withBorder p="md" radius="md" mt="md">
-                <Group justify="space-between" mb="xs">
-                  <Text fw={500}>Environmental Conditions</Text>
-                  <Anchor size="sm" href="/dashboard/weather">View Details</Anchor>
-                </Group>
-                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
-                  <Card p="sm" withBorder radius="md">
-                    <Group>
-                      <ThemeIcon color="cyan" variant="light" size="lg" radius="md">
-                        <IconSun size={20} />
-                      </ThemeIcon>
-                      <div>
-                        <Text size="xs" c="dimmed">Current Weather</Text>
-                        <Text fw={500}>Sunny, 75°F</Text>
-                      </div>
-                    </Group>
-                  </Card>
-                  <Card p="sm" withBorder radius="md">
-                    <Group>
-                      <ThemeIcon color="blue" variant="light" size="lg" radius="md">
-                        <IconCloudRain size={20} />
-                      </ThemeIcon>
-                      <div>
-                        <Text size="xs" c="dimmed">Precipitation Forecast</Text>
-                        <Text fw={500}>0.5" in next 7 days</Text>
-                      </div>
-                    </Group>
-                  </Card>
-                  <Card p="sm" withBorder radius="md">
-                    <Group>
-                      <ThemeIcon color="orange" variant="light" size="lg" radius="md">
-                        <IconSeeding size={20} />
-                      </ThemeIcon>
-                      <div>
-                        <Text size="xs" c="dimmed">Soil Temperature</Text>
-                        <Text fw={500}>62°F at 4" depth</Text>
-                      </div>
-                    </Group>
-                  </Card>
-                </SimpleGrid>
-              </Paper>
-            </Grid.Col>
-
-            {/* Sidebar with upcoming events */}
-            <Grid.Col span={{ base: 12, md: 4 }}>
-              <Card shadow="sm" padding="lg" radius="md" withBorder>
-                <Group justify="space-between" mb="md">
-                  <Text fw={500}>Upcoming Events</Text>
-                  <Button 
-                    variant="light" 
-                    size="xs"
-                    leftSection={<IconPlus size={14} />}
-                    onClick={() => router.push('/dashboard/planning/calendar')}
+              return (
+                <Card
+                  key={tool.id}
+                  shadow="md"
+                  radius="md"
+                  padding={0}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    backgroundColor: styles.bg,
+                    color: styles.textColor,
+                  }}
+                >
+                  <Card.Section 
+                    p="lg" 
+                    style={{ backgroundColor: styles.headerBg }}
+                    withBorder={!isDarkMode}
                   >
-                    Add
-                  </Button>
-                </Group>
-                <Stack gap="sm">
-                  {upcomingEvents.map((event) => (
-                    <Card key={event.id} withBorder padding="sm" radius="sm">
-                      <Group justify="space-between" wrap="nowrap">
-                        <div>
-                          <Text size="sm" fw={500}>{event.title}</Text>
-                          <Text size="xs" c="dimmed">{new Date(event.date).toLocaleDateString()}</Text>
-                        </div>
-                        <Group gap="xs">
-                          <Badge color={getTypeColor(event.type)} variant="light" size="sm">
-                            {event.type}
-                          </Badge>
-                          <Badge color={getStatusColor(event.status)} size="sm">
-                            {event.status}
-                          </Badge>
-                        </Group>
-                      </Group>
-                    </Card>
-                  ))}
-                </Stack>
-                <Button variant="default" fullWidth mt="md" onClick={() => router.push('/dashboard/planning/calendar')}>
-                  View All Events
-                </Button>
-              </Card>
-
-              {/* Rotation Health Card */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
-                <Group justify="space-between" mb="md">
-                  <Text fw={500}>Rotation Health</Text>
-                  <Anchor size="sm" href="/dashboard/planning/rotation">Details</Anchor>
-                </Group>
-                <Stack gap="sm">
-                  {rotationHealth.map((field) => (
-                    <Group key={field.field} justify="space-between">
-                      <Text size="sm">{field.field}</Text>
-                      <Group gap="xs">
-                        <RingProgress
-                          size={30}
-                          thickness={3}
-                          roundCaps
-                          sections={[{ value: field.score, color: getHealthColor(field.status) }]}
-                          label={
-                            <Text size="xs" ta="center">
-                              {field.score}%
-                            </Text>
-                          }
-                        />
-                        <Badge 
-                          color={field.status === 'excellent' ? 'green' : 
-                                field.status === 'good' ? 'blue' : 
-                                field.status === 'needs attention' ? 'yellow' : 'red'} 
-                          size="sm"
-                        >
-                          {field.status}
+                    <Group>
+                      <ThemeIcon color={tool.color} size={48} radius="md" variant={isDarkMode? 'filled':'outline'}>
+                        <ToolIcon size={26} />
+                      </ThemeIcon>
+                      <Stack gap={0}>
+                        <Title order={3} style={{ color: styles.headerTitleColor }}>
+                          {tool.title}
+                        </Title>
+                        <Badge color={tool.color} variant={styles.badgeVariant} size="sm" mt={4}>
+                          AI-Powered Insight
                         </Badge>
-                      </Group>
+                      </Stack>
                     </Group>
-                  ))}
-                </Stack>
-              </Card>
-            </Grid.Col>
-          </Grid>
-        </Tabs.Panel>
-
-        <Tabs.Panel value="recommendations">
-          <Paper withBorder p="md" radius="md" mb="lg">
-            <Text fw={500} size="lg" mb="xs">AI-Powered Crop Recommendations</Text>
-            <Text size="sm" c="dimmed" mb="md">
-              Based on your soil conditions, weather patterns, and historical data, our AI recommends the following crops for optimal yield.
-            </Text>
-            
-            <SimpleGrid cols={{ base: 1, sm: recommendedCrops.length }} spacing="md">
-              {recommendedCrops.map((crop) => (
-                <Card key={crop.id} shadow="sm" padding="lg" radius="md" withBorder>
-                  <Card.Section>
-                    <Box style={{ height: 140, position: 'relative', overflow: 'hidden' }}>
-                      <Image
-                        src={crop.image}
-                        alt={crop.name}
-                        height={140}
-                        style={{ objectFit: 'cover', width: '100%' }}
-                      />
-                      <Box 
-                        style={{ 
-                          position: 'absolute', 
-                          top: 10, 
-                          right: 10, 
-                          background: 'rgba(0,0,0,0.6)', 
-                          borderRadius: '50%',
-                          width: 40,
-                          height: 40,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Text c="white" fw={700} ta="center">{crop.confidence}%</Text>
-                      </Box>
-                    </Box>
                   </Card.Section>
-                  
-                  <Group justify="space-between" mt="md" mb="xs">
-                    <Text fw={500}>{crop.name}</Text>
-                    <Badge color="green">{crop.field}</Badge>
-                  </Group>
-                  
-                  <Text size="sm" c="dimmed" mb="md">Recommendation reasons:</Text>
-                  <List size="sm">
-                    {crop.reasons.map((reason, index) => (
-                      <List.Item key={index}>{reason}</List.Item>
-                    ))}
-                  </List>
-                  
-                  <Button variant="light" color="green" fullWidth mt="md">
-                    View Details
-                  </Button>
+
+                  <Box p="lg" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Text size="sm" c="dimmed" mb="md" style={{ minHeight: rem(50) }}>
+                      {tool.description}
+                    </Text>
+
+                    <Divider my="sm" />
+
+                    <Text size="xs" tt="uppercase" fw={700} c="dimmed" mb="xs">
+                      Key Features
+                    </Text>
+                    <List
+                      spacing="xs"
+                      size="sm"
+                      mb="lg"
+                      icon={
+                        <ThemeIcon color={tool.color} size={20} radius="xl" variant='light'>
+                          <IconCheck size={rem(12)} style={{color: styles.benefitIconColor}}/>
+                        </ThemeIcon>
+                      }
+                      style={{ flexGrow: 1 }}
+                    >
+                      {tool.benefits.map((benefit) => (
+                        <List.Item key={benefit}>{benefit}</List.Item>
+                      ))}
+                    </List>
+
+                    <Button
+                      component={Link}
+                      href={tool.link}
+                      variant={styles.buttonVariant}
+                      color={tool.color}
+                      fullWidth
+                      mt="auto"
+                      rightSection={<IconArrowRight size={16} />}
+                      radius="md"
+                    >
+                      Go to {tool.title}
+                    </Button>
+                  </Box>
                 </Card>
-              ))}
-            </SimpleGrid>
+              );
+            })}
+          </SimpleGrid>
+        </Box>
+
+        {/* Sidebar content */}
+        <Stack gap="md" style={{ flex: 1 }}>
+          {/* Season Overview Card */}
+          <Paper p="md" radius="md" shadow="sm" style={{ backgroundColor: isDarkMode ? theme.colors.dark[6] : theme.white }}>
+            <Title order={4} mb={rem(16)}>Season Overview</Title>
+            <Flex direction="column" align="center" justify="center">
+              <RingProgress
+                size={180}
+                thickness={16}
+                roundCaps
+                sections={[
+                  { value: seasonData.progress, color: 'green' }
+                ]}
+                label={
+                  <Center>
+                    <Stack gap={0} align="center">
+                      <Text fw={700} size="xl">{seasonData.progress}%</Text>
+                      <Text size="xs" c="dimmed">Complete</Text>
+                    </Stack>
+                  </Center>
+                }
+              />
+              <Group mt="md" justify="space-between" style={{ width: '100%' }}>
+                <Box>
+                  <Text size="sm" c="dimmed">Next Milestone</Text>
+                  <Text fw={600}>{seasonData.nextMilestone}</Text>
+                </Box>
+                <Box>
+                  <Text size="sm" c="dimmed" ta="right">Est. Completion</Text>
+                  <Text fw={600} ta="right">{seasonData.estimatedCompletion}</Text>
+                </Box>
+              </Group>
+            </Flex>
           </Paper>
-        </Tabs.Panel>
-      </Tabs>
+
+          {/* Upcoming Activities Card */}
+          <Paper p="md" radius="md" shadow="sm" style={{ backgroundColor: isDarkMode ? theme.colors.dark[6] : theme.white }}>
+            <Title order={4} mb={rem(16)}>Upcoming Activities</Title>
+            <Stack gap="md">
+              {upcomingActivities.map((activity, index) => (
+                <Paper key={index} p="md" radius="md" withBorder>
+                  <Group justify="space-between" mb={4}>
+                    <Text fw={600}>{activity.activity}</Text>
+                    <Badge color={getPriorityColor(activity.priority)} size="sm">
+                      {activity.priority}
+                    </Badge>
+                  </Group>
+                  <Text size="sm" c="dimmed">{new Date(activity.date).toLocaleDateString()}</Text>
+                </Paper>
+              ))}
+            </Stack>
+            <Button 
+              variant="subtle" 
+              color="gray" 
+              fullWidth 
+              mt="md"
+              component={Link}
+              href="/dashboard/planning/crop-calendar"
+              rightSection={<IconExternalLink size={16} />}
+            >
+              View Full Calendar
+            </Button>
+          </Paper>
+
+          {/* Planning Tip Card */}
+          <Paper p="md" radius="md" shadow="sm" 
+            style={{ 
+              backgroundColor: isDarkMode ? theme.colors.dark[6] : theme.white,
+              borderLeft: `4px solid ${theme.colors.blue[6]}`
+            }}
+          >
+            <Group mb={10} justify="flex-start">
+              <ThemeIcon color="blue" variant="light" size="lg" radius="xl">
+                <IconInfoCircle size={20} />
+              </ThemeIcon>
+              <Text fw={600}>Planning Tip</Text>
+            </Group>
+            <Text size="sm" c="dimmed">
+              Consider crop rotation for next season to improve soil health and reduce pest pressure.
+            </Text>
+          </Paper>
+        </Stack>
+      </Flex>
     </Container>
   );
 }

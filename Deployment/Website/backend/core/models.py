@@ -574,6 +574,164 @@ class Equipment(models.Model):
             self.status = 'Maintenance Needed'
         super().save(*args, **kwargs)
 
+class CropClassification(models.Model):
+    SEASON_CHOICES = [
+        ('spring', 'Spring'),
+        ('summer', 'Summer'),
+        ('autumn', 'Autumn'),
+        ('winter', 'Winter'),
+    ]
+    
+    FERTILIZER_TYPE_CHOICES = [
+        ('Urea', 'Urea'),
+        ('DAP', 'DAP'),
+        ('NPK', 'NPK'),
+        ('Organic', 'Organic'),
+        ('Other', 'Other'),
+    ]
+    
+    GOVERNORATE_CHOICES = [
+        ('Ariana', 'Ariana'),
+        ('Beja', 'Beja'),
+        ('Ben Arous', 'Ben Arous'),
+        ('Bizerte', 'Bizerte'),
+        ('Gabes', 'Gabes'),
+        ('Gafsa', 'Gafsa'),
+        ('Jendouba', 'Jendouba'),
+        ('Kairouan', 'Kairouan'),
+        ('Kasserine', 'Kasserine'),
+        ('Kebili', 'Kebili'),
+        ('Kef', 'Kef'),
+        ('Mahdia', 'Mahdia'),
+        ('Manouba', 'Manouba'),
+        ('Medenine', 'Medenine'),
+        ('Monastir', 'Monastir'),
+        ('Nabeul', 'Nabeul'),
+        ('Sfax', 'Sfax'),
+        ('Sidi Bouzid', 'Sidi Bouzid'),
+        ('Siliana', 'Siliana'),
+        ('Sousse', 'Sousse'),
+        ('Tataouine', 'Tataouine'),
+        ('Tozeur', 'Tozeur'),
+        ('Tunis', 'Tunis'),
+        ('Zaghouan', 'Zaghouan'),
+    ]
+
+    # Farm and soil data
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='crop_classifications')
+    soil_n = models.DecimalField('Nitrogen Level N (kg/ha)', max_digits=8, decimal_places=2)
+    soil_p = models.DecimalField('Phosphorus Level P (kg/ha)', max_digits=8, decimal_places=2)
+    soil_k = models.DecimalField('Potassium Level K (kg/ha)', max_digits=8, decimal_places=2)
+    temperature = models.DecimalField('Temperature (°C)', max_digits=5, decimal_places=2)
+    humidity = models.DecimalField('Humidity (%)', max_digits=5, decimal_places=2)
+    ph = models.DecimalField('Soil pH', max_digits=4, decimal_places=2)
+    rainfall = models.DecimalField('Rainfall (mm)', max_digits=6, decimal_places=2)
+    area = models.DecimalField('Area (ha)', max_digits=10, decimal_places=2)
+
+    # Inputs and methods
+    fertilizer_amount = models.DecimalField('Fertilizer Amount (kg)', max_digits=8, decimal_places=2)
+    pesticide_amount = models.DecimalField('Pesticide Amount (kg)', max_digits=8, decimal_places=2)
+    governorate = models.CharField('Governorate', max_length=50, choices=GOVERNORATE_CHOICES)
+    district = models.CharField('District', max_length=100, blank=True, null=True)
+    irrigation = models.CharField('Irrigation Method', max_length=20, choices=Farm.IRRIGATION_TYPE_CHOICES)
+    fertilizer_type = models.CharField('Fertilizer Type', max_length=20, choices=FERTILIZER_TYPE_CHOICES)
+
+    # Seasons
+    planting_season = models.CharField('Planting Season', max_length=20, choices=SEASON_CHOICES)
+    growing_season = models.CharField('Growing Season', max_length=20, choices=SEASON_CHOICES)
+    harvest_season = models.CharField('Harvest Season', max_length=20, choices=SEASON_CHOICES)
+
+    # Results and metadata
+    recommended_crop = models.ForeignKey(Crop, on_delete=models.SET_NULL, null=True, blank=True, related_name='classifications')
+    confidence_score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Crop Classification for {self.farm.name} at {self.created_at.strftime('%Y-%m-%d')}"
+
+    class Meta:
+        ordering = ['-created_at']
+        
+    def save(self, *args, **kwargs):
+        # Automatically pull data from farm if not provided
+        if not self.area and self.farm.size_hectares:
+            self.area = self.farm.size_hectares
+            
+        if not self.ph and self.farm.soil_ph:
+            self.ph = self.farm.soil_ph
+            
+        if not self.soil_n and self.farm.soil_nitrogen:
+            self.soil_n = self.farm.soil_nitrogen
+            
+        if not self.soil_p and self.farm.soil_phosphorus:
+            self.soil_p = self.farm.soil_phosphorus
+            
+        if not self.soil_k and self.farm.soil_potassium:
+            self.soil_k = self.farm.soil_potassium
+            
+        if not self.irrigation and self.farm.irrigation_type:
+            self.irrigation = self.farm.irrigation_type
+
+        # Get latest weather data if available
+        latest_weather = self.farm.weather_records.order_by('-date').first()
+        if latest_weather:
+            if not self.temperature:
+                self.temperature = (latest_weather.temperature_max + latest_weather.temperature_min) / 2
+            if not self.humidity and latest_weather.humidity:
+                self.humidity = latest_weather.humidity
+            if not self.rainfall and latest_weather.precipitation:
+                self.rainfall = latest_weather.precipitation
+
+        # Predict crop using the ML model
+        try:
+            import joblib
+            import os
+
+            # Get the relative path to the ML model
+            model_path = os.path.join('..', '..', '..', 'Models', 'ml_models', 'crop_classifier.pkl')
+            model = joblib.load(model_path)
+
+            # Prepare data for prediction
+            data = {
+                'N (kg/ha)': [float(self.soil_n)],
+                'P (kg/ha)': [float(self.soil_p)],
+                'K (kg/ha)': [float(self.soil_k)],
+                'Temperature (°C)': [float(self.temperature)],
+                'Humidity (%)': [float(self.humidity)],
+                'pH': [float(self.ph)],
+                'Rainfall (mm)': [float(self.rainfall)],
+                'Area (ha)': [float(self.area)],
+                'Fertilizer (kg)': [float(self.fertilizer_amount)],
+                'Pesticide (kg)': [float(self.pesticide_amount)],
+                'Governorate': [self.governorate],
+                'Irrigation': [self.irrigation],
+                'Fertilizer Plant': [self.fertilizer_type],
+                'Planting Season': [self.planting_season],
+                'Growing Season': [self.growing_season],
+                'Harvest Season': [self.harvest_season]
+            }
+
+            import pandas as pd
+            df_input = pd.DataFrame(data)
+            
+            # Get prediction and probability
+            predicted_crop_name = model.predict(df_input)[0]
+            probabilities = model.predict_proba(df_input)[0]
+            confidence = float(probabilities.max()) * 100
+
+            # Get or create the Crop object
+            recommended_crop, _ = Crop.objects.get_or_create(name=predicted_crop_name)
+            self.recommended_crop = recommended_crop
+            self.confidence_score = confidence
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error predicting crop: {e}")
+
+        super().save(*args, **kwargs)
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """Create a UserProfile whenever a User is created"""

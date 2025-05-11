@@ -134,20 +134,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       label: 'Planning', 
       path: '/dashboard/planning',
       children: [
-        { title: 'Crop Calendar', path: '/dashboard/planning/calendar' },
-        { title: 'Seasonal Planning', path: '/dashboard/planning/season' },
-        { title: 'Crop Health', path: '/dashboard/crop-health' }
+        { title: 'Crop Classification', path: '/dashboard/planning/classification' },
+        { title: 'Season Planning', path: '/dashboard/planning/season' },
+        { title: 'Yield Forecast', path: '/dashboard/planning/yield-forecast' },
+        { title: 'Crop Calendar', path: '/dashboard/planning/crop-calendar' }
       ]
     },
     { 
       icon: IconCloud, 
       color: 'cyan', 
       label: 'Weather', 
-      path: '/dashboard/weather',
-      badge: {
-        text: 'Updated',
-        color: 'blue'
-      }
+      path: '/dashboard/weather'
     },
     { 
       icon: IconFileAnalytics,
@@ -445,14 +442,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       </Group>
                     }
                     rightSection={hasChildren ? (
-                      <IconChevronRight 
-                        size={14} 
-                        style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }} 
-                      />
+                      <ActionIcon 
+                        variant="transparent" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleSection(item.label);
+                        }}
+                        aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
+                      >
+                        <IconChevronRight 
+                          size={14} 
+                          style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }} 
+                        />
+                      </ActionIcon>
                     ) : null}
-                    onClick={hasChildren ? () => toggleSection(item.label) : undefined}
-                    component={hasChildren ? 'div' : Link as any}
-                    href={hasChildren ? undefined : item.path}
+                    component={Link as any}
+                    href={item.path}
+                    onClick={hasChildren && !isExpanded && pathname !== item.path ? () => toggleSection(item.label) : undefined}
                   />
                   
                   {hasChildren && (

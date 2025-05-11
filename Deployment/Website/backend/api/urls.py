@@ -16,4 +16,6 @@ urlpatterns = [
     path('farm/boundary/<int:farm_id>/', views.get_farm_boundary, name='get_farm_boundary'),
     path('farm/update-boundary/<int:farm_id>/', views.update_farm_boundary, name='update_farm_boundary'),
     path('farm/update-boundary/', views.update_farm_boundary, name='update_farm_boundary_without_id'),
+    path('crop-classification/', views.CropClassificationView.as_view({'post': 'create', 'get': 'list'}), name='crop_classification'),
+    path('crop-classification/<int:pk>/', views.CropClassificationView.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='crop_classification_detail'),
 ]

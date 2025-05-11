@@ -45,4 +45,7 @@ urlpatterns = [
     
     # Debug onboarding endpoint
     path('debug/onboarding/', views.debug_onboarding, name='debug-onboarding'),
+    
+    # Add a specific endpoint for user farms
+    path('user-farms/', views.user_farms, name='user-farms'),
 ] 

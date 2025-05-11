@@ -1,6 +1,35 @@
 from django.shortcuts import render
+from rest_framework import viewsets, status
+from rest_framework.permissions import IsAuthenticated
+from .serializers import CropClassificationSerializer
+from core.models import CropClassification
 
 # Create your views here.
+
+class CropClassificationView(viewsets.ModelViewSet):
+    serializer_class = CropClassificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Filter classifications based on user's farms
+        if hasattr(self.request.user.profile, 'farmer_profile'):
+            farms = self.request.user.profile.farmer_profile.farms.all()
+            return CropClassification.objects.filter(farm__in=farms).order_by('-created_at')
+        return CropClassification.objects.none()
+    
+    def perform_create(self, serializer):
+        # Ensure user has access to the specified farm
+        farm_id = self.request.data.get('farm')
+        if farm_id and hasattr(self.request.user.profile, 'farmer_profile'):
+            farms = self.request.user.profile.farmer_profile.farms.all()
+            if farms.filter(id=farm_id).exists():
+                serializer.save()
+            else:
+                raise PermissionError("You don't have access to this farm")
+        else:
+            raise PermissionError("Only farmers can create crop classifications")
+
+# Other views continue here...
 
 import base64
 import io
@@ -34,13 +63,15 @@ import time
 import requests
 from datetime import datetime, timedelta
 
-from core.models import UserProfile, Farm, Farmer, Weather, FarmCrop, Recommendation
+from core.models import UserProfile, Farm, Farmer, Weather, FarmCrop, Recommendation, CropClassification
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import viewsets
+from .serializers import CropClassificationSerializer
 
 # Load environment variables from .env file
 load_dotenv()
@@ -676,7 +707,7 @@ class TreatmentChatView(View):
         # First check for nutrient deficiencies as a specific category
         for nutrient in nutrients:
             if nutrient in message_lower and 'deficiency' in message_lower:
-                return f"{nutrient} deficiency"
+                return f"{nutrient_deficiency}"
         
         # Check for crop + problem combinations
         for crop in crops:
@@ -2114,3 +2145,26 @@ def update_farm_boundary(request, farm_id=None):
                 "traceback": traceback.format_exc(),
             }, status=500)
         return Response({"error": "An internal error occurred"}, status=500)
+
+class CropClassificationView(viewsets.ModelViewSet):
+    serializer_class = CropClassificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Filter classifications based on user's farms
+        if hasattr(self.request.user.profile, 'farmer_profile'):
+            farms = self.request.user.profile.farmer_profile.farms.all()
+            return CropClassification.objects.filter(farm__in=farms).order_by('-created_at')
+        return CropClassification.objects.none()
+    
+    def perform_create(self, serializer):
+        # Ensure user has access to the specified farm
+        farm_id = self.request.data.get('farm')
+        if farm_id and hasattr(self.request.user.profile, 'farmer_profile'):
+            farms = self.request.user.profile.farmer_profile.farms.all()
+            if farms.filter(id=farm_id).exists():
+                serializer.save()
+            else:
+                raise PermissionError("You don't have access to this farm")
+        else:
+            raise PermissionError("Only farmers can create crop classifications")

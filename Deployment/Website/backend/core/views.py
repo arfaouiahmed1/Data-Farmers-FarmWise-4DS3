@@ -10,8 +10,8 @@ from rest_framework.authtoken.models import Token
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
-from .models import UserProfile, Farm, Farmer, Admin, Weather, Crop, FarmCrop, InventoryItem, Equipment, DetectedWeed, Scan, Recommendation
-from .serializers import UserSerializer, UserProfileSerializer, FarmSerializer, FarmerSerializer, AdminSerializer, WeatherSerializer, FarmCropSerializer, CropSerializer, InventoryItemSerializer, EquipmentSerializer, DetectedWeedSerializer, ScanSerializer, RecommendationSerializer
+from .models import UserProfile, Farm, Farmer, Admin, Weather, Crop, FarmCrop, InventoryItem, Equipment, DetectedWeed, Scan, Recommendation, CropClassification
+from .serializers import UserSerializer, UserProfileSerializer, FarmSerializer, FarmerSerializer, AdminSerializer, WeatherSerializer, FarmCropSerializer, CropSerializer, InventoryItemSerializer, EquipmentSerializer, DetectedWeedSerializer, ScanSerializer, RecommendationSerializer, CropClassificationSerializer
 from django.db import models
 
 # Create your views here.
@@ -893,3 +893,55 @@ class EquipmentViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         return Response([])
+
+class CropClassificationView(viewsets.ModelViewSet):
+    queryset = CropClassification.objects.all()
+    serializer_class = CropClassificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        # Add the farm data
+        data = request.data.copy()
+        try:
+            farm = Farm.objects.get(id=data['farm'])
+            if farm.owner != request.user and not request.user.profile.is_admin:
+                return Response(
+                    {"error": "You don't have permission to analyze this farm"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+                
+            serializer = self.get_serializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Farm.DoesNotExist:
+            return Response(
+                {"error": "Farm not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_farms(request):
+    """
+    Return all farms owned by the current user
+    """
+    try:
+        # Check if user has a farmer profile
+        if hasattr(request.user.profile, 'farmer_profile'):
+            farms = Farm.objects.filter(owner=request.user.profile.farmer_profile)
+            serializer = FarmSerializer(farms, many=True)
+            return Response(serializer.data)
+        return Response([], status=200)  # Return empty list if not a farmer
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=500
+        )

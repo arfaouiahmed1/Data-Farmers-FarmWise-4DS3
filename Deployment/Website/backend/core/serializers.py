@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, Farm, Farmer, Admin, Weather, DetectedWeed, Crop, FarmCrop, Scan, Recommendation, InventoryItem, Equipment
+from .models import UserProfile, Farm, Farmer, Admin, Weather, DetectedWeed, Crop, FarmCrop, Scan, Recommendation, InventoryItem, Equipment, CropClassification
 
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:
@@ -157,4 +157,19 @@ class UserSerializer(serializers.ModelSerializer):
         if 'password' in validated_data:
             password = validated_data.pop('password')
             instance.set_password(password)
-        return super().update(instance, validated_data) 
+        return super().update(instance, validated_data)
+
+class CropClassificationSerializer(serializers.ModelSerializer):
+    recommended_crop = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CropClassification
+        fields = '__all__'
+        
+    def get_recommended_crop(self, obj):
+        if obj.recommended_crop:
+            return {
+                'id': obj.recommended_crop.id,
+                'name': obj.recommended_crop.name
+            }
+        return None
