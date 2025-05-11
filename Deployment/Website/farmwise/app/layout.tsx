@@ -21,10 +21,45 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Enhance the theme for better dashboard visibility
+  const enhancedTheme = {
+    ...theme,
+    components: {
+      ...theme.components,
+      Container: {
+        defaultProps: {
+          p: 'xs',
+        },
+      },
+      Card: {
+        defaultProps: {
+          padding: 'xs',
+        },
+      },
+      Paper: {
+        defaultProps: {
+          p: 'xs',
+        },
+      },
+    },
+    spacing: {
+      ...theme.spacing,
+      xs: '0.5rem',
+      sm: '0.75rem',
+      md: '1rem',
+    },
+    fontSizes: {
+      ...theme.fontSizes,
+      xs: '0.7rem',
+      sm: '0.8rem',
+      md: '0.9rem',
+    },
+  };
+
   return (
     <html lang="en" {...mantineHtmlProps}>
       <head>
-        <ColorSchemeScript defaultColorScheme="auto" />
+        <ColorSchemeScript defaultColorScheme="light" />
         <link rel="shortcut icon" href="/favicon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -36,10 +71,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
         />
+        <style>
+          {`
+            html, body {
+              height: 100%;
+              margin: 0;
+              padding: 0;
+              overflow: hidden;
+            }
+          `}
+        </style>
       </head>
       <body>
         <AuthRedirect />
-        <MantineProvider theme={theme} defaultColorScheme="auto">
+        <MantineProvider theme={enhancedTheme} defaultColorScheme="light">
           {/* ClientShell is removed from here */}
           {children}
         </MantineProvider>

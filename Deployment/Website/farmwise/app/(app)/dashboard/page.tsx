@@ -316,60 +316,72 @@ export default function DashboardPage() {
   };
 
   return (
-    <Container fluid px="lg" py="md"> 
-      <Group justify="space-between" mb="xl">
-        <Title order={1} className={classes.pageTitle}>
+    <Container fluid px="xs" py="xs">
+      <Group justify="space-between" mb="md">
+        <Title order={2} className={classes.pageTitle}>
           Farm Dashboard
         </Title>
         <Badge 
-          size="lg" 
+          size="md" 
           color={daysUntilIrrigation <= 2 ? "red" : "blue"} 
           variant="light"
           leftSection={
             <ThemeIcon color={daysUntilIrrigation <= 2 ? "red" : "blue"} variant="light" size="sm" radius="xl">
-              <IconDroplet size={14} />
+              <IconDroplet size={12} />
             </ThemeIcon>
           }
         >
-          {daysUntilIrrigation} Day{daysUntilIrrigation !== 1 ? 's' : ''} Until Next Recommended Irrigation
+          {daysUntilIrrigation} Day{daysUntilIrrigation !== 1 ? 's' : ''} Until Irrigation
         </Badge>
       </Group>
 
-      <Tabs value={selectedTab} onChange={handleTabChange} mb="xl" variant="pills" radius="md">
-        <Tabs.List grow>
-          <Tabs.Tab value="stats" leftSection={<IconTrendingUp size={16} />}>
+      {/* Top-Level Statistics Grid */}
+      <SimpleGrid cols={{ base: 2, sm: 4, lg: 8 }} spacing="xs" mb="md">
+         <StatCard title="Irrigation" value={`${daysUntilIrrigation}d`} icon={IconDroplet} color={daysUntilIrrigation <= 2 ? "red" : "blue"} />
+         <StatCard title="Issues" value={diagnosedPlantsCount} icon={IconZoomCheck} color={diagnosedPlantsCount > 0 ? "orange" : "green"} />
+         <StatCard title="Fields" value={fieldsMonitored} icon={IconMapPin} color="cyan" />
+         <StatCard title="Tasks" value={upcomingTasks} icon={IconCalendar} color="grape" />
+         <StatCard title="Crops" value={totalCrops} icon={IconPlant} color="green" />
+         <StatCard title="Equipment" value={equipmentIssues} icon={IconTractor} color={equipmentIssues > 0 ? "yellow" : "gray"} />
+         <StatCard title="Inventory" value={lowInventory} icon={IconBuildingWarehouse} color={lowInventory > 0 ? "pink" : "gray"} />
+         <StatCard title="Logs" value={recentLogs} icon={IconListDetails} color="lime" />
+      </SimpleGrid>
+
+      <Tabs value={selectedTab} onChange={handleTabChange} mb="md" variant="outline" radius="sm">
+        <Tabs.List>
+          <Tabs.Tab value="stats" leftSection={<IconTrendingUp size={14} />}>
             Key Stats
           </Tabs.Tab>
-          <Tabs.Tab value="health" leftSection={<IconPlant2 size={16} />}>
-            Plant Health Center
+          <Tabs.Tab value="health" leftSection={<IconPlant2 size={14} />}>
+            Plant Health
           </Tabs.Tab>
-          <Tabs.Tab value="planning" leftSection={<IconCalendar size={16} />}>
-            Planning & Schedule
+          <Tabs.Tab value="planning" leftSection={<IconCalendar size={14} />}>
+            Planning
           </Tabs.Tab>
         </Tabs.List>
       </Tabs>
 
       {selectedTab === 'stats' && (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xs">
           {/* Water Status Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder className={classes.dataCard}>
+          <Card shadow="sm" padding="sm" radius="md" withBorder className={classes.dataCard}>
             <Group justify="space-between" mb="xs">
               <Group align="center" gap="xs">
-                <ThemeIcon color="blue" variant="light" size={36} radius="md">
-                  <IconDroplet size={20} />
+                <ThemeIcon color="blue" variant="light" size={28} radius="md">
+                  <IconDroplet size={16} />
                 </ThemeIcon>
-                <Text fw={500} size="lg">Water Status</Text>
+                <Text fw={500}>Water Status</Text>
               </Group>
               <Badge color={moistureStatus === 'Low' ? 'red' : moistureStatus === 'Adequate' ? 'yellow' : 'green'} variant="light">
                 {moistureStatus}
               </Badge>
             </Group>
-            <Text c="dimmed" size="sm" mb="md">
+            <Text c="dimmed" size="xs" mb="xs">
               Current average soil moisture: {currentMoisture}%
             </Text>
             
             <LineChart
-              h={160}
+              h={120}
               data={moistureData}
               dataKey="date"
               series={[
@@ -377,124 +389,94 @@ export default function DashboardPage() {
               ]}
               curveType="natural"
               withDots={false}
-              // withLegend
               yAxisProps={{ domain: [0, 100] }}
-              tooltipProps={{
-                content: ({ label, payload }) => (
-                  <Paper px="md" py="sm" withBorder shadow="md" radius="md">
-                    <Text fw={500} mb={5}>{label}</Text>
-                    {payload?.map((item: any) => (
-                      <Text key={item.name} c={item.color} fz="sm">
-                        {item.name}: {item.value}%
-                      </Text>
-                    ))}
-                  </Paper>
-                ),
-              }}
+              withLegend={false}
             />
             <Alert 
               variant="light" 
               color={daysUntilIrrigation <= 2 ? "red" : "blue"} 
               title={daysUntilIrrigation <= 2 ? "Action Required" : "Recommendation"} 
-              icon={<IconInfoCircle />} 
-              mt="md"
+              icon={<IconInfoCircle size={16} />} 
+              mt="xs"
               radius="md"
+              p="xs"
             >
-              Next irrigation recommended in ~{daysUntilIrrigation} day{daysUntilIrrigation !== 1 ? 's' : ''}.
+              <Text size="xs">Next irrigation in ~{daysUntilIrrigation} day{daysUntilIrrigation !== 1 ? 's' : ''}.</Text>
             </Alert>
           </Card>
 
           {/* Yield Forecast Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder className={classes.dataCard}>
+          <Card shadow="sm" padding="sm" radius="md" withBorder className={classes.dataCard}>
              <Group justify="space-between" mb="xs">
                <Group align="center" gap="xs">
-                 <ThemeIcon color="farmGreen" variant="light" size={36} radius="md">
-                   <IconPlant size={20} />
+                 <ThemeIcon color="green" variant="light" size={28} radius="md">
+                   <IconPlant size={16} />
                  </ThemeIcon>
-                 <Text fw={500} size="lg">Yield Forecast</Text>
+                 <Text fw={500}>Yield Forecast</Text>
                </Group>
-               <Badge color="farmGreen" variant="light">Est. Monthly</Badge>
+               <Badge color="green" variant="light">Est. Monthly</Badge>
              </Group>
-             <Text c="dimmed" size="sm" mb="md">
+             <Text c="dimmed" size="xs" mb="xs">
                Estimated yield based on current conditions (kg/hectare).
              </Text>
             <BarChart
-              h={180} 
-              mt="md"
+              h={140} 
+              mt="xs"
               data={yieldData}
               dataKey="month"
-              type="stacked" // Changed to stacked
+              type="stacked"
               series={[
                 { name: 'tomatoes', color: 'red.6', label: 'Tomatoes' },
                 { name: 'corn', color: 'yellow.6', label: 'Corn' },
-                { name: 'wheat', color: 'orange.6', label: 'Wheat' }, // Changed color
+                { name: 'wheat', color: 'orange.6', label: 'Wheat' },
               ]}
               barProps={{ radius: 4 }}
-              // withLegend
-              tooltipProps={{
-                content: ({ label, payload }) => (
-                  <Paper px="md" py="sm" withBorder shadow="md" radius="md">
-                    <Text fw={500} mb={5}>{label}</Text>
-                    {payload?.map((item: any) => (
-                      <Text key={item.name} c={item.color} fz="sm">
-                        {item.name}: {item.value} kg/ha
-                      </Text>
-                    ))}
-                  </Paper>
-                ),
-              }}
+              withLegend={false}
             />
              <Button 
                 variant="light" 
-                color="farmGreen" 
+                color="green" 
                 fullWidth 
-                mt="md" 
+                mt="xs" 
                 radius="md"
-                leftSection={<IconTrendingUp size={16} />}
+                leftSection={<IconTrendingUp size={14} />}
+                size="xs"
              >
-                View Detailed Analytics
+                View Analytics
              </Button>
           </Card>
 
           {/* Cost Estimation Card */}
-           <Card shadow="sm" padding="lg" radius="md" withBorder className={classes.dataCard}>
+           <Card shadow="sm" padding="sm" radius="md" withBorder className={classes.dataCard}>
              <Group justify="space-between" mb="xs">
                <Group align="center" gap="xs">
-                 <ThemeIcon color="teal" variant="light" size={36} radius="md">
-                   <IconCoin size={20} />
+                 <ThemeIcon color="teal" variant="light" size={28} radius="md">
+                   <IconCoin size={16} />
                  </ThemeIcon>
-                 <Text fw={500} size="lg">Cost Breakdown</Text>
+                 <Text fw={500}>Cost Breakdown</Text>
                </Group>
                <Badge color="teal" variant="light">Est. %</Badge>
              </Group>
-             <Text c="dimmed" size="sm" mb="md">
+             <Text c="dimmed" size="xs" mb="xs">
                Estimated operational cost distribution for the current cycle.
              </Text>
              <DonutChart 
-                h={180} 
-                mt="md" 
+                h={140} 
+                mt="xs" 
                 data={costBreakdown} 
                 tooltipDataSource="segment" 
                 chartLabel={`${costBreakdown.reduce((acc, item) => acc + item.value, 0)}% Total`}
-                tooltipProps={{
-                    content: ({ payload }) => (
-                      <Paper px="md" py="sm" withBorder shadow="md" radius="md">
-                        {payload?.map((item: any) => (
-                          <Text key={item.name} c={item.payload.fill} fz="sm" fw={500}>
-                            {item.name}: {item.value}%
-                          </Text>
-                        ))}
-                      </Paper>
-                    ),
-                }}
+                withLabels={false}
+                withTooltip={true}
                 />
              <Button 
                 variant="light" 
                 color="teal" 
                 fullWidth 
-                mt="md" 
+                mt="xs" 
                 radius="md"
-                leftSection={<IconSettings size={16} />}
+                leftSection={<IconSettings size={14} />}
+                size="xs"
              >
                 Manage Budget
              </Button>
@@ -504,74 +486,77 @@ export default function DashboardPage() {
       )}
 
       {selectedTab === 'health' && (
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xs">
           
           {/* Health Stats Overview & Chart */}
-          <Stack>
-             <Title order={3} mb="sm">Health Overview</Title>
-             <SimpleGrid cols={2} spacing="md">
+          <Stack gap="xs">
+             <SimpleGrid cols={2} spacing="xs">
                 <StatCard title="Total Scans" value={totalScans} icon={IconPhotoScan} color="blue" />
-                <StatCard title="Issues Found (Recent)" value={issuesLast30Days} icon={IconAlertCircle} color={issuesLast30Days > 0 ? 'orange' : 'green'} />
+                <StatCard title="Issues Found" value={issuesLast30Days} icon={IconAlertCircle} color={issuesLast30Days > 0 ? 'orange' : 'green'} />
              </SimpleGrid>
-             <Paper withBorder radius="md" p="md" shadow="sm">
+             <Paper withBorder radius="md" p="xs" shadow="sm">
                 <Group justify="space-between" mb="xs">
-                    <Text fw={500}>Issue Type Breakdown</Text>
-                    <Badge color="gray">Based on History</Badge>
+                    <Text fw={500} size="sm">Issue Type Breakdown</Text>
+                    <Badge color="gray" size="xs">Based on History</Badge>
                 </Group>
                 {issueBreakdownData.length > 0 ? (
                     <Center>
                         <DonutChart 
-                            h={200} 
+                            h={150} 
                             data={issueBreakdownData} 
                             tooltipDataSource="segment" 
                             chartLabel="Issue Types"
+                            withLabels={false}
                         />
                     </Center>
                 ) : (
-                    <Text c="dimmed" ta="center" my="lg">No issue history data available.</Text>
+                    <Text c="dimmed" ta="center" my="md" size="xs">No issue history data available.</Text>
                 )}
              </Paper>
              <Button 
                  variant="light" 
                  color="green" 
                  radius="md"
-                 leftSection={<IconPhotoScan size={16} />}
+                 leftSection={<IconPhotoScan size={14} />}
                  component={Link} 
-                 href="/dashboard/disease-detection" // Link to dedicated analysis page
+                 href="/dashboard/disease-detection"
+                 size="xs"
              >
                  Analyze New Image
              </Button>
           </Stack>
 
           {/* Recent Scan History Table */}
-          <Paper withBorder radius="md" p="md" shadow="sm">
-            <Title order={3} mb="md">Recent Health History</Title>
+          <Paper withBorder radius="md" p="xs" shadow="sm">
+            <Text fw={500} size="sm" mb="xs">Recent Health History</Text>
             {combinedHistory.length > 0 ? (
-              <Box style={{ maxHeight: '450px', overflowY: 'auto' }}> {/* Scrollable history */} 
-                <Table striped highlightOnHover withTableBorder verticalSpacing="xs" stickyHeader>
+              <Box style={{ maxHeight: '300px', overflowY: 'auto' }}> 
+                <Table striped highlightOnHover withTableBorder verticalSpacing="xs" stickyHeader fontSize="xs">
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Date</Table.Th>
                       <Table.Th>Type</Table.Th>
-                      <Table.Th>Location/Field</Table.Th>
-                      <Table.Th>Result/Severity</Table.Th>
+                      <Table.Th>Location</Table.Th>
+                      <Table.Th>Result</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {combinedHistory.slice(0, 15).map((item: any) => ( // Use any temporarily or define a common type
+                    {combinedHistory.slice(0, 8).map((item: any) => (
                       <Table.Tr key={item.id}>
                         <Table.Td>{item.date}</Table.Td>
                         <Table.Td>
                           <Badge 
                             variant="light" 
                             color={item.type === 'Disease' ? 'red' : item.type === 'Pest' ? 'orange' : item.type === 'Weed' ? 'yellow' : 'blue'}
+                            size="xs"
                           >
                             {item.type ?? 'Unknown'}
                           </Badge>
                         </Table.Td>
                         <Table.Td>{item.location ?? item.field ?? 'N/A'}</Table.Td>
                         <Table.Td>
-                          {item.resultSummary ?? item.name ?? 'N/A'} 
+                          {(item.resultSummary ?? item.name ?? 'N/A').substring(0, 15)}
+                          {(item.resultSummary ?? item.name ?? '').length > 15 ? '...' : ''}
                           {item.severity && (
                             <Badge 
                               ml={5} 
@@ -589,26 +574,26 @@ export default function DashboardPage() {
                 </Table>
               </Box>
             ) : (
-              <Text c="dimmed">No scan or issue history found.</Text>
+              <Text c="dimmed" size="xs">No scan or issue history found.</Text>
             )}
           </Paper>
         </SimpleGrid>
       )}
 
       {selectedTab === 'planning' && (
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xs">
           {/* Crop Rotation Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder className={classes.dataCard}>
-            <Group justify="space-between" mb="md">
+          <Card shadow="sm" padding="sm" radius="md" withBorder className={classes.dataCard}>
+            <Group justify="space-between" mb="xs">
               <Group align="center" gap="xs">
-                <ThemeIcon color="orange" variant="light" size={36} radius="md">
-                  <IconArrowsShuffle size={20} />
+                <ThemeIcon color="orange" variant="light" size={28} radius="md">
+                  <IconArrowsShuffle size={16} />
                 </ThemeIcon>
-                <Text fw={500} size="lg">Crop Rotation</Text>
+                <Text fw={500}>Crop Rotation</Text>
               </Group>
-              <Badge color="orange" variant="light">Field A</Badge>
+              <Badge color="orange" variant="light" size="xs">Field A</Badge>
             </Group>
-            <List spacing="xs" size="sm">
+            <List spacing="xs" size="xs">
               {cropRotationSchedule.map((item, index) => (
                 <List.Item 
                   key={index}
@@ -616,16 +601,16 @@ export default function DashboardPage() {
                     <ThemeIcon 
                       color={item.status === 'Current' ? 'green' : 'gray'} 
                       variant="light" 
-                      size={20} 
+                      size={18} 
                       radius="xl"
                     >
-                      {item.status === 'Current' ? <IconCheck size={12} /> : <IconCalendar size={12} />}
+                      {item.status === 'Current' ? <IconCheck size={10} /> : <IconCalendar size={10} />}
                     </ThemeIcon>
                   }
                 >
                   <Group justify="space-between">
-                    <Text>{item.season}: {item.crop}</Text>
-                    <Badge variant="outline" color={item.status === 'Current' ? 'green' : 'gray'}>{item.status}</Badge>
+                    <Text size="xs">{item.season}: {item.crop}</Text>
+                    <Badge variant="outline" color={item.status === 'Current' ? 'green' : 'gray'} size="xs">{item.status}</Badge>
                   </Group>
                 </List.Item>
               ))}
@@ -634,26 +619,27 @@ export default function DashboardPage() {
                 variant="light" 
                 color="orange" 
                 fullWidth 
-                mt="md" 
+                mt="xs" 
                 radius="md"
-                leftSection={<IconSettings size={16} />}
+                leftSection={<IconSettings size={14} />}
+                size="xs"
              >
                 Manage Rotation Plan
              </Button>
           </Card>
 
           {/* Planting Calendar Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder className={classes.dataCard}>
-            <Group justify="space-between" mb="md">
+          <Card shadow="sm" padding="sm" radius="md" withBorder className={classes.dataCard}>
+            <Group justify="space-between" mb="xs">
               <Group align="center" gap="xs">
-                <ThemeIcon color="lime" variant="light" size={36} radius="md">
-                  <IconCalendar size={20} />
+                <ThemeIcon color="lime" variant="light" size={28} radius="md">
+                  <IconCalendar size={16} />
                 </ThemeIcon>
-                <Text fw={500} size="lg">Planting Calendar</Text>
+                <Text fw={500}>Planting Calendar</Text>
               </Group>
-              <Badge color="lime" variant="light">Optimal Windows</Badge>
+              <Badge color="lime" variant="light" size="xs">Optimal Windows</Badge>
             </Group>
-            <List spacing="xs" size="sm">
+            <List spacing="xs" size="xs">
               {plantingCalendar.map((item, index) => (
                 <List.Item 
                   key={index}
@@ -661,17 +647,17 @@ export default function DashboardPage() {
                     <ThemeIcon 
                       color={item.readyToPlant ? 'green' : 'gray'} 
                       variant="light" 
-                      size={20} 
+                      size={18} 
                       radius="xl"
                     >
-                      {item.readyToPlant ? <IconCheck size={12} /> : <IconCircleX size={12} />}
+                      {item.readyToPlant ? <IconCheck size={10} /> : <IconCircleX size={10} />}
                     </ThemeIcon>
                   }
                 >
                   <Group justify="space-between">
-                    <Text fw={500}>{item.crop}</Text>
+                    <Text size="xs" fw={500}>{item.crop}</Text>
                     <Text size="xs" c="dimmed">{item.bestStart} - {item.bestEnd}</Text>
-                    <Badge variant="light" color={item.readyToPlant ? 'green' : 'gray'}>
+                    <Badge variant="light" color={item.readyToPlant ? 'green' : 'gray'} size="xs">
                       {item.readyToPlant ? 'Ready' : 'Not Ready'}
                     </Badge>
                   </Group>
@@ -682,43 +668,30 @@ export default function DashboardPage() {
                 variant="light" 
                 color="lime" 
                 fullWidth 
-                mt="md" 
+                mt="xs" 
                 radius="md"
-                leftSection={<IconPlus size={16} />}
+                leftSection={<IconPlus size={14} />}
+                size="xs"
              >
                 Add Crop to Calendar
              </Button>
           </Card>
         </SimpleGrid>
       )}
-
-      <Space h="xl" /> 
-
-      {/* Top-Level Statistics Grid */}
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: 4 }} spacing="lg" mb="xl">
-         <StatCard title="Irrigation Alert" value={`${daysUntilIrrigation} Day${daysUntilIrrigation !== 1 ? 's' : ''}`} icon={IconDroplet} color={daysUntilIrrigation <= 2 ? "red" : "blue"} />
-         <StatCard title="Diagnosed Issues" value={diagnosedPlantsCount} icon={IconZoomCheck} color={diagnosedPlantsCount > 0 ? "orange" : "green"} />
-         <StatCard title="Fields Monitored" value={fieldsMonitored} icon={IconMapPin} color="cyan" />
-         <StatCard title="Upcoming Tasks" value={upcomingTasks} icon={IconCalendar} color="grape" />
-         <StatCard title="Total Crops" value={totalCrops} icon={IconPlant} color="farmGreen" />
-         <StatCard title="Equipment Issues" value={equipmentIssues} icon={IconTractor} color={equipmentIssues > 0 ? "yellow" : "gray"} />
-         <StatCard title="Low Inventory" value={lowInventory} icon={IconBuildingWarehouse} color={lowInventory > 0 ? "pink" : "gray"} />
-         <StatCard title="Recent Logs" value={recentLogs} icon={IconListDetails} color="lime" />
-      </SimpleGrid>
     </Container>
   );
 }
 
 const StatCard = ({ title, value, icon: IconComponent, color }: { title: string; value: string | number; icon: React.ElementType; color: string }) => (
-  <Paper withBorder radius="md" p="md" shadow="sm">
-    <Group>
-      <ThemeIcon color={color} variant="light" size={36} radius="md">
-        <IconComponent size={20} />
+  <Paper withBorder radius="md" p="xs" shadow="sm">
+    <Group gap="xs">
+      <ThemeIcon color={color} variant="light" size={28} radius="md">
+        <IconComponent size={16} />
       </ThemeIcon>
-      <Stack gap={0}>
-        <Text c="dimmed" size="xs" tt="uppercase" fw={700}>{title}</Text>
-        <Text fw={700} size="xl">{value}</Text>
-      </Stack>
+      <div>
+        <Text c="dimmed" size="xs" tt="uppercase" fw={500}>{title}</Text>
+        <Text fw={700} size="sm">{value}</Text>
+      </div>
     </Group>
   </Paper>
 );

@@ -20,15 +20,16 @@ import {
   Badge,
   useMantineColorScheme,
   ActionIcon,
-  Affix,
-  Button,
   Modal,
   CloseButton,
   Paper,
-  Transition,
-  Notification,
   Center,
-  List
+  List,
+  Flex,
+  Title,
+  Indicator,
+  Collapse,
+  MantineTheme
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { 
@@ -50,23 +51,19 @@ import {
   IconSun,
   IconMoon,
   IconInfoCircle,
-  IconMessageChatbot,
-  IconBrandHipchat,
-  IconBug,
-  IconLayoutDashboard,
   IconBuildingWarehouse,
   IconListDetails,
-  IconBrain,
-  IconArrowsMaximize,
-  IconArrowsMinimize,
-  IconShoppingCart
+  IconShoppingCart,
+  IconChevronRight,
+  IconSearch,
+  IconHome
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
-import { AiChatInterface } from '../AiChat/AiChatInterface';
 import authService from '../../app/api/auth';
+import classes from './Shell.module.css';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -85,9 +82,7 @@ interface NavItemProps {
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpened, { toggle: toggleMobileNav }] = useDisclosure(false);
-  const [aiModalOpened, { open: openAiModal, close: closeAiModal }] = useDisclosure(false);
   const [logoutModalOpened, { open: openLogoutModal, close: closeLogoutModal }] = useDisclosure(false);
-  const [isAiFullScreen, setIsAiFullScreen] = useState(false);
   const pathname = usePathname();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [mounted, setMounted] = useState(false);
@@ -100,11 +95,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     { id: '3', title: 'Equipment maintenance due', message: 'Tractor #2 is due for regular maintenance', color: 'yellow', date: new Date(Date.now() - 172800000) }, // 2 days ago
   ]);
   const [notificationsMenuOpened, { open: openNotificationsMenu, close: closeNotificationsMenu }] = useDisclosure(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   
   // Set mounted to true once component is mounted (client-side only)
   useEffect(() => {
     setMounted(true);
-  }, [pathname]);
+  }, []);
+
+  // Force a re-render when colorScheme changes to ensure consistent styling
+  useEffect(() => {
+    if (mounted) {
+      // Apply any client-side-only style adjustments here if needed
+      const htmlElement = document.documentElement;
+      if (colorScheme === 'dark') {
+        htmlElement.setAttribute('data-mantine-color-scheme', 'dark');
+      } else {
+        htmlElement.setAttribute('data-mantine-color-scheme', 'light');
+      }
+    }
+  }, [colorScheme, mounted]);
 
   // Default text color to use for server-side rendering
   const textColor = "green.7"; // Default for server render
@@ -115,7 +124,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Main navigation items
   const mainNavItems: NavItemProps[] = [
     { 
-      icon: IconDashboard, 
+      icon: IconHome, 
       color: 'blue', 
       label: 'Dashboard', 
       path: '/dashboard',
@@ -205,81 +214,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   ];
 
-  // Tools navigation items
-  const toolsNavItems: NavItemProps[] = [
-    // {
-    //   icon: IconBrandHipchat,
-    //   color: 'violet',
-    //   label: 'AI Advisor',
-    //   path: '/dashboard/ai-advisor',
-    // },
-    // {
-    //   icon: IconBug,
-    //   color: 'red',
-    //   label: 'Disease Detection',
-    //   path: '/dashboard/disease-detection',
-    // }
-  ];
-
-  // Generate all navigation links
-  const renderNavLinks = (items: NavItemProps[]) => {
-    return items.map((item) => {
-      // Special case for the root dashboard link
-      const isRootDashboard = item.path === '/dashboard';
-      const isActive = isRootDashboard 
-        ? pathname === item.path // Only match exactly for root dashboard
-        : (pathname === item.path || pathname?.startsWith(item.path + '/')); // Existing logic for others
-      
-      return (
-        <NavLink
-          key={item.path}
-          active={isActive}
-          label={item.label}
-          leftSection={
-            <ThemeIcon color={item.color} variant={isActive ? 'filled' : 'light'} size={30}>
-              <item.icon style={{ width: rem(18), height: rem(18) }} />
-            </ThemeIcon>
-          }
-          rightSection={
-            item.badge && (
-              <Badge size="sm" color={item.badge.color} variant="filled">
-                {item.badge.text}
-              </Badge>
-            )
-          }
-          component={Link}
-          href={item.path}
-          childrenOffset={28}
-        >
-          {item.children?.map((child) => (
-            <NavLink
-              key={child.path}
-              label={child.title}
-              component={Link}
-              href={child.path}
-              active={pathname === child.path}
-            />
-          ))}
-        </NavLink>
-      );
-    });
-  };
-
-  // Determine if the AI button should be visible
-  const showAiButton = pathname !== '/dashboard/ai-advisor';
-
-  // Custom title for the modal including the fullscreen toggle
-  const modalTitle = (
-    <Group justify="space-between" style={{ width: '100%' }}>
-      <Text fw={500}>AI Advisor</Text>
-      <Tooltip label={isAiFullScreen ? "Exit full screen" : "Enter full screen"} position="left" withArrow>
-        <ActionIcon variant="subtle" onClick={() => setIsAiFullScreen((p) => !p)}>
-          {isAiFullScreen ? <IconArrowsMinimize size={18} /> : <IconArrowsMaximize size={18} />}
-        </ActionIcon>
-      </Tooltip>
-    </Group>
-  );
-
   // Load user data
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -354,80 +288,68 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Toggle section expansion
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
+
   return (
     <AppShell
       header={{ height: 60 }}
       navbar={{ 
-        width: 280, 
-        breakpoint: 'sm',
+        width: 250, 
+        breakpoint: "sm",
         collapsed: { mobile: !mobileNavOpened }
       }}
-      padding="md"
+      padding="xs"
+      classNames={{
+        navbar: classes.navbar,
+        header: classes.header
+      }}
       styles={{
         main: {
-          // Remove this line:
-          // backgroundColor: mounted ? (colorScheme === 'dark' ? '#1f1f1f' : '#f8f9fa') : '#f8f9fa',
-        },
+          backgroundColor: 'var(--mantine-color-body)',
+          height: '100vh',
+          overflow: 'auto'
+        }
       }}
       suppressHydrationWarning={true}
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
+        <Flex h="100%" px="md" align="center" justify="space-between">
           <Group>
             <Burger opened={mobileNavOpened} onClick={toggleMobileNav} hiddenFrom="sm" size="sm" />
-            <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-              <Group gap={8}>
-                <Image src="/favicon.svg" alt="FarmWise Logo" width={32} height={32} />
-                <Text fw={700} size="lg" c={logoTextColor}>
-                  FarmWise
-                </Text>
-              </Group>
+            <Link href="/dashboard" className={classes.logoContainer}>
+              <Image src="/favicon.svg" alt="FarmWise Logo" width={32} height={32} />
+              <Text className={classes.logoText} c={logoTextColor}>
+                FarmWise
+              </Text>
             </Link>
           </Group>
 
           <Group>
+            <ActionIcon className={classes.searchButton} variant="subtle" radius="xl" size="md" color="gray">
+              <IconSearch style={{ width: rem(18), height: rem(18) }} />
+            </ActionIcon>
+            
             <Menu shadow="md" width={320} position="bottom-end" closeOnItemClick={false} opened={notificationsMenuOpened} onChange={notificationsMenuOpened ? closeNotificationsMenu : openNotificationsMenu}>
               <Menu.Target>
-                <Tooltip label="Notifications" withArrow position="bottom">
-                  <ActionIcon variant="subtle" radius="xl" size="lg" color="gray">
-                    <IconBell style={{ width: rem(20), height: rem(20) }} />
-                    {notifications.length > 0 && (
-                      <Box 
-                        pos="absolute" 
-                        top={3} 
-                        right={3} 
-                        w={14} 
-                        h={14} 
-                        bg="red" 
-                        style={{ 
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '10px',
-                          color: 'white',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        {notifications.length}
-                      </Box>
-                    )}
+                <Indicator disabled={notifications.length === 0} color="red" size={8} offset={4}>
+                  <ActionIcon className={classes.searchButton} variant="subtle" radius="xl" size="md" color="gray">
+                    <IconBell style={{ width: rem(18), height: rem(18) }} />
                   </ActionIcon>
-                </Tooltip>
+                </Indicator>
               </Menu.Target>
               <Menu.Dropdown>
                 <Box p="xs">
                   <Group justify="space-between" mb="xs">
                     <Text fw={600}>Notifications</Text>
                     {notifications.length > 0 && (
-                      <Button 
-                        variant="subtle" 
-                        color="gray" 
-                        size="xs"
+                      <CloseButton 
+                        size="xs" 
                         onClick={handleClearAllNotifications}
-                      >
-                        Clear All
-                      </Button>
+                        title="Clear all notifications"
+                      />
                     )}
                   </Group>
                 </Box>
@@ -475,9 +397,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
             <Menu shadow="md" width={200} position="bottom-end">
               <Menu.Target>
-                <UnstyledButton>
+                <UnstyledButton className={classes.userMenu}>
                   <Group gap={8}>
-                    <Avatar color="green" radius="xl">{getUserInitials()}</Avatar>
+                    <Avatar className={classes.avatar} color="green" radius="xl">{getUserInitials()}</Avatar>
                     <Box style={{ flex: 1 }} visibleFrom="sm">
                       <Text size="sm" fw={500}>{userData?.first_name} {userData?.last_name || 'User'}</Text>
                       <Text c="dimmed" size="xs">{getUserRole()}</Text>
@@ -508,77 +430,113 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </Menu.Dropdown>
             </Menu>
           </Group>
-        </Group>
+        </Flex>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
-        <ScrollArea style={{ flex: 1 }} mx="-md">
-          <Stack gap="xs">
-            {renderNavLinks(mainNavItems)}
-            <Divider label="Management" labelPosition="center" my="sm" />
-            {renderNavLinks(managementNavItems)}
-            {toolsNavItems.length > 0 && (
-              <>
-                <Divider label="Tools" labelPosition="center" my="sm" />
-            {renderNavLinks(toolsNavItems)}
-              </>
-            )}
-          </Stack>
-        </ScrollArea>
-        <AppShell.Section>
-          <Divider my="sm" />
-          <Group justify="space-between" px="md">
-            <Text size="xs" c="dimmed">
-              FarmWise v2.0
-            </Text>
-            <Tooltip label="AI Assistance" withArrow position="top">
-              <ActionIcon variant="subtle" color="green" component={Link} href="/dashboard/help">
-                <IconMessageChatbot style={{ width: rem(18), height: rem(18) }} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
+      <AppShell.Navbar p="xs">
+        <AppShell.Section grow component={ScrollArea} mx="-xs" px="xs">
+          <Box mb="md" mt="md">
+            <Text className={classes.sectionTitle}>MAIN</Text>
+            {mainNavItems.map((item) => {
+              // Special case for the root dashboard link
+              const isRootDashboard = item.path === '/dashboard';
+              const isActive = isRootDashboard 
+                ? pathname === item.path // Only match exactly for root dashboard
+                : (pathname === item.path || pathname?.startsWith(item.path + '/'));
+              
+              const hasChildren = item.children && item.children.length > 0;
+              const isExpanded = expandedSection === item.label;
+              
+              return (
+                <Box key={item.path}>
+                  <NavLink
+                    className={isActive ? `${classes.navLink} ${classes.navLinkActive}` : classes.navLink}
+                    active={isActive}
+                    label={
+                      <Group justify="space-between" wrap="nowrap">
+                        <Group gap="sm">
+                          <ThemeIcon color={item.color} variant={isActive ? 'filled' : 'light'} size={28} radius="md">
+                            <item.icon style={{ width: rem(16), height: rem(16) }} />
+                          </ThemeIcon>
+                          <Text size="sm">{item.label}</Text>
+                        </Group>
+                        {item.badge && (
+                          <Badge size="xs" color={item.badge.color} variant="filled">
+                            {item.badge.text}
+                          </Badge>
+                        )}
+                      </Group>
+                    }
+                    rightSection={hasChildren ? (
+                      <IconChevronRight 
+                        size={14} 
+                        style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }} 
+                      />
+                    ) : null}
+                    onClick={hasChildren ? () => toggleSection(item.label) : undefined}
+                    component={hasChildren ? 'div' : Link as any}
+                    href={hasChildren ? undefined : item.path}
+                  />
+                  
+                  {hasChildren && (
+                    <Collapse in={isExpanded}>
+                      <Box pl={44}>
+                        {item.children?.map((child) => (
+                          <NavLink
+                            key={child.path}
+                            className={classes.navLink}
+                            label={<Text size="xs">{child.title}</Text>}
+                            component={Link as any}
+                            href={child.path}
+                            active={pathname === child.path}
+                            pl="xs"
+                          />
+                        ))}
+                      </Box>
+                    </Collapse>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+          
+          <Box mb="md">
+            <Text className={classes.sectionTitle}>MANAGEMENT</Text>
+            {managementNavItems.map((item) => {
+              const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
+              
+              return (
+                <NavLink
+                  key={item.path}
+                  className={isActive ? `${classes.navLink} ${classes.navLinkActive}` : classes.navLink}
+                  active={isActive}
+                  label={
+                    <Group justify="space-between" wrap="nowrap">
+                      <Group gap="sm">
+                        <ThemeIcon color={item.color} variant={isActive ? 'filled' : 'light'} size={28} radius="md">
+                          <item.icon style={{ width: rem(16), height: rem(16) }} />
+                        </ThemeIcon>
+                        <Text size="sm">{item.label}</Text>
+                      </Group>
+                      {item.badge && (
+                        <Badge size="xs" color={item.badge.color} variant="filled">
+                          {item.badge.text}
+                        </Badge>
+                      )}
+                    </Group>
+                  }
+                  component={Link as any}
+                  href={item.path}
+                />
+              );
+            })}
+          </Box>
         </AppShell.Section>
       </AppShell.Navbar>
 
       <AppShell.Main>
         {children}
-        
-        {showAiButton && (
-            <Affix position={{ bottom: rem(20), right: rem(20) }}>
-              <Tooltip label="Ask AI Advisor" position="left" withArrow>
-                 <Button
-                    onClick={openAiModal}
-                    leftSection={<IconBrain size={18} />}
-                    radius="xl"
-                    size="md"
-                    variant="gradient"
-                    gradient={{ from: 'violet', to: 'grape' }}
-                  >
-                    Ask AI
-                  </Button>
-              </Tooltip>
-            </Affix>
-        )}
       </AppShell.Main>
-
-      {/* AI Chat Modal */}
-      <Modal 
-        opened={aiModalOpened} 
-        onClose={() => {
-            closeAiModal();
-            setIsAiFullScreen(false);
-        }} 
-        title={modalTitle}
-        fullScreen={isAiFullScreen}
-        transitionProps={{ transition: 'fade', duration: 200 }}
-        overlayProps={{
-           backgroundOpacity: 0.55,
-           blur: 3,
-         }}
-        radius={isAiFullScreen ? 0 : "md" }
-      >
-        <AiChatInterface isFullScreen={isAiFullScreen} />
-      </Modal>
 
       {/* Logout Confirmation Modal */}
       <Modal
@@ -590,12 +548,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       >
         <Text size="sm">Are you sure you want to log out?</Text>
         <Group justify="flex-end" mt="md">
-          <Button variant="default" onClick={closeLogoutModal}>
+          <CloseButton onClick={closeLogoutModal}>
             Cancel
-          </Button>
-          <Button color="red" onClick={handleLogoutConfirm}>
-            Logout
-          </Button>
+          </CloseButton>
+          <ActionIcon variant="filled" color="red" onClick={handleLogoutConfirm} radius="xl" size="lg">
+            <IconLogout size={18} />
+          </ActionIcon>
         </Group>
       </Modal>
     </AppShell>
