@@ -161,8 +161,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       path: '/dashboard/planning',
       children: [
         { title: 'Crop Calendar', path: '/dashboard/planning/calendar' },
-        { title: 'Rotation Schedule', path: '/dashboard/planning/rotation' },
-        { title: 'Resource Planning', path: '/dashboard/planning/resources' },
+        { title: 'Rotation Schedule', path: '/dashboard/planning/rotation' }
       ]
     },
     {

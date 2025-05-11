@@ -8,6 +8,7 @@ export interface FarmEvent {
     allDay?: boolean;
     resource?: string;
     type?: string;
+    description?: string; // Add description field
     // Add any other relevant fields that might be shared
   }
 

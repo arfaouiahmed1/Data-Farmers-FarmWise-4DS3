@@ -3,32 +3,13 @@
 import React, { useState } from 'react';
 import {
     Container, Title, Text, Paper, Button, Modal,
-    Group, Stack, Box, ActionIcon, Divider // Import ActionIcon if needed, using Button with icons for now
+    Group, Stack, Box, Tabs, Badge, Divider
 } from '@mantine/core';
-import { Calendar, dateFnsLocalizer, EventProps } from 'react-big-calendar';
-import { format } from 'date-fns/format';
-import { parse } from 'date-fns/parse';
-import { startOfWeek } from 'date-fns/startOfWeek';
-import { getDay } from 'date-fns/getDay';
-import { enUS } from 'date-fns/locale/en-US';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import '@/styles/custom-calendar.css'; // Import custom styles
-import { IconPlus, IconPencil, IconTrash } from '@tabler/icons-react'; // Import icons
+import { IconCalendarStats, IconFilter, IconPlus } from '@tabler/icons-react';
 import type { FarmEvent } from '@/types/planning';
 import { EventForm } from '@/components/planning/EventForm';
-import { CustomCalendarToolbar } from '@/components/planning/CustomCalendarToolbar';
-
-// Setup the localizer by providing the required functions
-const locales = {
-  'en-US': enUS,
-};
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
+import { CropRecommendations } from '@/components/planning/CropRecommendations';
+import { EnhancedCalendar } from '@/components/planning/EnhancedCalendar';
 
 // Mock Event Data (Replace with actual data source)
 const now = new Date();
@@ -40,6 +21,7 @@ const initialMockEvents: FarmEvent[] = [
     end: new Date(now.getFullYear(), now.getMonth(), 4),
     resource: 'Planting Team',
     type: 'planting',
+    description: 'Plant corn seeds at 1.5 inch depth with 30 inch row spacing.'
   },
   {
     id: 2,
@@ -48,6 +30,7 @@ const initialMockEvents: FarmEvent[] = [
     end: new Date(now.getFullYear(), now.getMonth(), 8, 12, 0, 0),
     resource: 'Fertilizer Spreader',
     type: 'fertilization',
+    description: 'Apply nitrogen fertilizer at 40 lbs/acre.'
   },
   {
     id: 3,
@@ -57,6 +40,7 @@ const initialMockEvents: FarmEvent[] = [
     allDay: true,
     resource: 'Agronomist',
     type: 'scouting',
+    description: 'Check for aphids, corn borers, and other common pests.'
   },
    {
     id: 4,
@@ -64,41 +48,50 @@ const initialMockEvents: FarmEvent[] = [
     start: new Date(now.getFullYear(), now.getMonth() + 1, 5),
     end: new Date(now.getFullYear(), now.getMonth() + 1, 10),
     type: 'harvesting',
+    description: 'Harvest soybeans when moisture content is between 13-15%.'
+  },
+  {
+    id: 5,
+    title: 'Tractor Maintenance',
+    start: new Date(now.getFullYear(), now.getMonth(), 20),
+    end: new Date(now.getFullYear(), now.getMonth(), 20),
+    resource: 'John Deere 8R',
+    type: 'equipment',
+    description: 'Regular maintenance: oil change, filter replacement, and general inspection.'
+  },
+  {
+    id: 6,
+    title: 'Irrigation - Field D',
+    start: new Date(now.getFullYear(), now.getMonth(), 12),
+    end: new Date(now.getFullYear(), now.getMonth(), 12),
+    resource: 'Center Pivot System',
+    type: 'irrigation',
+    description: 'Apply 0.75 inches of water.'
   },
 ];
 
 export default function CropCalendarPage() {
   const [events, setEvents] = useState<FarmEvent[]>(initialMockEvents);
-  const [selectedEvent, setSelectedEvent] = useState<FarmEvent | null>(null);
-  const [detailsModalOpened, setDetailsModalOpened] = useState(false);
   const [formModalOpened, setFormModalOpened] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<Partial<FarmEvent> | null>(null);
   const [modalTitle, setModalTitle] = useState('Add New Event');
-
-  const handleSelectEvent = (event: FarmEvent) => {
-    setSelectedEvent(event);
-    setDetailsModalOpened(true);
-  };
+  const [activeTab, setActiveTab] = useState<string>('calendar');
 
   const handleAddEventClick = () => {
     setCurrentEvent(null);
     setModalTitle('Add New Event');
-    setDetailsModalOpened(false);
     setFormModalOpened(true);
   };
 
-  const handleEditEventClick = (event: FarmEvent) => {
+  const handleEditEvent = (event: FarmEvent) => {
     setCurrentEvent(event);
     setModalTitle('Edit Event');
-    setDetailsModalOpened(false);
     setFormModalOpened(true);
   };
 
   const handleDeleteEvent = (eventId: number | string) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
       setEvents(events.filter(event => event.id !== eventId));
-      setDetailsModalOpened(false);
-      setSelectedEvent(null);
       console.log(`Deleted event with ID: ${eventId}`);
     }
   };
@@ -108,76 +101,54 @@ export default function CropCalendarPage() {
       setEvents(events.map(event => (event.id === eventData.id ? eventData : event)));
       console.log('Updated event:', eventData);
     } else {
-      setEvents([...events, { ...eventData }]);
+      // Generate a unique ID for new events
+      const newId = Math.max(...events.map(e => typeof e.id === 'number' ? e.id : 0)) + 1;
+      setEvents([...events, { ...eventData, id: newId }]);
       console.log('Added new event:', eventData);
     }
     setFormModalOpened(false);
     setCurrentEvent(null);
   };
 
-  // Refine event styling
-  const eventStyleGetter = (event: FarmEvent, start: Date, end: Date, isSelected: boolean) => {
-    let backgroundColor = '#3174ad'; // Default blue
-    let borderColor = '#195a91'; // Darker blue
-
-    if (event.type === 'planting') { backgroundColor = '#40c057'; borderColor = '#2f9e44'; } // Green
-    if (event.type === 'harvesting') { backgroundColor = '#fd7e14'; borderColor = '#e67700'; } // Orange
-    if (event.type === 'fertilization') { backgroundColor = '#7950f2'; borderColor = '#7048e8'; } // Violet
-    if (event.type === 'scouting') { backgroundColor = '#fab005'; borderColor = '#f59f00'; } // Yellow
-    // Add more types and colors if needed
-
-    const style = {
-        backgroundColor: isSelected ? borderColor : backgroundColor,
-        borderRadius: '4px', // Slightly smaller radius
-        opacity: 0.9, // Slightly less opaque
-        color: 'white',
-        border: `1px solid ${borderColor}`,
-        display: 'block',
-        padding: '2px 4px', // Add small padding
-        fontSize: '0.8rem', // Slightly smaller font
-    };
-    return {
-        style: style
-    };
-  };
-
   return (
     <Container size="xl" py="lg">
       <Group justify="space-between" align="center" mb="xl">
-        <Title order={3}>Crop Calendar</Title>
-        <Button onClick={handleAddEventClick} leftSection={<IconPlus size={16} />}>Add Event</Button>
+        <Title order={3}>
+          <Group gap="xs">
+            <IconCalendarStats size={24} stroke={1.5} />
+            <Text>Farm Calendar</Text>
+          </Group>
+        </Title>
       </Group>
 
-      <Paper shadow="sm" p="md" withBorder>
-        <Calendar<FarmEvent>
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '70vh' }}
-          onSelectEvent={handleSelectEvent}
-          eventPropGetter={eventStyleGetter}
-          views={['month', 'week', 'day', 'agenda']}
-          components={{
-              toolbar: CustomCalendarToolbar
-          }}
-        />
-      </Paper>
+      <Tabs value={activeTab} onChange={(value) => value && setActiveTab(value)} mb="xl">
+        <Tabs.List>
+          <Tabs.Tab value="calendar">Calendar</Tabs.Tab>
+          <Tabs.Tab value="recommendations">Planting Recommendations</Tabs.Tab>
+        </Tabs.List>
 
-      <Modal
-        opened={detailsModalOpened}
-        onClose={() => setDetailsModalOpened(false)}
-        title={selectedEvent?.title || 'Event Details'}
-      >
-        {selectedEvent && (
-          <Stack>
-            <Text><strong>Starts:</strong> {format(selectedEvent.start, 'Pp')}</Text>
-            <Text><strong>Ends:</strong> {format(selectedEvent.end, 'Pp')}</Text>
-            {selectedEvent.resource && <Text><strong>Resource:</strong> {selectedEvent.resource}</Text>}
-            {selectedEvent.type && <Text><strong>Type:</strong> {selectedEvent.type}</Text>}
-          </Stack>
-        )}
-      </Modal>
+        <Tabs.Panel value="calendar">
+          <EnhancedCalendar
+            events={events}
+            onAddEvent={handleAddEventClick}
+            onEditEvent={handleEditEvent}
+            onDeleteEvent={handleDeleteEvent}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="recommendations">
+          <CropRecommendations />
+        </Tabs.Panel>
+      </Tabs>
+
+      {/* Event Form Modal */}
+      <EventForm
+        opened={formModalOpened}
+        onClose={() => setFormModalOpened(false)}
+        onSubmit={handleSaveEvent}
+        initialValues={currentEvent}
+        title={modalTitle}
+      />
     </Container>
   );
 } 

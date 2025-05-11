@@ -13,9 +13,10 @@ interface EventFormProps {
   onSubmit: (values: FarmEvent) => void; // Use the imported type
   initialValues?: Partial<FarmEvent> | null; // Allow partial initial values
   title: string;
+  onCancel?: () => void; // Add optional onCancel prop
 }
 
-export function EventForm({ opened, onClose, onSubmit, initialValues, title }: EventFormProps) {
+export function EventForm({ opened, onClose, onSubmit, initialValues, title, onCancel }: EventFormProps) {
   const form = useForm<Partial<FarmEvent>>({ // Use partial type for form
     initialValues: {
       title: initialValues?.title || '',
@@ -24,7 +25,7 @@ export function EventForm({ opened, onClose, onSubmit, initialValues, title }: E
       allDay: initialValues?.allDay || false,
       resource: initialValues?.resource || '',
       type: initialValues?.type || '',
-      // Add other relevant fields here
+      description: initialValues?.description || '',
     },
 
     validate: {
@@ -44,6 +45,7 @@ export function EventForm({ opened, onClose, onSubmit, initialValues, title }: E
       allDay: values.allDay,
       resource: values.resource,
       type: values.type,
+      description: values.description || '',
     };
 
     // Validate required fields before submitting, although form validation should handle this
@@ -65,7 +67,7 @@ export function EventForm({ opened, onClose, onSubmit, initialValues, title }: E
           <TextInput
             required
             label="Event Title"
-            placeholder="e.g., Plant Corn"
+            placeholder="e.g., Plant Corn - Field A"
             {...form.getInputProps('title')}
           />
           <DateTimePicker
@@ -95,7 +97,7 @@ export function EventForm({ opened, onClose, onSubmit, initialValues, title }: E
           />
           <TextInput
             label="Resource"
-            placeholder="e.g., Tractor, Team A"
+            placeholder="e.g., Tractor, Field Crew, etc."
             {...form.getInputProps('resource')}
           />
            <Select
@@ -107,15 +109,25 @@ export function EventForm({ opened, onClose, onSubmit, initialValues, title }: E
                 { value: 'fertilization', label: 'Fertilization' },
                 { value: 'scouting', label: 'Scouting' },
                 { value: 'irrigation', label: 'Irrigation' },
-                { value: 'maintenance', label: 'Maintenance' },
+                { value: 'equipment', label: 'Equipment' },
                 { value: 'other', label: 'Other' },
             ]}
             {...form.getInputProps('type')}
             clearable
           />
-          {/* Add more form fields as needed */}
+          <Textarea
+            label="Description"
+            placeholder="Add details about this event..."
+            autosize
+            minRows={3}
+            {...form.getInputProps('description')}
+          />
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={onClose}>Cancel</Button>
+            {onCancel && (
+              <Button variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
             <Button type="submit">Save Event</Button>
           </Group>
         </Stack>
