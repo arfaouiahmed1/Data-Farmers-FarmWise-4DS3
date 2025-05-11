@@ -111,12 +111,14 @@ const inventoryService = {
   async addInventoryItem(item: Omit<InventoryItem, 'id' | 'farmer' | 'created_at' | 'updated_at' | 'is_low_stock'>): Promise<InventoryItem> {
     try {
       const token = authService.getToken();
-      // Convert numeric values to strings for Django DecimalField compatibility
+      // Ensure we're sending proper numeric values as strings with 2 decimal places
       const formattedItem = {
         ...item,
-        quantity: item.quantity.toString(),
-        low_stock_threshold: item.low_stock_threshold.toString(),
+        quantity: typeof item.quantity === 'number' ? item.quantity.toFixed(2) : Number(item.quantity).toFixed(2),
+        low_stock_threshold: typeof item.low_stock_threshold === 'number' ? item.low_stock_threshold.toFixed(2) : Number(item.low_stock_threshold).toFixed(2),
       };
+      
+      console.log('Formatted inventory item for API:', formattedItem);
       
       const response = await axios.post(`${API_BASE_URL}/core/inventory/`, formattedItem, {
         headers: {
@@ -127,6 +129,10 @@ const inventoryService = {
       return response.data;
     } catch (error) {
       console.error('Error adding inventory item:', error);
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+      }
       throw error; // Propagate the error to handle it at component level
     }
   },
@@ -135,12 +141,14 @@ const inventoryService = {
   async updateInventoryItem(id: string, item: Omit<InventoryItem, 'id' | 'farmer' | 'created_at' | 'updated_at' | 'is_low_stock'>): Promise<InventoryItem> {
     try {
       const token = authService.getToken();
-      // Convert numeric values to strings for Django DecimalField compatibility
+      // Ensure we're sending proper numeric values as strings with 2 decimal places
       const formattedItem = {
         ...item,
-        quantity: item.quantity.toString(),
-        low_stock_threshold: item.low_stock_threshold.toString(),
+        quantity: typeof item.quantity === 'number' ? item.quantity.toFixed(2) : Number(item.quantity).toFixed(2),
+        low_stock_threshold: typeof item.low_stock_threshold === 'number' ? item.low_stock_threshold.toFixed(2) : Number(item.low_stock_threshold).toFixed(2),
       };
+      
+      console.log('Formatted inventory item for API update:', formattedItem);
       
       const response = await axios.put(`${API_BASE_URL}/core/inventory/${id}/`, formattedItem, {
         headers: {
@@ -149,8 +157,12 @@ const inventoryService = {
         }
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating inventory item:', error);
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+      }
       throw error; // Propagate the error to handle it at component level
     }
   },
