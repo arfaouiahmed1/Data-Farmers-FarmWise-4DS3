@@ -154,11 +154,11 @@ class ResNet9(ImageClassificationBase):
 # --- Configuration ---
 # Use a relative path based on the Django project's BASE_DIR
 # Assuming BASE_DIR points to the 'backend' directory
-MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Farm Boundaries/yolov8l-seg.pt'))
+MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../Models/Farm Boundaries/yolov8l-seg.pt'))
 # Path for the weed detection model
-WEED_MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Weed Detection/PIDS_weed_detection.pt'))
+WEED_MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../Models/Weed Detection/PIDS_weed_detection.pt'))
 # Path for the disease detection model
-DISEASE_MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../../Models/Disease Detection/diseases_model_fixed.pt'))
+DISEASE_MODEL_PATH = os.path.normpath(os.path.join(settings.BASE_DIR, '../../Models/Disease Detection/diseases_model_fixed.pt'))
 
 # Load the model (consider loading it once globally if performance is critical)
 # For simplicity here, loading per request. Optimize later if needed.
