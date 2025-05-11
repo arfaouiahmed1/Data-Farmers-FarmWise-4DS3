@@ -32,13 +32,8 @@ import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
 import authService from '../../app/api/auth';
 import classes from './Header.module.css';
 
-const links = [
-  { link: '/#features', label: 'Features' }, // Link to features section on the same page
-  { link: '/#analytics', label: 'Analytics' }, // Added Analytics link
-  { link: '/#how-it-works', label: 'How It Works' },
-  { link: '/#pricing', label: 'Pricing' }, // Link to pricing section on the same page
-  { link: '/#testimonials', label: 'Testimonials' }, // Added Testimonials link
-];
+// Navigation links - removed as per request
+const links = [];
 
 export function AppHeader() {
   const [opened, { toggle }] = useDisclosure(false);

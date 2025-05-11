@@ -44,7 +44,6 @@ import {
   IconBell,
   IconCalendarStats,
   IconFileAnalytics,
-  IconMap2,
   IconDroplet,
   IconTractor,
   IconDeviceAnalytics,
@@ -165,12 +164,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         { title: 'Rotation Schedule', path: '/dashboard/planning/rotation' },
         { title: 'Resource Planning', path: '/dashboard/planning/resources' },
       ]
-    },
-    {
-      icon: IconMap2,
-      color: 'orange',
-      label: 'Field Mapping',
-      path: '/dashboard/mapping',
     },
     {
       icon: IconFileAnalytics,
