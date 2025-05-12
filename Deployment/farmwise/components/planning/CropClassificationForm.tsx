@@ -96,6 +96,7 @@ interface FormFieldBase {
   label: string;
   key: string;
   description: string;
+  isReadOnly?: boolean;
 }
 
 interface TextFieldData extends FormFieldBase {
@@ -175,6 +176,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
           key: 'governorate',
           options: governorateOptions,
           description: 'Farm governorate location',
+          isReadOnly: true,
         },
         {
           fieldType: 'text',
@@ -213,6 +215,41 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
       ],
     },
   ];
+
+  // Function to extract governorate from address string
+  const extractGovernorateFromAddress = (address: string): string | null => {
+    if (!address) return null;
+    
+    // List of all governorates to check in the address
+    const allGovernorates = governorateOptions.map(option => option.value);
+    
+    // Check if any governorate name is directly in the address
+    for (const governorate of allGovernorates) {
+      if (address.includes(governorate)) {
+        return governorate;
+      }
+    }
+    
+    // If no direct match, try to parse from comma-separated parts
+    // Typically governorate might be the 4th part: "Street, Area, District, Governorate, Postal, Country"
+    const addressParts = address.split(',').map(part => part.trim());
+    
+    // Try to match any part with governorates (checking 3rd, 4th parts first as they're most likely)
+    for (const index of [3, 2, 4, 1, 0, 5]) {
+      if (addressParts[index]) {
+        const part = addressParts[index];
+        for (const governorate of allGovernorates) {
+          if (part.includes(governorate)) {
+            return governorate;
+          }
+        }
+      }
+    }
+    
+    // Default to Tunis if nothing found
+    return 'Tunis';
+  };
+
   useEffect(() => {
     async function fetchFarms() {
       try {
@@ -282,6 +319,28 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
               if (details.size_hectares) {
                 console.log('Setting area value:', details.size_hectares);
                 form.setFieldValue('area', parseFloat(details.size_hectares));
+              }
+              
+              // Set governorate from farm details if available
+              if (details.location && details.location.governorate) {
+                console.log('Setting governorate value:', details.location.governorate);
+                form.setFieldValue('governorate', details.location.governorate);
+              } 
+              // Try to extract from address if location.governorate is not available
+              else if (details.address) {
+                const extractedGovernorate = extractGovernorateFromAddress(details.address);
+                if (extractedGovernorate) {
+                  console.log('Setting governorate value extracted from address:', extractedGovernorate);
+                  form.setFieldValue('governorate', extractedGovernorate);
+                }
+              } 
+              // If no address directly in farm details, check farm_address
+              else if (details.farm_address) {
+                const extractedGovernorate = extractGovernorateFromAddress(details.farm_address);
+                if (extractedGovernorate) {
+                  console.log('Setting governorate value extracted from farm_address:', extractedGovernorate);
+                  form.setFieldValue('governorate', extractedGovernorate);
+                }
               }
 
               // Get latest weather data from weather_records if available
@@ -473,6 +532,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
         <input type="hidden" {...form.getInputProps('soil_p')} />
         <input type="hidden" {...form.getInputProps('soil_k')} />
         <input type="hidden" {...form.getInputProps('ph')} />
+        <input type="hidden" {...form.getInputProps('governorate')} />
           {/* Display selected farm information */}
         <Box mb="md">
           <Group align="center">
@@ -701,8 +761,41 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
               <Title order={4}>{section.title}</Title>
             </Group>
 
+            {section.title === 'Agricultural Practices' && (
+              <Card withBorder p="md" radius="md" bg={`rgba(76, 175, 80, 0.08)`} mb="md">
+                <Box mb="sm">
+                  <Text size="sm" fw={600} c="green.7" mb={4}>
+                    <IconLock size={16} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }} />
+                    Location data from your farm profile
+                  </Text>
+                  <Text size="sm" mb="sm" c="dimmed" lh={1.5}>
+                    Your farm's governorate is automatically pulled from your farm profile.
+                  </Text>
+                </Box>
+                
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                      <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Governorate</Text>
+                      <Group gap="xs" align="baseline">
+                        <Text size="xl" fw={700} c={form.values.governorate ? 'green.7' : 'gray.5'}>
+                          {form.values.governorate || 'N/A'}
+                        </Text>
+                      </Group>
+                      {form.values.governorate && !farmDetails?.location?.governorate && (
+                        <Text size="xs" fs="italic" c="dimmed" mt={2}>
+                          Detected from farm address
+                        </Text>
+                      )}
+                      <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-green-5)', borderRadius: '2px' }}></Box>
+                    </Card>
+                  </Grid.Col>
+                </Grid>
+              </Card>
+            )}
+
             <Grid>
-              {section.fields.map((field) => (
+              {section.fields.filter(field => !field.isReadOnly).map((field) => (
                 <Grid.Col key={field.key} span={{ base: 12, sm: 6, md: section.title === 'Seasonal Planning' ? 4 : 6 }}>
                   {field.fieldType === 'select' ? (
                     <Select
