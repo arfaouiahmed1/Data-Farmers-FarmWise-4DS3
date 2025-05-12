@@ -1,0 +1,101 @@
+/* farmwise/styles/custom-calendar.css */
+
+/* Fix oversized calendar buttons */
+.mantine-DatePickerInput-calendarHeader button {
+    width: auto !important;
+    height: auto !important;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px;
+}
+
+.mantine-DatePickerInput-calendarHeaderControl {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px;
+}
+
+.mantine-DatePickerInput-calendarHeaderLevel {
+    font-size: 14px;
+}
+
+.mantine-DatePickerInput-monthCell button {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 13px;
+}
+
+.mantine-DatePickerInput-day {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 13px;
+}
+
+/* Add padding to Agenda view rows */
+.rbc-agenda-view table tbody tr {
+    padding: 10px 0; /* Add vertical padding */
+}
+
+.rbc-agenda-view table tbody td {
+    padding: 8px 15px; /* Add padding to cells */
+}
+
+/* Style the date column in Agenda view */
+.rbc-agenda-date-cell {
+    font-weight: bold;
+    padding-right: 20px; /* Add more space between date and time */
+    vertical-align: top; /* Align date to the top */
+}
+
+/* Style the time column in Agenda view */
+.rbc-agenda-time-cell {
+    font-style: italic;
+    color: #555;
+    padding-right: 20px; /* Add more space between time and event */
+    vertical-align: top; /* Align time to the top */
+}
+
+/* Style the event column in Agenda view */
+.rbc-agenda-event-cell {
+    vertical-align: top; /* Align event title to the top */
+}
+
+
+/* Improve Day/Week view time gutter */
+.rbc-time-gutter {
+    background-color: #f8f9fa; /* Light background */
+    border-right: 1px solid #dee2e6; /* Subtle border */
+}
+
+.rbc-time-slot {
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Center time vertically */
+    justify-content: flex-end; /* Align time to the right */
+    padding-right: 10px; /* Add some padding */
+    font-size: 0.85rem; /* Slightly smaller font */
+    color: #495057; /* Grey text color */
+    border-top: none !important; /* Remove default top border */
+}
+
+.rbc-time-gutter .rbc-timeslot-group {
+    border-bottom: 1px solid #dee2e6 !important; /* Add a subtle bottom border */
+}
+
+/* Style the time labels */
+.rbc-time-gutter .rbc-time-slot span {
+    /* Custom styling for the time text if needed */
+    font-weight: 500; /* Slightly bolder */
+}
+
+/* Adjust the time header gutter */
+.rbc-time-header-gutter {
+     background-color: #f8f9fa; /* Match time gutter background */
+     border-right: 1px solid #dee2e6; /* Match time gutter border */
+     border-bottom: 1px solid #dee2e6 !important; /* Match group border */
+}
+
+/* Optional: Style the current time indicator */
+.rbc-current-time-indicator {
+    background-color: #dc3545; /* Red color for visibility */
+    height: 2px;
+} 

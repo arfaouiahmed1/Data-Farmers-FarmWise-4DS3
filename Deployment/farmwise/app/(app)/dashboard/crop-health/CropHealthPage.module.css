@@ -1,0 +1,127 @@
+.pageTitle {
+  color: var(--mantine-color-farmGreen-filled);
+}
+
+.mapCard {
+  overflow: hidden; /* Ensure map corners respect border radius */
+}
+
+.mapContainer {
+  height: 600px; /* Required: Define a height for the map */
+  width: 100%;
+  /* Ensure map corners are rounded if inside mapPaper */
+  border-radius: var(--mantine-radius-md);
+  z-index: 1; /* Ensure map controls are clickable */
+}
+
+.mapPaper {
+  /* Ensure Paper component allows map to fill */
+  padding: 0 !important; /* Override Mantine padding if needed */
+  overflow: hidden; /* Prevent map overflow */
+}
+
+/* Optional: Style for popups if needed */
+.leaflet-popup-content-wrapper {
+  border-radius: 4px;
+}
+
+.leaflet-popup-content {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.polygon3d {
+  filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5));
+  transform: translate3d(0, 0, 10px);
+  transition: all 0.3s ease;
+}
+
+.polygon3d:hover {
+  transform: translate3d(0, -5px, 20px);
+  filter: drop-shadow(5px 10px 10px rgba(0, 0, 0, 0.5));
+}
+
+.weedListItem {
+  all: unset;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+/* Add new styles for dropzones */
+.weedDropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border-style: dashed;
+  border-width: 2px;
+  border-color: var(--mantine-color-green-4);
+  height: 300px;
+}
+
+.diseaseDropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border-style: dashed;
+  border-width: 2px;
+  border-color: var(--mantine-color-blue-4);
+  height: 300px;
+}
+
+/* Additional utility classes to replace deprecated Mantine props */
+.spaceBetween {
+  display: flex;
+  justify-content: space-between;
+}
+
+.nowrap {
+  flex-wrap: nowrap;
+}
+
+.gapXs {
+  gap: var(--mantine-spacing-xs);
+}
+
+.gapSm {
+  gap: var(--mantine-spacing-sm);
+}
+
+.gapMd {
+  gap: var(--mantine-spacing-md);
+}
+
+.gapLg {
+  gap: var(--mantine-spacing-lg);
+}
+
+.gapXl {
+  gap: var(--mantine-spacing-xl);
+}
+
+/* Image analysis canvas container */
+.canvasContainer {
+  position: relative;
+  height: 350px;
+}
+
+.imageAnalysisWrapper {
+  position: relative;
+  min-height: 350px;
+  background-color: var(--mantine-color-gray-light);
+}
+
+.resultCard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.weedTabContent {
+  height: calc(100% - 36px);
+  overflow: hidden;
+}

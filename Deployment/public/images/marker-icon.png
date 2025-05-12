@@ -1,0 +1,2 @@
+// This is a binary file, so we'll use a base64-encoded placeholder for the Leaflet marker icon
+// In a real application, you would download the actual marker-icon.png from the Leaflet distribution 

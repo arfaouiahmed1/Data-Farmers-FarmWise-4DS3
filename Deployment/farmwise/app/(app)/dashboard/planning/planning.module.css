@@ -1,0 +1,159 @@
+.container {
+  padding: 16px;
+}
+
+.header {
+  background: linear-gradient(135deg, var(--mantine-color-farmGreen-6) 0%, var(--mantine-color-blue-6) 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.title {
+  color: white;
+}
+
+.healthBadge {
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.statsPaper {
+  transition: all 0.3s ease;
+}
+
+.statCard {
+  height: 100%;
+  transition: all 0.2s ease;
+  border: 1px solid var(--mantine-color-gray-3);
+}
+
+.statCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+.toolsPaper {
+  height: 100%;
+}
+
+.toolCard {
+  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+/* Tool card headers - light theme */
+.toolCardHeader {
+  transition: background-color 0.3s ease;
+}
+
+.indigoHeader {
+  background-color: var(--mantine-color-indigo-0);
+}
+
+.orangeHeader {
+  background-color: var(--mantine-color-orange-0);
+}
+
+.blueHeader {
+  background-color: var(--mantine-color-blue-0);
+}
+
+.greenHeader {
+  background-color: var(--mantine-color-green-0);
+}
+
+/* Tool card title colors - light theme */
+.indigoTitle {
+  color: var(--mantine-color-indigo-9);
+}
+
+.orangeTitle {
+  color: var(--mantine-color-orange-9);
+}
+
+.blueTitle {
+  color: var(--mantine-color-blue-9);
+}
+
+.greenTitle {
+  color: var(--mantine-color-green-9);
+}
+
+.activitiesPaper {
+  transition: all 0.3s ease;
+}
+
+.activityCard {
+  transition: all 0.2s ease;
+  border: 1px solid var(--mantine-color-gray-3);
+}
+
+.activityCard:hover {
+  transform: translateX(3px);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.seasonPaper {
+  transition: all 0.3s ease;
+}
+
+.tipsPaper {
+  transition: all 0.3s ease;
+  border-left: 4px solid var(--mantine-color-blue-6);
+}
+
+/* Dark mode adjustments */
+:global([data-mantine-color-scheme="dark"]) .statCard,
+:global([data-mantine-color-scheme="dark"]) .activityCard {
+  border-color: var(--mantine-color-dark-4);
+}
+
+:global([data-mantine-color-scheme="dark"]) .header {
+  background: linear-gradient(135deg, var(--mantine-color-farmGreen-8) 0%, var(--mantine-color-blue-8) 100%);
+}
+
+:global([data-mantine-color-scheme="dark"]) .healthBadge {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Tool card headers - dark theme */
+:global([data-mantine-color-scheme="dark"]) .indigoHeader {
+  background-color: var(--mantine-color-indigo-8);
+}
+
+:global([data-mantine-color-scheme="dark"]) .orangeHeader {
+  background-color: var(--mantine-color-orange-8);
+}
+
+:global([data-mantine-color-scheme="dark"]) .blueHeader {
+  background-color: var(--mantine-color-blue-8);
+}
+
+:global([data-mantine-color-scheme="dark"]) .greenHeader {
+  background-color: var(--mantine-color-green-8);
+}
+
+/* Tool card title colors - dark theme */
+:global([data-mantine-color-scheme="dark"]) .indigoTitle,
+:global([data-mantine-color-scheme="dark"]) .orangeTitle,
+:global([data-mantine-color-scheme="dark"]) .blueTitle,
+:global([data-mantine-color-scheme="dark"]) .greenTitle {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 8px;
+  }
+} 

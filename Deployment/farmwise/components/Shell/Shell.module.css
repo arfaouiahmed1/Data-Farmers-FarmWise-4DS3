@@ -1,0 +1,231 @@
+/* Shell.module.css */
+
+.header {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  backdrop-filter: blur(10px);
+  background-color: var(--mantine-color-body);
+  transition: all 0.3s ease;
+}
+
+.headerInner {
+  justify-content: space-between;
+  height: 100%;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.logoContainer:hover {
+  transform: scale(1.02);
+}
+
+.logo {
+  border-radius: 6px;
+}
+
+.logoText {
+  font-weight: 700;
+  font-size: var(--mantine-font-size-lg);
+}
+
+.navbar {
+  border-right: none;
+  transition: all 0.3s ease;
+  background-color: var(--mantine-color-body);
+}
+
+.navScrollArea {
+  flex: 1;
+  margin-left: calc(var(--mantine-spacing-md) * -1);
+  margin-right: calc(var(--mantine-spacing-md) * -1);
+  padding: 0 var(--mantine-spacing-md);
+}
+
+.navStack {
+  padding-top: var(--mantine-spacing-xs);
+}
+
+.navSection {
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.sectionTitle {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mantine-color-dimmed);
+  padding: 0 var(--mantine-spacing-md);
+  margin-bottom: var(--mantine-spacing-xs);
+}
+
+.navLink {
+  border-radius: var(--mantine-radius-md);
+  margin-bottom: 2px;
+  transition: all 0.2s ease;
+}
+
+.navLink:hover {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.navLinkActive {
+  background-color: var(--mantine-color-blue-light);
+}
+
+.navLinkLabel {
+  font-size: var(--mantine-font-size-sm);
+}
+
+.navLinkBody {
+  display: flex;
+  align-items: center;
+}
+
+.navIcon {
+  box-shadow: light-dark(
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.2)
+  );
+}
+
+.navChevron {
+  color: light-dark(var(--mantine-color-gray-5), var(--mantine-color-dark-2));
+  transition: transform 200ms ease;
+}
+
+.navLink[data-expanded] .navChevron {
+  transform: rotate(90deg);
+}
+
+.navLinkChild {
+  border-radius: var(--mantine-radius-md);
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: var(--mantine-font-size-sm);
+}
+
+.navLinkChildLabel {
+  font-weight: 400;
+}
+
+.navLinkChild:hover {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.navLinkChild[data-active] {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  font-weight: 500;
+}
+
+.navFooter {
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+  margin-left: calc(var(--mantine-spacing-md) * -1);
+  margin-right: calc(var(--mantine-spacing-md) * -1);
+  padding-bottom: calc(var(--mantine-spacing-xs) + 2px);
+}
+
+.mainContent {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.searchButton {
+  border-radius: var(--mantine-radius-xl);
+  transition: all 0.2s ease;
+}
+
+.searchButton:hover {
+  background-color: var(--mantine-color-default-hover);
+  transform: scale(1.05);
+}
+
+.actionIcon {
+  border: 1px solid light-dark(var(--mantine-color-gray-3), transparent);
+  transition: background-color 150ms ease;
+}
+
+.actionIcon:hover {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-5));
+}
+
+.userMenu {
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-xs);
+  transition: all 0.2s ease;
+}
+
+.userMenu:hover {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.avatar {
+  border: 2px solid var(--mantine-color-green-filled);
+}
+
+.notification {
+  position: relative;
+}
+
+.helpButton {
+  transition: transform 150ms ease;
+}
+
+.helpButton:hover {
+  transform: translateY(-2px);
+}
+
+.aiButton {
+  box-shadow: 0 4px 12px rgba(131, 38, 224, 0.2);
+  transition: all 200ms ease;
+}
+
+.aiButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(131, 38, 224, 0.3);
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 768px) {
+  .logoText {
+    font-size: 16px;
+  }
+  
+  .navLinkLabel {
+    font-size: 14px;
+  }
+  
+  .sectionTitle {
+    padding-left: var(--mantine-spacing-xs);
+  }
+  
+  .navIcon {
+    min-width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 576px) {
+  .logoContainer {
+    padding: 4px;
+  }
+  
+  .navScrollArea {
+    padding: 0 var(--mantine-spacing-xs);
+  }
+  
+  .navLink {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+} 

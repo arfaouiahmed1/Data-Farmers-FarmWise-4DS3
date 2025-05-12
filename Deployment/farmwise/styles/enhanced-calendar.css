@@ -1,0 +1,171 @@
+/* Calendar Container */
+.rbc-calendar {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+  background: var(--mantine-color-dark-7);
+  border-radius: var(--mantine-radius-md);
+  padding: 1rem;
+}
+
+/* Header */
+.rbc-toolbar {
+  margin-bottom: 1.5rem;
+}
+
+.rbc-toolbar button {
+  color: var(--mantine-color-gray-2);
+  background: var(--mantine-color-dark-6);
+  border: 1px solid var(--mantine-color-dark-4);
+  border-radius: var(--mantine-radius-sm);
+  padding: 0.5rem 1rem;
+}
+
+.rbc-toolbar button:hover {
+  background: var(--mantine-color-dark-5);
+  border-color: var(--mantine-color-dark-3);
+}
+
+.rbc-toolbar button.rbc-active {
+  background: var(--mantine-color-blue-6);
+  color: white;
+  border-color: var(--mantine-color-blue-7);
+}
+
+/* Month View */
+.rbc-month-view {
+  border: 1px solid var(--mantine-color-dark-4);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-dark-8);
+}
+
+.rbc-month-row {
+  border-color: var(--mantine-color-dark-4);
+}
+
+.rbc-day-bg {
+  border-color: var(--mantine-color-dark-4);
+}
+
+.rbc-header {
+  color: var(--mantine-color-gray-2);
+  padding: 0.75rem;
+  font-weight: 500;
+  border-color: var(--mantine-color-dark-4);
+  background: var(--mantine-color-dark-7);
+}
+
+.rbc-off-range-bg {
+  background: var(--mantine-color-dark-8);
+}
+
+.rbc-off-range {
+  color: var(--mantine-color-gray-6);
+}
+
+.rbc-today {
+  background-color: var(--mantine-color-dark-6);
+}
+
+/* Events */
+.rbc-event {
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  padding: 2px 5px;
+  font-size: 0.875rem;
+  border: none;
+}
+
+.rbc-event.rbc-selected {
+  background-color: var(--mantine-color-blue-6);
+}
+
+/* Event colors */
+.rbc-event.planting-event {
+  background-color: var(--mantine-color-green-6);
+}
+
+.rbc-event.harvesting-event {
+  background-color: var(--mantine-color-orange-6);
+}
+
+.rbc-event.fertilization-event {
+  background-color: var(--mantine-color-violet-6);
+}
+
+.rbc-event.scouting-event {
+  background-color: var(--mantine-color-yellow-6);
+}
+
+.rbc-event.equipment-event {
+  background-color: var(--mantine-color-blue-6);
+}
+
+.rbc-event.irrigation-event {
+  background-color: var(--mantine-color-cyan-6);
+}
+
+/* Time Grid */
+.rbc-time-view {
+  border: 1px solid var(--mantine-color-dark-4);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-dark-8);
+}
+
+.rbc-time-header {
+  border-color: var(--mantine-color-dark-4);
+}
+
+.rbc-time-content {
+  border-color: var(--mantine-color-dark-4);
+}
+
+.rbc-time-slot {
+  color: var(--mantine-color-gray-4);
+}
+
+.rbc-current-time-indicator {
+  background-color: var(--mantine-color-blue-5);
+}
+
+/* Agenda View */
+.rbc-agenda-view table {
+  border: 1px solid var(--mantine-color-dark-4);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-dark-8);
+}
+
+.rbc-agenda-table {
+  border-color: var(--mantine-color-dark-4);
+}
+
+.rbc-agenda-time-cell {
+  padding: 0.5rem;
+  color: var(--mantine-color-gray-2);
+}
+
+.rbc-agenda-event-cell {
+  padding: 0.5rem;
+  color: var(--mantine-color-gray-1);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .rbc-toolbar-label {
+    margin: 0.5rem 0;
+    text-align: center;
+  }
+  
+  .rbc-btn-group {
+    justify-content: center;
+  }
+  
+  .rbc-event {
+    padding: 1px 3px;
+    font-size: 0.75rem;
+  }
+}

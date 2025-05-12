@@ -1,0 +1,86 @@
+.title {
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.headerWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.iconWrapper {
+  background: linear-gradient(45deg, var(--mantine-color-green-6), var(--mantine-color-blue-5));
+  color: var(--mantine-color-white);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 20px -8px rgba(var(--mantine-color-green-6-rgb), 0.4);
+}
+
+.formWrapper {
+  width: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  border-color: var(--mantine-color-default-border);
+}
+
+.formWrapper:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mantine-shadow-lg);
+}
+
+.notification {
+  border-radius: var(--mantine-radius-md);
+}
+
+.input {
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  transform: translateY(-2px);
+}
+
+.button {
+  background: linear-gradient(45deg, var(--mantine-color-green-6), var(--mantine-color-blue-5));
+  border: none;
+  transition: all 0.3s ease;
+  color: var(--mantine-color-white);
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px -5px rgba(var(--mantine-color-green-6-rgb), 0.4);
+}
+
+.segmentedControl {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.socialButton {
+  transition: all 0.2s ease;
+  border-color: var(--mantine-color-default-border);
+  color: var(--mantine-color-text);
+}
+
+.socialButton:hover {
+  background-color: var(--mantine-color-default-hover);
+  transform: translateY(-2px);
+}
+
+.link {
+  transition: color 0.2s ease;
+  font-weight: 500;
+}
+
+.link:hover {
+  color: var(--mantine-color-green-6);
+  text-decoration: none;
+} 

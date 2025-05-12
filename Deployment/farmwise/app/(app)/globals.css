@@ -1,0 +1,11 @@
+/* Fix Leaflet attribution position for all maps */
+.leaflet-control-attribution {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  padding: 0 5px !important;
+  margin: 0 !important;
+  font-size: 9px !important;
+  z-index: 1000 !important;
+} 

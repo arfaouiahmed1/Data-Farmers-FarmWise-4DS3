@@ -1,20 +1,22 @@
-# Système RAG de Recommandation d'Engrais
+# Système Déployé de Recommandation Agricole Intelligente
 
-Ce projet implémente un système de recommandation d'engrais basé sur l'approche RAG (Retrieval-Augmented Generation), et fournit des outils pour évaluer ses performances.
+Ce projet implémente un système web de recommandation agricole basé sur l'approche RAG (Retrieval-Augmented Generation) pour les engrais et pesticides, ainsi qu'un modèle d'optimisation d'irrigation. Il fournit une interface web accessible pour les agriculteurs.
 
 ## Structure du projet
 
 ```
 /
-├── data/
-│   ├── total_melonge_df.csv        # Données sur les cultures et engrais
-│   └── evaluation_results.csv      # Résultats d'évaluation exportés
-├── rag/
-│   ├── rag_fertilizer.py           # Implémentation principale du système RAG
-│   ├── evaluate_rag.py             # Outil d'évaluation avec ROUGE et BLEU
-│   └── chroma_fertilizer_db/       # Base de données vectorielle (générée)
-├── requirements.txt                # Dépendances du projet
-└── README.md                       # Ce fichier
+├── api_connector.js       # Connecteur JavaScript pour les API du backend
+├── flask_server.py        # Serveur Flask fournissant les API de recommandation
+├── index.html             # Interface utilisateur principale
+├── irrigation_optimizer.pkl # Modèle sérialisé pour l'optimisation d'irrigation
+├── ml_models.js           # Logique JavaScript pour communiquer avec les modèles ML
+├── ml.css                 # Styles spécifiques aux composants ML
+├── script.js              # Script principal du frontend
+├── styles.css             # Styles généraux de l'interface
+├── setup.bat              # Script d'installation pour Windows
+├── setup.sh               # Script d'installation pour Linux/Mac
+└── requirements.txt       # Dépendances Python du projet
 ```
 
 ## Installation
@@ -22,44 +24,69 @@ Ce projet implémente un système de recommandation d'engrais basé sur l'approc
 1. Clonez ce dépôt
 2. Installez les dépendances requises:
 
+**Pour Windows:**
+```bash
+setup.bat
+```
+
+**Pour Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+Ou installez manuellement les dépendances:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Utilisation du système de recommandation
+## Démarrage du serveur
 
-Pour obtenir des recommandations d'engrais:
-
-```bash
-cd rag
-python rag_fertilizer.py
-```
-
-Suivez les instructions pour entrer les détails de votre culture et obtenir une recommandation personnalisée.
-
-## Évaluation du système RAG
-
-Pour évaluer les performances du système avec les métriques ROUGE et BLEU:
+Pour lancer l'application:
 
 ```bash
-cd rag
-python evaluate_rag.py
+python flask_server.py
 ```
 
-Le script comparera les recommandations générées par le système avec des réponses de référence et calculera:
-- Score ROUGE-1: Mesure la présence des mots de référence dans la réponse générée
-- Score ROUGE-L: Évalue les séquences communes les plus longues
-- Score BLEU: Évalue la précision des n-grammes par rapport à la référence
+Le serveur démarre sur http://localhost:5000. Ouvrez cette adresse dans votre navigateur pour accéder à l'interface utilisateur.
 
-Les résultats seront affichés dans la console et exportés dans un fichier CSV pour une analyse plus approfondie.
+## Fonctionnalités
 
-## Personnalisation de l'évaluation
+### Recommandation d'Engrais
 
-Pour personnaliser l'évaluation avec vos propres requêtes et réponses de référence, modifiez les listes `test_queries` et `reference_responses` dans le fichier `evaluate_rag.py`.
+Le système analyse les caractéristiques du sol (niveaux de NPK, pH) et recommande les engrais optimaux pour une culture spécifique dans une région donnée.
 
-## Notes sur les métriques d'évaluation
+### Recommandation de Pesticides
 
-- **ROUGE** (Recall-Oriented Understudy for Gisting Evaluation): Évalue dans quelle mesure les réponses générées contiennent les mêmes mots/séquences que les références.
-- **BLEU** (Bilingual Evaluation Understudy): Mesure la précision des n-grammes dans les réponses générées par rapport aux références.
+En fonction des problèmes de ravageurs signalés et des conditions environnementales (température, humidité, précipitations), le système suggère les traitements phytosanitaires appropriés.
 
-Ces métriques fournissent une évaluation quantitative, mais une évaluation qualitative par des experts agricoles reste recommandée pour une validation complète. 
+### Optimisation d'Irrigation
+
+Le système utilise un modèle d'apprentissage automatique pour déterminer les programmes d'irrigation optimaux basés sur les conditions climatiques et les besoins des cultures.
+
+## API Disponibles
+
+Le système expose les API REST suivantes:
+
+- `/api/fertilizer-recommendation`: Obtient des recommandations d'engrais
+- `/api/pesticide-recommendation`: Obtient des recommandations de pesticides
+- `/api/extract-data`: Extrait automatiquement les informations pertinentes d'une description en texte libre
+
+Consultez le code source de `flask_server.py` pour plus de détails sur les paramètres requis.
+
+## Technologie
+
+Ce système utilise:
+- **Flask** pour le backend API
+- **RAG (Retrieval-Augmented Generation)** pour des recommandations précises et contextuelles
+- **HTML/CSS/JavaScript** pour l'interface utilisateur
+- **ChromaDB** pour le stockage et la recherche vectorielle
+- **Sentence Transformers** pour l'embedding des requêtes et documents
+
+## Évaluation du système
+
+Pour évaluer les performances du système avec les métriques ROUGE et BLEU, utilisez le module d'évaluation dans le dossier `Models/rag`.
+
+## Notes sur la sécurité
+
+Ce système est configuré pour un développement local. Pour un déploiement en production, assurez-vous d'implémenter les mesures de sécurité appropriées comme HTTPS, une authentification robuste, et une validation des entrées.
