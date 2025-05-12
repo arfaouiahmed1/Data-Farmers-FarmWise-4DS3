@@ -28,7 +28,8 @@ import {
   IconArrowRight,
   IconCalendar,
   IconCheck,
-  IconMapPin
+  IconMapPin,
+  IconCloudRain
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
@@ -60,6 +61,7 @@ interface CropClassificationResultProps {
     created_at?: string;
     governorate?: string;
     district?: string;
+    annual_rainfall?: number;
   };
 }
 
@@ -132,9 +134,20 @@ export function CropClassificationResult({ result }: CropClassificationResultPro
                   </ThemeIcon>
                   <div>
                     <Text size="sm" fw={500}>Humidity & Rainfall</Text>
-                    <Text size="sm">{result.humidity}% humidity, {result.rainfall}mm rainfall</Text>
+                    <Text size="sm">{result.humidity}% humidity, {result.rainfall}mm daily rainfall</Text>
                   </div>
                 </Group>
+                {result.annual_rainfall && (
+                  <Group>
+                    <ThemeIcon color="teal" variant="light">
+                      <IconCloudRain size={16} />
+                    </ThemeIcon>
+                    <div>
+                      <Text size="sm" fw={500}>Annual Rainfall</Text>
+                      <Text size="sm">{result.annual_rainfall}mm per year</Text>
+                    </div>
+                  </Group>
+                )}
                 <Group>
                   <ThemeIcon color="orange" variant="light">
                     <IconSun size={16} />

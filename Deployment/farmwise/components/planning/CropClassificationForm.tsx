@@ -135,15 +135,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
   const [error, setError] = useState<string | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<number | null>(initialFarmId || null);
   const [farmDetails, setFarmDetails] = useState<any | null>(null);
-    const sections: FormSection[] = [
-    {
-      title: 'Environmental Conditions',
-      icon: <IconTemperature size={20} />,
-      color: 'orange',
-      fields: [        // Environmental fields are now displayed as read-only cards
-        // and removed from the editable form fields
-      ],
-    },
+  const sections: FormSection[] = [
     {
       title: 'Agricultural Practices',
       icon: <IconPlant2 size={20} />,
@@ -317,6 +309,12 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
                     console.log('Setting rainfall value:', latestWeather.precipitation);
                     form.setFieldValue('rainfall', parseFloat(latestWeather.precipitation));
                   }
+                  
+                  // Check for annual rainfall in forecast_data
+                  if (latestWeather.forecast_data && latestWeather.forecast_data.annual_rainfall) {
+                    console.log('Setting annual rainfall value:', latestWeather.forecast_data.annual_rainfall);
+                    form.setFieldValue('annual_rainfall', parseFloat(latestWeather.forecast_data.annual_rainfall));
+                  }
                 } else {
                   console.log('No weather data available for this farm');
                 }
@@ -351,6 +349,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
       humidity: 60,
       ph: 7,
       rainfall: 0,
+      annual_rainfall: 0,
       area: 0,
       fertilizer_amount: 0,
       pesticide_amount: 0,
@@ -371,6 +370,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
       humidity: (value) => (value >= 0 && value <= 100 ? null : 'Humidity must be between 0% and 100%'),
       ph: (value) => (value >= 0 && value <= 14 ? null : 'pH must be between 0 and 14'),
       rainfall: (value) => (value >= 0 ? null : 'Rainfall must be non-negative'),
+      annual_rainfall: (value) => (value >= 0 ? null : 'Annual rainfall must be non-negative'),
       area: (value) => (value > 0 ? null : 'Area must be greater than 0'),
       fertilizer_amount: (value) => (value >= 0 ? null : 'Fertilizer amount must be non-negative'),
       pesticide_amount: (value) => (value >= 0 ? null : 'Pesticide amount must be non-negative'),
@@ -598,60 +598,10 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
                 <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-grape-5)', borderRadius: '2px' }}></Box>
               </Card>
             </Grid.Col>
-            <Grid.Col span={{ base: 6, md: 3 }}>
-              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
-                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Temperature</Text>
-                <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.temperature_min && farmDetails?.weather_records?.[0]?.temperature_max ? 'orange.7' : 'gray.5'}>
-                    {farmDetails?.weather_records?.[0]?.temperature_min && farmDetails?.weather_records?.[0]?.temperature_max
-                      ? ((parseFloat(farmDetails.weather_records[0].temperature_min) + parseFloat(farmDetails.weather_records[0].temperature_max)) / 2).toFixed(1)
-                      : 'N/A'}
-                  </Text>
-                  <Text size="xs" c="dimmed" fw={600}>°C</Text>
-                </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
-              </Card>
-            </Grid.Col>
-            <Grid.Col span={{ base: 6, md: 3 }}>
-              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
-                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Humidity</Text>
-                <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.humidity ? 'blue.7' : 'gray.5'}>
-                    {farmDetails?.weather_records?.[0]?.humidity || 'N/A'}
-                  </Text>
-                  <Text size="xs" c="dimmed" fw={600}>%</Text>
-                </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-blue-5)', borderRadius: '2px' }}></Box>
-              </Card>
-            </Grid.Col>
-            <Grid.Col span={{ base: 6, md: 3 }}>
-              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
-                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Rainfall</Text>
-                <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.precipitation ? 'blue.7' : 'gray.5'}>
-                    {farmDetails?.weather_records?.[0]?.precipitation || 'N/A'}
-                  </Text>
-                  <Text size="xs" c="dimmed" fw={600}>mm</Text>
-                </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-blue-5)', borderRadius: '2px' }}></Box>
-              </Card>
-            </Grid.Col>
-            <Grid.Col span={{ base: 6, md: 3 }}>
-              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
-                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Area</Text>
-                <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c={farmDetails?.size_hectares ? 'green.7' : 'gray.5'}>
-                    {farmDetails?.size_hectares || 'N/A'}
-                  </Text>
-                  <Text size="xs" c="dimmed" fw={600}>ha</Text>
-                </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-green-5)', borderRadius: '2px' }}></Box>
-              </Card>
-            </Grid.Col>
           </Grid>
         </Card>
 
-        {/* Farm and Weather Data Panel */}
+        {/* Environmental Data Panel */}
         <Card withBorder shadow="sm" p="md" mb="lg">
           <Group justify="space-between" mb="sm">
             <Group>
@@ -690,8 +640,10 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
               <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
                 <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Temperature</Text>
                 <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c="orange.7">
-                    {form.values.temperature || 'N/A'}
+                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.temperature_min && farmDetails?.weather_records?.[0]?.temperature_max ? 'orange.7' : 'gray.5'}>
+                    {farmDetails?.weather_records?.[0]?.temperature_min && farmDetails?.weather_records?.[0]?.temperature_max
+                      ? ((parseFloat(farmDetails.weather_records[0].temperature_min) + parseFloat(farmDetails.weather_records[0].temperature_max)) / 2).toFixed(1)
+                      : 'N/A'}
                   </Text>
                   <Text size="xs" c="dimmed" fw={600}>°C</Text>
                 </Group>
@@ -703,25 +655,25 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
               <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
                 <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Humidity</Text>
                 <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c="orange.7">
-                    {form.values.humidity || 'N/A'}
+                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.humidity ? 'blue.7' : 'gray.5'}>
+                    {farmDetails?.weather_records?.[0]?.humidity || 'N/A'}
                   </Text>
                   <Text size="xs" c="dimmed" fw={600}>%</Text>
                 </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-blue-5)', borderRadius: '2px' }}></Box>
               </Card>
             </Grid.Col>
             
             <Grid.Col span={{ base: 6, md: 3 }}>
               <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
-                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Rainfall</Text>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Annual Rainfall</Text>
                 <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c="orange.7">
-                    {form.values.rainfall || 'N/A'}
+                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.forecast_data?.annual_rainfall ? 'cyan.7' : 'gray.5'}>
+                    {farmDetails?.weather_records?.[0]?.forecast_data?.annual_rainfall ? `${farmDetails.weather_records[0].forecast_data.annual_rainfall} mm` : 'N/A'}
                   </Text>
                   <Text size="xs" c="dimmed" fw={600}>mm</Text>
                 </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-cyan-5)', borderRadius: '2px' }}></Box>
               </Card>
             </Grid.Col>
             
@@ -729,12 +681,12 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
               <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
                 <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Area</Text>
                 <Group gap="xs" align="baseline">
-                  <Text size="xl" fw={700} c="orange.7">
-                    {form.values.area || 'N/A'}
+                  <Text size="xl" fw={700} c={farmDetails?.size_hectares ? 'green.7' : 'gray.5'}>
+                    {farmDetails?.size_hectares || 'N/A'}
                   </Text>
                   <Text size="xs" c="dimmed" fw={600}>ha</Text>
                 </Group>
-                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-green-5)', borderRadius: '2px' }}></Box>
               </Card>
             </Grid.Col>
           </Grid>

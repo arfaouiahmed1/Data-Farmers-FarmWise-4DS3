@@ -1806,26 +1806,17 @@ def get_weather_icon_code(weather_code):
 
 def save_weather_data(farm, weather_data):
     """
-    Save weather data to the database with improved error handling and efficiency
+    Save weather data to the database for a farm
     """
-    if not farm or not weather_data:
-        print("❌ Missing farm or weather data - cannot save")
-        return False
+    if not weather_data:
+        return
         
-    if not weather_data.get('current'):
-        print("❌ Missing current weather data - cannot save")
-        return False
-    
     try:
-        # Get today's date
-        today = datetime.now().date()
+        # Extract current weather data
+        current = weather_data.get('current', {})
         
-        # Check if we already have weather data for today
-        try:
-            existing_weather = Weather.objects.filter(farm=farm, date=today).first()
-        except Exception as e:
-            print(f"❌ Database error when checking for existing weather: {e}")
-            return False
+        # Convert weather code to our model's condition enum
+        weather_code = current.get('weather_code')
         
         # Map OpenMeteo weather codes to our model's weather conditions
         weather_code_to_condition = {
@@ -1859,71 +1850,54 @@ def save_weather_data(farm, weather_data):
             99: 'STORMY',  # Thunderstorm with heavy hail
         }
         
-        # Extract data safely using get() with defaults
-        try:
-            # Get the condition from the weather code
-            weather_code = weather_data['current'].get('weather_code', 0)
-            condition = weather_code_to_condition.get(weather_code, 'CLOUDY')  # Default to CLOUDY
-            
-            # Get other data with defaults to prevent errors
-            current_temp = weather_data['current'].get('temperature', 0)
-            
-            # Get daily data for today if available
-            daily_data = None
-            if weather_data.get('daily'):
-                today_str = today.strftime('%Y-%m-%d')
-                for day in weather_data['daily']:
-                    if day.get('date') == today_str:
-                        daily_data = day
-                        break
-            
-            # Use daily data if available, otherwise fallback to current
-            temp_max = daily_data.get('max_temp', current_temp) if daily_data else current_temp
-            temp_min = daily_data.get('min_temp', current_temp) if daily_data else current_temp
-            
-            # Get other current values with defaults
-            precipitation = weather_data['current'].get('precipitation', 0)
-            wind_speed = weather_data['current'].get('wind_speed', 0)
-            humidity = weather_data['current'].get('humidity', 0)
-            
-            # Prepare data for database - convert all values to appropriate types
-            db_data = {
+        condition = weather_code_to_condition.get(weather_code, 'CLOUDY')  # Default to cloudy if unknown code
+        
+        # Get daily data for min/max temps
+        daily_data = weather_data.get('daily', [])
+        temp_min = None
+        temp_max = None
+        
+        if daily_data and len(daily_data) > 0:
+            temp_min = daily_data[0].get('min_temp')
+            temp_max = daily_data[0].get('max_temp')
+        else:
+            # Fallback to current temperature with simple offset
+            current_temp = current.get('temperature')
+            if current_temp is not None:
+                temp_min = current_temp - 3  # Simple approximation
+                temp_max = current_temp + 3  # Simple approximation
+        
+        # Prepare additional forecast data
+        forecast_data = {
+            'hourly': weather_data.get('hourly', []),
+            'daily': daily_data,
+            'last_updated': datetime.now().isoformat()
+        }
+        
+        # Add annual rainfall to forecast_data if available
+        if 'annual_rainfall' in weather_data:
+            forecast_data['annual_rainfall'] = weather_data['annual_rainfall']
+            print(f"💧 Saving annual rainfall: {weather_data['annual_rainfall']} mm")
+        
+        # Create or update weather record for today
+        Weather.objects.update_or_create(
+            farm=farm,
+            date=datetime.now().date(),
+            defaults={
                 'condition': condition,
-                'temperature_max': float(temp_max),
-                'temperature_min': float(temp_min),
-                'precipitation': float(precipitation),
-                'wind_speed': float(wind_speed),
-                'humidity': float(humidity),
-                'forecast_data': weather_data
+                'temperature_max': temp_max if temp_max is not None else 0,
+                'temperature_min': temp_min if temp_min is not None else 0,
+                'humidity': current.get('humidity'),
+                'precipitation': current.get('precipitation'),
+                'wind_speed': current.get('wind_speed'),
+                'forecast_data': forecast_data
             }
-            
-            # Create or update the weather record
-            if existing_weather:
-                # Update existing record
-                print(f"📊 Updating existing weather record for {farm.name} on {today}")
-                for key, value in db_data.items():
-                    setattr(existing_weather, key, value)
-                existing_weather.save()
-            else:
-                # Create new record
-                print(f"📊 Creating new weather record for {farm.name} on {today}")
-                Weather.objects.create(
-                    farm=farm,
-                    date=today,
-                    **db_data
-                )
-                
-            return True
-            
-        except KeyError as e:
-            print(f"❌ Missing key in weather data: {e}")
-            return False
+        )
+        
+        print(f"✅ Weather data saved for farm: {farm.name}")
+        
     except Exception as e:
         print(f"❌ Error saving weather data: {e}")
-        if settings.DEBUG:
-            import traceback
-            print(f"🔍 Traceback: {traceback.format_exc()}")
-        return False
 
 def generate_weather_recommendations(farm, weather_data):
     """

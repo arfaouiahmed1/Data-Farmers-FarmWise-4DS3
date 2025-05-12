@@ -8,6 +8,7 @@ export interface CropClassification {
     humidity: number;
     ph: number;
     rainfall: number;
+    annual_rainfall?: number;
     area: number;
     fertilizer_amount: number;
     pesticide_amount: number;
@@ -36,6 +37,7 @@ export interface CropClassificationInput {
     humidity: number;
     ph: number;
     rainfall: number;
+    annual_rainfall?: number;
     area: number;
     fertilizer_amount: number;
     pesticide_amount: number;

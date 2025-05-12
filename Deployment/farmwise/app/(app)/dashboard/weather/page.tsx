@@ -147,12 +147,14 @@ interface Recommendation {
   };
 }
 
+// Update the WeatherResponse interface to include annual_rainfall
 interface WeatherResponse {
   farm_id: number;
   farm_name: string;
   coordinates: Coordinates;
   weather_data: WeatherData;
   recommendations: Recommendation[];
+  annual_rainfall?: number; // Add annual_rainfall property
 }
 
 // Helper to get a weather icon based on icon_code from API
@@ -588,20 +590,23 @@ export default function WeatherPage() {
                 <Group gap="xs">
                   <IconCloudRain size={18} />
                   <Text size="sm">Precipitation</Text>
-          </Group>
+                </Group>
                 <Text fw={500}>{current.precipitation} mm</Text>
               </div>
               <div>
                 <Group gap="xs">
                   <IconUmbrella size={18} />
-                  <Text size="sm">Chance of Rain</Text>
-                            </Group>
+                  <Text size="sm">{weatherData.annual_rainfall !== undefined ? 'Annual Rainfall' : 'Chance of Rain'}</Text>
+                </Group>
                 <Text fw={500}>
-                  {hourly && hourly.length > 0 ? hourly[0].precipitation_probability : 0}%
+                  {weatherData.annual_rainfall !== undefined ? 
+                    `${weatherData.annual_rainfall} mm` : 
+                    (hourly && hourly.length > 0 ? hourly[0].precipitation_probability : 0) + '%'
+                  }
                 </Text>
               </div>
-                         </SimpleGrid>
-            </Grid.Col>
+            </SimpleGrid>
+          </Grid.Col>
       </Grid>
                 </Paper>
 
@@ -821,7 +826,21 @@ export default function WeatherPage() {
           ) : (
             <Badge color="gray" variant="light">No Farm Boundary</Badge>
           )}
-             </Group>
+        </Group>
+        
+        {/* Display annual rainfall information if available */}
+        {weatherData.annual_rainfall !== undefined && (
+          <Alert color="blue" radius="md" mb="md" icon={<IconDropletFilled />}>
+            <Group gap="xs">
+              <Text fw={700} size="md">Annual Rainfall:</Text>
+              <Text fw={700} size="md">{weatherData.annual_rainfall} mm</Text>
+            </Group>
+            <Text size="sm" c="dimmed" mt={4}>
+              Based on historical data for the past year. This can help inform long-term agricultural planning and water management strategies.
+            </Text>
+          </Alert>
+        )}
+
         <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '0.5rem' }}>
           {weatherData && weatherData.coordinates ? (
            <iframe
