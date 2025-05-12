@@ -77,7 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               height: 100%;
               margin: 0;
               padding: 0;
-              overflow: hidden;
+              overflow: auto;
             }
           `}
         </style>
@@ -89,13 +89,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </MantineProvider>
 
-        {/* Removed Global Style for Scroll Padding */}
-        {/* <style jsx global>{`
-          html {
-            scroll-padding-top: 70px; 
-            scroll-behavior: smooth; 
-          }
-        `}</style> */}
+        {/* Global Style for Scroll Padding - moved to regular style tag */}
+        <style>
+          {`
+            html {
+              scroll-padding-top: 70px; 
+              scroll-behavior: smooth; 
+            }
+          `}
+        </style>
       </body>
     </html>
   );

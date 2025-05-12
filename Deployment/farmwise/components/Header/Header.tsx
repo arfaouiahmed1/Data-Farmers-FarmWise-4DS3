@@ -19,7 +19,8 @@ import {
   Badge,
   Center,
   Tooltip,
-  ActionIcon
+  ActionIcon,
+  Drawer
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import Link from 'next/link';
@@ -32,8 +33,14 @@ import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
 import authService from '../../app/api/auth';
 import classes from './Header.module.css';
 
-// Navigation links - removed as per request
-const links = [];
+// Navigation links for the landing page
+const links = [
+  { link: '/#features', label: 'Features' },
+  { link: '/#analytics', label: 'Analytics' },
+  { link: '/#how-it-works', label: 'How It Works' },
+  { link: '/#pricing', label: 'Pricing' },
+  { link: '/#testimonials', label: 'Testimonials' },
+];
 
 export function AppHeader() {
   const [opened, { toggle }] = useDisclosure(false);
@@ -372,7 +379,77 @@ export function AppHeader() {
         {/* Mobile Burger Menu */}
         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
 
-        {/* TODO: Add Mobile Drawer/Menu based on 'opened' state */}
+        {/* Mobile Drawer/Menu */}
+        <Drawer
+          opened={opened}
+          onClose={toggle}
+          size="100%"
+          padding="md"
+          title={
+            <Group>
+              <Link href="/" passHref legacyBehavior>
+                <a className={classes.logoLink} onClick={toggle}>
+                  <Image
+                    src="/Farmwise Logo.svg"
+                    alt="FarmWise Logo"
+                    width={140}
+                    height={35}
+                    priority
+                  />
+                </a>
+              </Link>
+            </Group>
+          }
+          withCloseButton
+          zIndex={1000}
+        >
+          <ScrollArea h={`calc(100vh - 60px)`} mx="-md">
+            <Box py="md">
+              {links.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.link}
+                  className={classes.link}
+                  onClick={(event) => {
+                    toggle();
+                    if (pathname === '/') {
+                      handleScroll(event, link.link);
+                    }
+                  }}
+                  style={{
+                    padding: 'var(--mantine-spacing-md)',
+                    display: 'block',
+                    borderRadius: 0
+                  }}
+                >
+                  {link.label}
+                </a>
+              ))}
+
+              <Divider my="md" />
+              
+              {!isAuthenticated ? (
+                <Group grow px="md">
+                  <Button variant="default" component={Link} href="/login" onClick={toggle}>
+                    Log in
+                  </Button>
+                  <Button component={Link} href="/signup" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }} onClick={toggle}>
+                    Sign up
+                  </Button>
+                </Group>
+              ) : (
+                <Box px="md">
+                  <Button component={Link} href="/dashboard" fullWidth onClick={toggle}>
+                    Dashboard
+                  </Button>
+                  <Button onClick={openLogoutModal} color="red" variant="light" fullWidth mt="sm">
+                    Logout
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          </ScrollArea>
+        </Drawer>
       </Container>
 
       {/* Logout Confirmation Modal */}
