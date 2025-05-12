@@ -21,6 +21,11 @@ import {
   Card,
   Tooltip,
   ActionIcon,
+  Stepper,
+  rem,
+  Center,
+  Container,
+  List,
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
@@ -33,7 +38,19 @@ import {
   IconLock, 
   IconInfoCircle,
   IconEdit,
-  IconArrowRight
+  IconArrowRight,
+  IconArrowLeft,
+  IconBuildingWarehouse,
+  IconSoil,
+  IconCloudRain,
+  IconPlant,
+  IconCalendarStats,
+  IconChevronRight,
+  IconChevronLeft,
+  IconLeaf,
+  IconCircleCheck,
+  IconMapPin,
+  IconSun
 } from '@tabler/icons-react';
 import { authPost, getUserFarms, getFarmDetails } from '../../app/utils/api';
 
