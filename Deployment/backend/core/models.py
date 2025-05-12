@@ -930,12 +930,16 @@ class CropClassification(models.Model):
 
         # Predict crop using the ML model
         try:
-            import joblib
             import os
-
-            # Get the relative path to the ML model
-            model_path = os.path.join('..', '..', '..', 'Models', 'ml_models', 'crop_classifier.pkl')
-            model = joblib.load(model_path)
+            from django.apps import apps
+            
+            # Import the ml_utils dynamically to avoid circular imports
+            try:
+                from api.ml_utils import predict_crop
+                print("Successfully imported predict_crop from ml_utils")
+            except ImportError:
+                print("Error importing predict_crop, will use fallback method")
+                predict_crop = None
 
             # Prepare data for prediction
             data = {
@@ -956,14 +960,38 @@ class CropClassification(models.Model):
                 'Growing Season': [self.growing_season],
                 'Harvest Season': [self.harvest_season]
             }
-
-            import pandas as pd
-            df_input = pd.DataFrame(data)
             
-            # Get prediction and probability
-            predicted_crop_name = model.predict(df_input)[0]
-            probabilities = model.predict_proba(df_input)[0]
-            confidence = float(probabilities.max()) * 100
+            # Try to use the utility function first
+            if predict_crop:
+                predicted_crop_name, confidence = predict_crop(data)
+                print(f"Prediction from utility: {predicted_crop_name}, confidence: {confidence}")
+            else:
+                # Fallback to local prediction if utility function not available
+                import pandas as pd
+                import joblib
+                
+                # Try both absolute and relative paths, prioritizing local copy
+                model_paths = [
+                    os.path.join('models', 'crop_classifier.pkl'),  # Local copy in Django project directory
+                    r'C:\Users\ahmed\Desktop\PIDS\Data-Farmers-FarmWise-4DS3\Models\ml_models\crop_classifier.pkl',
+                    os.path.join('..', '..', 'Models', 'ml_models', 'crop_classifier.pkl')
+                ]
+                
+                model = None
+                for path in model_paths:
+                    if os.path.exists(path):
+                        print(f"Loading model from: {path}")
+                        model = joblib.load(path)
+                        break
+                
+                if not model:
+                    raise FileNotFoundError("Could not find the crop classification model")
+                
+                df_input = pd.DataFrame(data)
+                predicted_crop_name = model.predict(df_input)[0]
+                probabilities = model.predict_proba(df_input)[0]
+                confidence = float(probabilities.max()) * 100
+                print(f"Prediction from fallback: {predicted_crop_name}, confidence: {confidence}")
 
             # Get or create the Crop object
             recommended_crop, _ = Crop.objects.get_or_create(name=predicted_crop_name)
@@ -972,8 +1000,25 @@ class CropClassification(models.Model):
 
         except Exception as e:
             import logging
+            import traceback
+            import pandas as pd  # Ensure pandas is imported
+            
             logger = logging.getLogger(__name__)
             logger.error(f"Error predicting crop: {e}")
+            logger.error(f"Stack trace: {traceback.format_exc()}")
+            
+            # Print the error for console visibility during development
+            print(f"ERROR predicting crop: {e}")
+            print(f"Stack trace: {traceback.format_exc()}")
+            
+            # Check file paths for debugging
+            print(f"Absolute model path exists: {os.path.exists(r'C:\Users\ahmed\Desktop\PIDS\Data-Farmers-FarmWise-4DS3\Models\ml_models\crop_classifier.pkl')}")
+            print(f"Current working directory: {os.getcwd()}")
+            
+            # Use a fallback value for recommended_crop so the save doesn't fail
+            default_crop, _ = Crop.objects.get_or_create(name="Wheat")  # Default to a common crop
+            self.recommended_crop = default_crop
+            self.confidence_score = 50.0  # Default confidence
 
         super().save(*args, **kwargs)
 

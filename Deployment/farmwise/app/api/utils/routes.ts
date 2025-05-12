@@ -15,8 +15,7 @@ export const API_ROUTES = {
   FARMS: `${API_BASE_URL}/core/farms/`,
   USER_FARMS: `${API_BASE_URL}/core/user-farms/`,
   FARM_DETAIL: (id: number) => `${API_BASE_URL}/core/farms/${id}/`,
-  
-  // Crop classification
-  CROP_CLASSIFICATION: `${API_BASE_URL}/api/crop-classification/`,
+    // Crop classification
+  CROP_CLASSIFICATION: `${API_BASE_URL}/api/crop-classification/`, // Points to Django API endpoint
   CROP_CLASSIFICATION_DETAIL: (id: number) => `${API_BASE_URL}/api/crop-classification/${id}/`,
 }; 

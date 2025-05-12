@@ -1,12 +1,23 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from .serializers import CropClassificationSerializer
 from core.models import CropClassification
+import pandas as pd
+import traceback
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
 class CropClassificationView(viewsets.ModelViewSet):
+    """
+    ViewSet for crop classification requests.
+    Handles CRUD operations for crop classification and uses ML model for predictions.
+    """
     serializer_class = CropClassificationSerializer
     permission_classes = [IsAuthenticated]
     
@@ -17,17 +28,40 @@ class CropClassificationView(viewsets.ModelViewSet):
             return CropClassification.objects.filter(farm__in=farms).order_by('-created_at')
         return CropClassification.objects.none()
     
-    def perform_create(self, serializer):
-        # Ensure user has access to the specified farm
-        farm_id = self.request.data.get('farm')
-        if farm_id and hasattr(self.request.user.profile, 'farmer_profile'):
-            farms = self.request.user.profile.farmer_profile.farms.all()
-            if farms.filter(id=farm_id).exists():
-                serializer.save()
-            else:
-                raise PermissionError("You don't have access to this farm")
-        else:
-            raise PermissionError("Only farmers can create crop classifications")
+    def create(self, request, *args, **kwargs):
+        try:
+            # Use the standard serializer validation
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            # Ensure user has access to the specified farm
+            farm_id = request.data.get('farm')
+            if not farm_id:
+                return Response({"error": "Farm ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+                
+            if not hasattr(request.user.profile, 'farmer_profile'):
+                return Response({"error": "Only farmers can create crop classifications"}, status=status.HTTP_403_FORBIDDEN)
+                
+            farms = request.user.profile.farmer_profile.farms.all()
+            if not farms.filter(id=farm_id).exists():
+                return Response({"error": "You don't have access to this farm"}, status=status.HTTP_403_FORBIDDEN)
+            
+            # Save will trigger the model's save method which handles the ML prediction
+            instance = serializer.save()
+            
+            # Return the serialized instance with the prediction results
+            return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            # Proper error handling to prevent HTML responses
+            logger.error(f"Error in crop classification: {e}")
+            logger.error(traceback.format_exc())
+            
+            # Return a JSON response instead of letting Django's debug page appear
+            return Response({
+                "error": "Error processing crop classification",
+                "detail": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Other views continue here...
 
@@ -2161,25 +2195,5 @@ def update_farm_boundary(request, farm_id=None):
             }, status=500)
         return Response({"error": "An internal error occurred"}, status=500)
 
-class CropClassificationView(viewsets.ModelViewSet):
-    serializer_class = CropClassificationSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        # Filter classifications based on user's farms
-        if hasattr(self.request.user.profile, 'farmer_profile'):
-            farms = self.request.user.profile.farmer_profile.farms.all()
-            return CropClassification.objects.filter(farm__in=farms).order_by('-created_at')
-        return CropClassification.objects.none()
-    
-    def perform_create(self, serializer):
-        # Ensure user has access to the specified farm
-        farm_id = self.request.data.get('farm')
-        if farm_id and hasattr(self.request.user.profile, 'farmer_profile'):
-            farms = self.request.user.profile.farmer_profile.farms.all()
-            if farms.filter(id=farm_id).exists():
-                serializer.save()
-            else:
-                raise PermissionError("You don't have access to this farm")
-        else:
-            raise PermissionError("Only farmers can create crop classifications")
+# Duplicate CropClassificationView removed to fix 500 error
+# This was causing conflicts with the implementation at the top of the file
