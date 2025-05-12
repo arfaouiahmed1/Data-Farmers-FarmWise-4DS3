@@ -1,8 +1,0 @@
-pandas
-langchain
-langchain_community
-nltk
-rouge-score
-chromadb
-sentence-transformers
-huggingface-hub 
