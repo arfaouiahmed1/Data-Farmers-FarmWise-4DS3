@@ -132,6 +132,19 @@ class Farm(models.Model):
     def __str__(self):
         return f"{self.name} ({self.owner.profile.user.username})"
     
+    def get_available_hectares(self):
+        """Calculate available hectares for planting new crops"""
+        if not self.size_hectares:
+            return 0
+            
+        # Calculate total hectares already used by existing crops
+        used_hectares = self.farm_crops.aggregate(
+            total=models.Sum('area_planted_hectares')
+        )['total'] or 0
+        
+        # Return available area (can't be negative)
+        return max(float(self.size_hectares) - float(used_hectares), 0)
+        
     def calculate_estimated_price(self):
         """Calculate and update the farm's estimated price"""
         if not self.size_hectares:
@@ -230,6 +243,48 @@ class FarmCrop(models.Model):
         ('As_Needed', 'As Needed'),
     ]
     
+    SEASON_CHOICES = [
+        ('spring', 'Spring'),
+        ('summer', 'Summer'),
+        ('autumn', 'Autumn'),
+        ('winter', 'Winter'),
+    ]
+    
+    FERTILIZER_TYPE_CHOICES = [
+        ('Urea', 'Urea'),
+        ('DAP', 'DAP'),
+        ('NPK', 'NPK'),
+        ('Organic', 'Organic'),
+        ('Other', 'Other'),
+    ]
+    
+    GOVERNORATE_CHOICES = [
+        ('Ariana', 'Ariana'),
+        ('Beja', 'Beja'),
+        ('Ben Arous', 'Ben Arous'),
+        ('Bizerte', 'Bizerte'),
+        ('Gabes', 'Gabes'),
+        ('Gafsa', 'Gafsa'),
+        ('Jendouba', 'Jendouba'),
+        ('Kairouan', 'Kairouan'),
+        ('Kasserine', 'Kasserine'),
+        ('Kebili', 'Kebili'),
+        ('Kef', 'Kef'),
+        ('Mahdia', 'Mahdia'),
+        ('Manouba', 'Manouba'),
+        ('Medenine', 'Medenine'),
+        ('Monastir', 'Monastir'),
+        ('Nabeul', 'Nabeul'),
+        ('Sfax', 'Sfax'),
+        ('Sidi Bouzid', 'Sidi Bouzid'),
+        ('Siliana', 'Siliana'),
+        ('Sousse', 'Sousse'),
+        ('Tataouine', 'Tataouine'),
+        ('Tozeur', 'Tozeur'),
+        ('Tunis', 'Tunis'),
+        ('Zaghouan', 'Zaghouan'),
+    ]
+    
     farm = models.ForeignKey(Farm, on_delete=models.CASCADE, related_name='farm_crops')
     crop = models.ForeignKey(Crop, on_delete=models.PROTECT, related_name='crop_plantings')  # Protect Crop from deletion if used
     planting_date = models.DateField(blank=True, null=True)
@@ -237,6 +292,31 @@ class FarmCrop(models.Model):
     area_planted_hectares = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Fields that mirror Farm model for classification purposes
+    soil_nitrogen = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)  # N value in kg/ha
+    soil_phosphorus = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)  # P value in kg/ha
+    soil_potassium = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)  # K value in kg/ha
+    soil_ph = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)  # pH value (0-14)
+    
+    # Weather related fields
+    temperature = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # in Celsius
+    humidity = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # in percentage
+    rainfall = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)  # in mm
+    
+    # Location fields
+    governorate = models.CharField(max_length=50, blank=True, null=True, choices=GOVERNORATE_CHOICES)
+    district = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Additional classification fields
+    fertilizer_amount = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)  # in kg
+    pesticide_amount = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)  # in kg
+    fertilizer_type = models.CharField(max_length=20, choices=FERTILIZER_TYPE_CHOICES, blank=True, null=True)
+    
+    # Season fields
+    planting_season = models.CharField(max_length=20, choices=SEASON_CHOICES, blank=True, null=True)
+    growing_season = models.CharField(max_length=20, choices=SEASON_CHOICES, blank=True, null=True)
+    harvest_season = models.CharField(max_length=20, choices=SEASON_CHOICES, blank=True, null=True)
     
     # Crop management and monitoring
     growth_stage = models.CharField(max_length=20, choices=GROWTH_STAGE_CHOICES, blank=True, null=True)
@@ -257,6 +337,171 @@ class FarmCrop(models.Model):
 
     def __str__(self):
         return f"{self.crop.name} on {self.farm.name}"
+    
+    def extract_governorate_from_address(self):
+        """Extract governorate from farm address"""
+        if not self.farm or not self.farm.address:
+            return None
+            
+        address = self.farm.address.lower()
+        for gov_code, gov_name in self.GOVERNORATE_CHOICES:
+            if gov_name.lower() in address:
+                return gov_code
+                
+        # Default fallback - could use geocoding here in a more sophisticated version
+        return None
+        
+    def get_recent_weather_data(self):
+        """Fetch most recent weather data for this farm"""
+        if not self.farm:
+            return None, None, None
+            
+        # Get the most recent weather record for this farm
+        latest_weather = self.farm.weather_records.order_by('-timestamp').first()
+        
+        if latest_weather:
+            return (
+                latest_weather.temperature,
+                latest_weather.humidity,
+                latest_weather.rainfall
+            )
+        return None, None, None
+    
+    def determine_season_from_date(self, date):
+        """Determine season from date"""
+        if not date:
+            return None
+            
+        # Simple season determination based on month
+        month = date.month
+        if 3 <= month <= 5:
+            return 'spring'
+        elif 6 <= month <= 8:
+            return 'summer'
+        elif 9 <= month <= 11:
+            return 'autumn'
+        else:
+            return 'winter'
+    
+    def populate_from_farm(self):
+        """Populate fields from Farm model"""
+        if self.farm:
+            self.soil_nitrogen = self.farm.soil_nitrogen
+            self.soil_phosphorus = self.farm.soil_phosphorus
+            self.soil_potassium = self.farm.soil_potassium
+            self.soil_ph = self.farm.soil_ph
+            
+            # Extract governorate from farm address
+            self.governorate = self.extract_governorate_from_address()
+            
+            # If farm has district info
+            if hasattr(self.farm, 'district'):
+                self.district = self.farm.district
+    
+    def populate_weather_data(self):
+        """Populate weather data from Weather model"""
+        temp, humidity, rain = self.get_recent_weather_data()
+        self.temperature = temp
+        self.humidity = humidity
+        self.rainfall = rain
+    
+    def populate_season_data(self):
+        """Populate season data based on dates"""
+        self.planting_season = self.determine_season_from_date(self.planting_date)
+        self.harvest_season = self.determine_season_from_date(self.expected_harvest_date)
+        
+        # Simple growing season logic - could be more sophisticated
+        if self.planting_season and self.harvest_season:
+            # If planting and harvest are in the same season
+            if self.planting_season == self.harvest_season:
+                self.growing_season = self.planting_season
+            # Simple growing season logic - the season between planting and harvest
+            else:
+                seasons = ['winter', 'spring', 'summer', 'autumn', 'winter']
+                planting_idx = seasons.index(self.planting_season)
+                harvest_idx = seasons.index(self.harvest_season)
+                
+                # If harvest comes after planting in the same year
+                if harvest_idx > planting_idx:
+                    self.growing_season = seasons[planting_idx + 1]
+                # If harvest is in the next year (winter planting, spring harvest)
+                else:
+                    self.growing_season = seasons[1]  # Default to spring
+    
+    def save(self, *args, **kwargs):
+        # Populate data from related models before saving
+        if self.pk is None:  # Only auto-populate on first save
+            self.populate_from_farm()
+            self.populate_weather_data()
+            self.populate_season_data()
+        
+        super().save(*args, **kwargs)
+    
+    def clean(self):
+        """Validate model data before saving"""
+        from django.core.exceptions import ValidationError
+        
+        if self.area_planted_hectares and self.farm and self.farm.size_hectares:
+            # For updates, exclude this instance's current area
+            if self.pk:
+                used_hectares = self.farm.farm_crops.exclude(pk=self.pk).aggregate(
+                    total=models.Sum('area_planted_hectares')
+                )['total'] or 0
+            else:
+                used_hectares = self.farm.farm_crops.aggregate(
+                    total=models.Sum('area_planted_hectares')
+                )['total'] or 0
+                
+            # Calculate how much area is available
+            available = float(self.farm.size_hectares) - float(used_hectares)
+            
+            # If area exceeds available space, raise validation error
+            if float(self.area_planted_hectares) > available:
+                raise ValidationError({
+                    'area_planted_hectares': f'The area planted ({self.area_planted_hectares} ha) '
+                                            f'exceeds available farm area ({available} ha). '
+                                            f'Total farm size is {self.farm.size_hectares} ha.'
+                })
+    
+    def save(self, *args, **kwargs):
+        """Override save method to handle area_planted_hectares"""
+        # Get original instance if this is an update
+        if self.pk:
+            try:
+                original = FarmCrop.objects.get(pk=self.pk)
+                original_area = original.area_planted_hectares or 0
+            except FarmCrop.DoesNotExist:
+                original_area = 0
+        else:
+            original_area = 0
+        
+        # If area_planted_hectares is not set and the farm has a size_hectares value
+        if not self.area_planted_hectares and self.farm and self.farm.size_hectares:
+            # For a new crop, check available area
+            available_hectares = self.farm.get_available_hectares()
+            if original_area > 0:  # If updating, add back the original area to available
+                available_hectares += float(original_area)
+                
+            # If farm is empty, use all hectares, otherwise use available hectares
+            if available_hectares > 0:
+                self.area_planted_hectares = available_hectares
+            else:
+                self.area_planted_hectares = self.farm.size_hectares
+        
+        # Ensure area_planted_hectares doesn't exceed the farm's available size
+        if self.area_planted_hectares and self.farm and self.farm.size_hectares:
+            # Calculate how much area is available
+            used_hectares = self.farm.farm_crops.exclude(pk=self.pk).aggregate(
+                total=models.Sum('area_planted_hectares')
+            )['total'] or 0
+            
+            max_allowed = float(self.farm.size_hectares) - float(used_hectares)
+            
+            # Cap the area at the maximum available
+            if float(self.area_planted_hectares) > max_allowed:
+                self.area_planted_hectares = max_allowed
+                
+        super().save(*args, **kwargs)
     
     def predict_yield(self):
         """Calculate and update the predicted yield for this crop planting"""

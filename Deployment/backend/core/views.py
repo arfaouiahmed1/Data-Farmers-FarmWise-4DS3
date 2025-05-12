@@ -957,3 +957,255 @@ def user_farms(request):
             {"error": str(e)},
             status=500
         )
+
+class FarmCropViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows farm crops to be viewed or edited.
+    Includes functionality to populate data from Farm and Weather models.
+    """
+    serializer_class = FarmCropSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Filter farm crops based on current user's farmer profile
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        
+        if hasattr(user_profile, 'farmer_profile'):
+            farms = user_profile.farmer_profile.farms.all()
+            return FarmCrop.objects.filter(farm__in=farms)
+        return FarmCrop.objects.none()
+    
+    def perform_create(self, serializer):
+        """Create a new farm crop and populate data from related models"""
+        farm_crop = serializer.save()
+        farm_crop.populate_from_farm()
+        farm_crop.populate_weather_data()
+        farm_crop.populate_season_data()
+        farm_crop.save()
+    
+    def perform_update(self, serializer):
+        """Update a farm crop and refresh data from related models if requested"""
+        should_refresh = self.request.data.get('refresh_data', False)
+        farm_crop = serializer.save()
+        
+        if should_refresh:
+            farm_crop.populate_from_farm()
+            farm_crop.populate_weather_data()
+            farm_crop.populate_season_data()
+            farm_crop.save()
+    
+    @action(detail=True, methods=['post'])
+    def refresh_data(self, request, pk=None):
+        """Endpoint to manually refresh data from related models"""
+        farm_crop = self.get_object()
+        farm_crop.populate_from_farm()
+        farm_crop.populate_weather_data()
+        farm_crop.populate_season_data()
+        farm_crop.save()
+        
+        serializer = self.get_serializer(farm_crop)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def predict_yield(self, request, pk=None):
+        """Endpoint to run yield prediction for a farm crop"""
+        farm_crop = self.get_object()
+        
+        # Check permissions - only the owner can run yield prediction
+        user_profile = UserProfile.objects.get(user=request.user)
+        if not hasattr(user_profile, 'farmer_profile') or farm_crop.farm.owner != user_profile.farmer_profile:
+            return Response(
+                {"error": "You don't have permission to run yield prediction for this farm crop"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            # Run the yield prediction
+            predicted_yield = farm_crop.predict_yield()
+            
+            if predicted_yield is None:
+                return Response(
+                    {"error": "Could not calculate yield prediction. Please ensure all required data is available."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Return the prediction results
+            result = {
+                "predicted_yield": farm_crop.predicted_yield,
+                "yield_confidence": farm_crop.yield_confidence,
+                "prediction_date": farm_crop.yield_prediction_date,
+                "projected_revenue": farm_crop.projected_revenue,
+                "area_planted": farm_crop.area_planted_hectares,
+                "crop_name": farm_crop.crop.name,
+                "farm_name": farm_crop.farm.name
+            }
+            
+            return Response(result, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Error during yield prediction: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def initialize_farm_crop_classification(request, farm_crop_id):
+    """Initialize or refresh classification data for a farm crop"""
+    try:
+        # Get the farm crop
+        farm_crop = FarmCrop.objects.get(pk=farm_crop_id)
+        
+        # Check permissions - only the owner can initialize classification
+        user_profile = UserProfile.objects.get(user=request.user)
+        if not hasattr(user_profile, 'farmer_profile') or farm_crop.farm.owner != user_profile.farmer_profile:
+            return Response(
+                {"error": "You don't have permission to initialize this farm crop's classification data"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Populate data from related models
+        farm_crop.populate_from_farm()
+        farm_crop.populate_weather_data()
+        farm_crop.populate_season_data()
+        farm_crop.save()
+        
+        # Return the updated farm crop data
+        serializer = FarmCropSerializer(farm_crop)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+    except FarmCrop.DoesNotExist:
+        return Response(
+            {"error": "Farm crop not found"}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def yield_prediction(request):
+    """
+    Endpoint for crop yield prediction based on a farm crop ID or with provided data.
+    This connects the FarmCrop model's yield prediction with the classification page.
+    """
+    try:
+        # Check if we're predicting based on an existing farm crop
+        farm_crop_id = request.data.get('farm_crop_id')
+        
+        if farm_crop_id:
+            # Get the farm crop
+            try:
+                farm_crop = FarmCrop.objects.get(pk=farm_crop_id)
+                
+                # Check permissions - only the owner can run yield prediction
+                user_profile = UserProfile.objects.get(user=request.user)
+                if not hasattr(user_profile, 'farmer_profile') or farm_crop.farm.owner != user_profile.farmer_profile:
+                    return Response(
+                        {"error": "You don't have permission to run yield prediction for this farm crop"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                
+                # Run the yield prediction
+                predicted_yield = farm_crop.predict_yield()
+                
+                if predicted_yield is None:
+                    return Response(
+                        {"error": "Could not calculate yield prediction. Please ensure all required data is available."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Return the prediction results
+                result = {
+                    "predicted_yield": farm_crop.predicted_yield,
+                    "yield_confidence": farm_crop.yield_confidence,
+                    "prediction_date": farm_crop.yield_prediction_date,
+                    "projected_revenue": farm_crop.projected_revenue,
+                    "area_planted": farm_crop.area_planted_hectares,
+                    "crop_name": farm_crop.crop.name,
+                    "farm_name": farm_crop.farm.name
+                }
+                
+                return Response(result, status=status.HTTP_200_OK)
+            
+            except FarmCrop.DoesNotExist:
+                return Response(
+                    {"error": "Farm crop not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # If no farm_crop_id provided, create a temporary FarmCrop object
+        # from classification data and run prediction
+        else:
+            # Check if there's a classification ID
+            classification_id = request.data.get('classification_id')
+            if classification_id:
+                try:
+                    # Get the classification
+                    classification = CropClassification.objects.get(pk=classification_id)
+                    
+                    # Check permissions
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    if not hasattr(user_profile, 'farmer_profile') or classification.farm.owner != user_profile.farmer_profile:
+                        return Response(
+                            {"error": "You don't have permission to access this classification"},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    
+                    # Create a temporary FarmCrop object
+                    farm_crop = FarmCrop(
+                        farm=classification.farm,
+                        crop=classification.recommended_crop,
+                        area_planted_hectares=classification.area,
+                        soil_nitrogen=classification.soil_n,
+                        soil_phosphorus=classification.soil_p,
+                        soil_potassium=classification.soil_k,
+                        soil_ph=classification.ph,
+                        temperature=classification.temperature,
+                        humidity=classification.humidity,
+                        rainfall=classification.rainfall,
+                        planting_season=classification.planting_season,
+                        growing_season=classification.growing_season,
+                        harvest_season=classification.harvest_season,
+                        fertilizer_type=classification.fertilizer_type,
+                        governorate=classification.governorate,
+                        district=classification.district
+                    )
+                    
+                    # Run prediction but don't save the temporary object
+                    predicted_yield = farm_crop.predict_yield()
+                    
+                    # Return the results
+                    result = {
+                        "predicted_yield": farm_crop.predicted_yield,
+                        "yield_confidence": farm_crop.yield_confidence,
+                        "projection_date": farm_crop.yield_prediction_date,
+                        "projected_revenue": farm_crop.projected_revenue,
+                        "area_planted": farm_crop.area_planted_hectares,
+                        "crop_name": farm_crop.crop.name,
+                        "farm_name": farm_crop.farm.name,
+                        "is_temporary": True
+                    }
+                    
+                    return Response(result, status=status.HTTP_200_OK)
+                    
+                except CropClassification.DoesNotExist:
+                    return Response(
+                        {"error": "Classification not found"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # No input data provided
+            return Response(
+                {"error": "Please provide either a farm_crop_id or classification_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+    except Exception as e:
+        return Response(
+            {"error": f"Error during yield prediction: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

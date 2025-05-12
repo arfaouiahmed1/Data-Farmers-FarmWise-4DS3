@@ -76,6 +76,32 @@ export async function getUserFarms(): Promise<any[]> {
 }
 
 /**
+ * Get detailed information about a specific farm
+ * @param farmId - The ID of the farm to fetch
+ * @returns Promise resolving to the farm details or null if error
+ */
+export async function getFarmDetails(farmId: number): Promise<any | null> {
+  try {
+    if (!farmId) return null;
+    
+    const response = await fetch(`/api/farms/${farmId}`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    } else {
+      console.error('Failed to fetch farm details:', response.status);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching farm details:', error);
+    return null;
+  }
+}
+
+/**
  * Ensure URL has correct prefix for Next.js API routes
  * @param url - The URL to normalize
  * @returns Normalized URL with proper prefix
@@ -158,4 +184,4 @@ export async function authPut(url: string, data: any): Promise<Response> {
  */
 export async function authDelete(url: string): Promise<Response> {
   return fetchWithAuth(url, { method: 'DELETE' });
-} 
+}

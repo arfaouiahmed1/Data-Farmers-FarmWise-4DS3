@@ -11,7 +11,7 @@ router.register(r'farmers', views.FarmerViewSet, basename='farmer')
 router.register(r'admins', views.AdminViewSet, basename='admin')
 # router.register(r'weather', views.WeatherViewSet, basename='weather')  # Commented out as this doesn't exist
 # router.register(r'crops', views.CropViewSet)  # Commented out as this doesn't exist
-# router.register(r'farm-crops', views.FarmCropViewSet, basename='farm-crop')  # Commented out as this doesn't exist
+router.register(r'farm-crops', views.FarmCropViewSet, basename='farm-crop')
 router.register(r'inventory', views.InventoryItemViewSet, basename='inventory')
 router.register(r'equipment', views.EquipmentViewSet, basename='equipment')
 
@@ -48,4 +48,10 @@ urlpatterns = [
     
     # Add a specific endpoint for user farms
     path('user-farms/', views.user_farms, name='user-farms'),
-] 
+    
+    # FarmCrop classification data initialization
+    path('farm-crops/<int:farm_crop_id>/initialize-classification/', views.initialize_farm_crop_classification, name='initialize-farm-crop-classification'),
+    
+    # Yield prediction endpoint
+    path('yield-prediction/', views.yield_prediction, name='yield-prediction'),
+]

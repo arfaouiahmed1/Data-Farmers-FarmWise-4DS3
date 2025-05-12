@@ -17,11 +17,25 @@ import {
   Box,
   Loader,
   Alert,
+  Badge,
+  Card,
+  Tooltip,
+  ActionIcon,
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
-import { IconPlant2, IconDroplet, IconTemperature, IconMoonStars, IconAlertCircle } from '@tabler/icons-react';
-import { authPost, getUserFarms } from '../../app/utils/api';
+import { 
+  IconPlant2, 
+  IconDroplet, 
+  IconTemperature, 
+  IconMoonStars, 
+  IconAlertCircle, 
+  IconLock, 
+  IconInfoCircle,
+  IconEdit,
+  IconArrowRight
+} from '@tabler/icons-react';
+import { authPost, getUserFarms, getFarmDetails } from '../../app/utils/api';
 
 const seasonOptions = [
   { value: 'spring', label: 'Spring' },
@@ -120,44 +134,8 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<number | null>(initialFarmId || null);
-  
-  const sections: FormSection[] = [
-    {
-      title: 'Soil Analysis',
-      icon: <IconDroplet size={20} />,
-      color: 'blue',
-      fields: [
-        {
-          fieldType: 'number',
-          label: 'Nitrogen (N)',
-          key: 'soil_n',
-          unit: 'kg/ha',
-          description: 'Nitrogen content in soil',
-        },
-        {
-          fieldType: 'number',
-          label: 'Phosphorus (P)',
-          key: 'soil_p',
-          unit: 'kg/ha',
-          description: 'Phosphorus content in soil',
-        },
-        {
-          fieldType: 'number',
-          label: 'Potassium (K)',
-          key: 'soil_k',
-          unit: 'kg/ha',
-          description: 'Potassium content in soil',
-        },
-        {
-          fieldType: 'number',
-          label: 'pH Level',
-          key: 'ph',
-          min: 0,
-          max: 14,
-          description: 'Soil pH level',
-        },
-      ],
-    },
+  const [farmDetails, setFarmDetails] = useState<any | null>(null);
+    const sections: FormSection[] = [
     {
       title: 'Environmental Conditions',
       icon: <IconTemperature size={20} />,
@@ -274,7 +252,6 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
       ],
     },
   ];
-  
   useEffect(() => {
     async function fetchFarms() {
       try {
@@ -290,8 +267,39 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
           
           setFarms(formattedFarms);
           
-          if (!initialFarmId && formattedFarms.length > 0) {
-            setSelectedFarmId(parseInt(formattedFarms[0].value));
+          // Determine which farm ID to use
+          let selectedId: number | null = null;
+          
+          if (initialFarmId) {
+            selectedId = initialFarmId;
+          } else if (formattedFarms.length > 0) {
+            selectedId = parseInt(formattedFarms[0].value);
+          }
+          
+          if (selectedId) {
+            setSelectedFarmId(selectedId);
+            
+            // Get the farm name for the notification
+            const farmName = formattedFarms.find(farm => parseInt(farm.value) === selectedId)?.label || 'Unknown';
+            
+            // Show notification for selected farm
+            notifications.show({
+              title: 'Farm Selected',
+              message: `Automatically selected farm: ${farmName}`,
+              color: 'teal',
+            });
+            
+            // Fetch detailed farm data including soil information
+            const details = await getFarmDetails(selectedId);
+            if (details) {
+              setFarmDetails(details);
+              
+              // Pre-fill soil data in the form if available
+              if (details.soil_nitrogen) form.setFieldValue('soil_n', parseFloat(details.soil_nitrogen));
+              if (details.soil_phosphorus) form.setFieldValue('soil_p', parseFloat(details.soil_phosphorus));
+              if (details.soil_potassium) form.setFieldValue('soil_k', parseFloat(details.soil_potassium));
+              if (details.soil_ph) form.setFieldValue('ph', parseFloat(details.soil_ph));
+            }
           }
           
           setError(null);
@@ -350,13 +358,20 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
     if (selectedFarmId) {
       form.setFieldValue('farm', selectedFarmId);
     }
-  }, [selectedFarmId]);
-
-  const handleSubmit = async (values: typeof form.values) => {
+  }, [selectedFarmId]);  const handleSubmit = async (values: typeof form.values) => {
     try {
+      // Make sure soil values are included from farm details if available
+      if (farmDetails) {
+        if (farmDetails.soil_nitrogen) values.soil_n = parseFloat(farmDetails.soil_nitrogen);
+        if (farmDetails.soil_phosphorus) values.soil_p = parseFloat(farmDetails.soil_phosphorus);
+        if (farmDetails.soil_potassium) values.soil_k = parseFloat(farmDetails.soil_potassium);
+        if (farmDetails.soil_ph) values.ph = parseFloat(farmDetails.soil_ph);
+      }
+      
       console.log('Submitting form with values:', values);
       
-      const response = await authPost('crop-classification', values);
+      // Use the local API route which will forward to Django backend
+      const response = await authPost('planning/crop-classification', values);
       
       console.log('Response status:', response.status);
 
@@ -381,6 +396,8 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
 
       const data = await response.json();
       console.log('Success response:', data);
+      
+      // Django backend returns the full object so it's ready to be passed to the results component
       onSuccess(data);
       
     } catch (error: any) {
@@ -414,32 +431,145 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
     );
   }
 
+  // Find the selected farm name
+  const selectedFarmName = farms.find(farm => farm.value === selectedFarmId?.toString())?.label || 'Your farm';
+
   return (
     <form onSubmit={form.onSubmit(handleSubmit)}>
-      <Stack gap="xl">
-        <Box>
-          <Group align="center" mb="md">
+      <Stack gap="xl">        {/* Hidden inputs for form submission */}
+        <input type="hidden" {...form.getInputProps('farm')} />
+        <input type="hidden" {...form.getInputProps('soil_n')} />
+        <input type="hidden" {...form.getInputProps('soil_p')} />
+        <input type="hidden" {...form.getInputProps('soil_k')} />
+        <input type="hidden" {...form.getInputProps('ph')} />
+          {/* Display selected farm information */}
+        <Box mb="md">
+          <Group align="center">
             <ThemeIcon size="lg" color="teal" variant="light">
               <IconPlant2 size={20} />
             </ThemeIcon>
-            <Title order={4}>Farm Selection</Title>
+            <Title order={4}>Farm Information</Title>
           </Group>
-
-          <Select
-            label="Select Farm"
-            description="Choose the farm for crop classification"
-            placeholder="Select a farm"
-            data={farms}
-            required
-            {...form.getInputProps('farm')}
-            onChange={(value) => {
-              if (value) {
-                setSelectedFarmId(parseInt(value));
-                form.setFieldValue('farm', parseInt(value));
-              }
-            }}
-          />
+          <Text mt="xs" size="sm" c="dimmed">
+            Running soil analysis for:
+          </Text>
+          <Badge size="lg" color="teal" variant="filled" mt="xs">
+            {selectedFarmName}
+          </Badge>
         </Box>
+        
+        {/* Soil Analysis Panel with Info Message */}
+        <Card withBorder shadow="sm" p="md" mb="lg">
+          <Group justify="space-between" mb="sm">
+            <Group>
+              <ThemeIcon size="lg" color="blue" variant="light">
+                <IconDroplet size={20} />
+              </ThemeIcon>
+              <Title order={4}>Soil Analysis</Title>
+            </Group>            <Tooltip 
+              label="These values are managed in your farm profile" 
+              position="left"
+              multiline
+              w={200}
+            >
+              <ActionIcon variant="subtle" color="gray">
+                <IconInfoCircle size={20} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>          <Card withBorder p="md" radius="md" bg="rgba(56, 182, 255, 0.08)" mb="md">
+            <Box mb="sm">
+              <Text size="sm" fw={600} c="blue.7" mb={4}>
+                <IconLock size={16} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }} />
+                Soil data from your farm profile
+              </Text>
+              <Text size="sm" mb="sm" c="dimmed" lh={1.5}>
+                These values are automatically pulled from your farm profile settings. 
+                Accurate soil data helps provide better crop recommendations for your specific conditions.
+              </Text>
+            </Box>
+            
+            <Box
+              style={{
+                position: 'relative',
+                background: 'linear-gradient(135deg, rgba(56, 182, 255, 0.1) 0%, rgba(0, 128, 0, 0.1) 100%)',
+                padding: '12px',
+                borderRadius: '8px',
+                marginTop: '10px',
+                marginBottom: '16px',
+                border: '1px dashed var(--mantine-color-blue-5)',
+              }}
+            >
+              <Text size="sm" fw={500} lh={1.5}>
+                Need to update your soil analysis? 
+                <br />Recent soil tests ensure the most accurate crop recommendations.
+              </Text>
+            </Box>
+            
+            <Group mt="md">
+              <Button 
+                variant="light" 
+                color="blue" 
+                leftSection={<IconEdit size={16} />}
+                rightSection={<IconArrowRight size={16} />}
+                onClick={() => router.push('/dashboard/farms')}
+                style={{
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                Update farm soil data
+              </Button>
+            </Group>
+          </Card>
+            <Grid>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Nitrogen (N)</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.soil_nitrogen ? 'blue.7' : 'gray.5'}>
+                    {farmDetails?.soil_nitrogen || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>kg/ha</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-blue-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Phosphorus (P)</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.soil_phosphorus ? 'blue.7' : 'gray.5'}>
+                    {farmDetails?.soil_phosphorus || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>kg/ha</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-indigo-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Potassium (K)</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.soil_potassium ? 'teal.7' : 'gray.5'}>
+                    {farmDetails?.soil_potassium || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>kg/ha</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-teal-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>pH Level</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.soil_ph ? 'grape.7' : 'gray.5'}>
+                    {farmDetails?.soil_ph || 'N/A'}
+                  </Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-grape-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+          </Grid>
+        </Card>
 
         {sections.map((section, idx) => (
           <Box key={idx}>

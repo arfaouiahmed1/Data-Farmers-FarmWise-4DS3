@@ -57,14 +57,25 @@ class CropSerializer(serializers.ModelSerializer):
 
 class FarmCropSerializer(serializers.ModelSerializer):
     crop_name = serializers.CharField(source='crop.name', read_only=True)
+    farm_name = serializers.CharField(source='farm.name', read_only=True)
     
     class Meta:
         model = FarmCrop
-        fields = ['id', 'farm', 'crop', 'crop_name', 'planting_date', 'expected_harvest_date', 
+        fields = ['id', 'farm', 'farm_name', 'crop', 'crop_name', 'planting_date', 'expected_harvest_date', 
                   'area_planted_hectares', 'growth_stage', 'health_status', 'notes', 
                   'last_fertilized', 'watering_frequency', 'planting_cost', 
                   'expected_yield_per_hectare', 'projected_revenue',
-                  'predicted_yield', 'yield_confidence', 'yield_prediction_date']
+                  'predicted_yield', 'yield_confidence', 'yield_prediction_date',
+                  # Soil fields
+                  'soil_nitrogen', 'soil_phosphorus', 'soil_potassium', 'soil_ph',
+                  # Weather fields
+                  'temperature', 'humidity', 'rainfall',
+                  # Location fields
+                  'governorate', 'district',
+                  # Classification fields
+                  'fertilizer_amount', 'pesticide_amount', 'fertilizer_type',
+                  # Season fields
+                  'planting_season', 'growing_season', 'harvest_season']
         
 class DetectedWeedSerializer(serializers.ModelSerializer):
     class Meta:
