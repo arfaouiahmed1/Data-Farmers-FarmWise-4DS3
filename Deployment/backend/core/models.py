@@ -208,12 +208,77 @@ class Weather(models.Model):
         return f"Weather for {self.farm.name} on {self.date}"
 
 class Crop(models.Model):
+    WATER_REQUIREMENT_CHOICES = [
+        ('LOW', 'Low - Drought Tolerant'),
+        ('MEDIUM', 'Medium - Average Water Needs'),
+        ('HIGH', 'High - Requires Regular Watering'),
+        ('VERY_HIGH', 'Very High - Requires Abundant Water'),
+    ]
+    
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
-    # Add other relevant fields like optimal conditions, etc.
+    
+    # Planting and harvesting windows (0=January, 11=December)
+    planting_start_month = models.IntegerField(blank=True, null=True, help_text="Month index (0-11) when planting typically begins")
+    planting_end_month = models.IntegerField(blank=True, null=True, help_text="Month index (0-11) when planting typically ends")
+    harvesting_start_month = models.IntegerField(blank=True, null=True, help_text="Month index (0-11) when harvesting typically begins")
+    harvesting_end_month = models.IntegerField(blank=True, null=True, help_text="Month index (0-11) when harvesting typically ends")
+    
+    # Growth information
+    growth_days_min = models.IntegerField(blank=True, null=True, help_text="Minimum days to maturity")
+    growth_days_max = models.IntegerField(blank=True, null=True, help_text="Maximum days to maturity")
+    
+    # Planting details
+    seed_depth = models.CharField(max_length=50, blank=True, null=True, help_text="Recommended planting depth (e.g., '1-2 inches')")
+    row_spacing = models.CharField(max_length=50, blank=True, null=True, help_text="Recommended row spacing (e.g., '30-36 inches')")
+    
+    # Water requirements
+    water_requirement = models.CharField(max_length=10, choices=WATER_REQUIREMENT_CHOICES, blank=True, null=True)
+    water_schedule = models.CharField(max_length=100, blank=True, null=True, help_text="Suggested watering frequency/schedule")
+    
+    # Climate and conditions
+    min_soil_temp = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True, help_text="Minimum soil temperature for planting (°F)")
+    optimal_ph_min = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True, help_text="Minimum optimal soil pH")
+    optimal_ph_max = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True, help_text="Maximum optimal soil pH")
+    sun_requirement = models.CharField(max_length=50, blank=True, null=True, help_text="Sun exposure needs (e.g., 'Full Sun')")
+    
+    # Additional information
+    notes = models.TextField(blank=True, null=True, help_text="Additional growing notes and tips")
+    companion_plants = models.TextField(blank=True, null=True, help_text="Plants that grow well with this crop")
+    antagonistic_plants = models.TextField(blank=True, null=True, help_text="Plants that should not be grown with this crop")
 
     def __str__(self):
         return self.name
+    
+    def get_growth_days_display(self):
+        """Return the growth days range as a string"""
+        if self.growth_days_min is not None and self.growth_days_max is not None:
+            return f"{self.growth_days_min}-{self.growth_days_max} days"
+        elif self.growth_days_min is not None:
+            return f"{self.growth_days_min}+ days"
+        elif self.growth_days_max is not None:
+            return f"Up to {self.growth_days_max} days"
+        return "Unknown"
+    
+    def get_planting_window_display(self):
+        """Return the planting window as a string with month names"""
+        months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                 'July', 'August', 'September', 'October', 'November', 'December']
+        if self.planting_start_month is not None and self.planting_end_month is not None:
+            start = months[self.planting_start_month]
+            end = months[self.planting_end_month]
+            return f"{start} to {end}"
+        return "Unknown"
+    
+    def get_harvesting_window_display(self):
+        """Return the harvesting window as a string with month names"""
+        months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                 'July', 'August', 'September', 'October', 'November', 'December']
+        if self.harvesting_start_month is not None and self.harvesting_end_month is not None:
+            start = months[self.harvesting_start_month]
+            end = months[self.harvesting_end_month]
+            return f"{start} to {end}"
+        return "Unknown"
 
 class FarmCrop(models.Model):
     GROWTH_STAGE_CHOICES = [
