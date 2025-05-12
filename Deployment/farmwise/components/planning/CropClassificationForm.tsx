@@ -370,8 +370,10 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
                   // Set temperature (average of min and max)
                   if (latestWeather.temperature_min && latestWeather.temperature_max) {
                     const avgTemp = (parseFloat(latestWeather.temperature_min) + parseFloat(latestWeather.temperature_max)) / 2;
-                    console.log('Setting temperature value:', avgTemp);
-                    form.setFieldValue('temperature', avgTemp);
+                    // Round to 2 decimal places to avoid validation errors
+                    const roundedTemp = parseFloat(avgTemp.toFixed(2));
+                    console.log('Setting temperature value:', roundedTemp);
+                    form.setFieldValue('temperature', roundedTemp);
                   }
                   
                   // Set humidity

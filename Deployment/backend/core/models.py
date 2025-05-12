@@ -932,7 +932,7 @@ class CropClassification(models.Model):
     soil_n = models.DecimalField('Nitrogen Level N (kg/ha)', max_digits=8, decimal_places=2)
     soil_p = models.DecimalField('Phosphorus Level P (kg/ha)', max_digits=8, decimal_places=2)
     soil_k = models.DecimalField('Potassium Level K (kg/ha)', max_digits=8, decimal_places=2)
-    temperature = models.DecimalField('Temperature (°C)', max_digits=5, decimal_places=2)
+    temperature = models.DecimalField('Temperature (°C)', max_digits=6, decimal_places=2)
     humidity = models.DecimalField('Humidity (%)', max_digits=5, decimal_places=2)
     ph = models.DecimalField('Soil pH', max_digits=4, decimal_places=2)
     rainfall = models.DecimalField('Rainfall (mm)', max_digits=6, decimal_places=2)
@@ -964,6 +964,11 @@ class CropClassification(models.Model):
         ordering = ['-created_at']
         
     def save(self, *args, **kwargs):
+        # Ensure temperature is properly formatted to avoid validation errors
+        if self.temperature:
+            from decimal import Decimal
+            self.temperature = Decimal(str(round(float(self.temperature), 2)))
+            
         # Automatically pull data from farm if not provided
         if not self.area and self.farm.size_hectares:
             self.area = self.farm.size_hectares
