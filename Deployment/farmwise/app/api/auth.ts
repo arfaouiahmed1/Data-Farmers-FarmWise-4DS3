@@ -10,8 +10,8 @@ const api = axios.create({
   },
   // Set timeout to avoid hanging requests
   timeout: 10000, // 10 seconds
-  // Enable credentials for CORS requests
-  withCredentials: true,
+  // For development, don't send credentials to avoid CSRF issues
+  withCredentials: false,
 });
 
 // Add a request interceptor to include auth token in requests

@@ -16,6 +16,10 @@ from django.db import models
 
 # Create your views here.
 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     
@@ -32,6 +36,8 @@ class RegisterView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [AllowAny]
     
@@ -90,6 +96,8 @@ class LoginView(APIView):
             'onboarding_required': not onboarding_completed
         })
 
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
     
@@ -158,6 +166,8 @@ class ChangePasswordView(APIView):
             'token': token.key
         }, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class CheckUsernameView(APIView):
     permission_classes = [AllowAny]
     
@@ -174,6 +184,8 @@ class CheckUsernameView(APIView):
             'exists': exists
         }, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class CheckEmailView(APIView):
     permission_classes = [AllowAny]
     

@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-)n36x*y9dh093qhby47sk-u74fpbf&bc$-g2-@+0@g*0o4c%h_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Allow all hosts in development
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -53,10 +54,12 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # Comment out CSRF middleware for development to allow cross-origin requests
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'farmwise_backend.middleware.AuthenticationExemptMiddleware',  # Add our custom middleware
 ]
 
 ROOT_URLCONF = 'farmwise_backend.urls'
@@ -148,6 +151,9 @@ CORS_ALLOWED_ORIGINS = [
     # "https://your-frontend-domain.com",
 ]
 
+# For more flexibility in development, use CORS_ALLOW_ALL_ORIGINS
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Add more permissive CORS settings for development
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -173,14 +179,26 @@ CORS_ALLOW_HEADERS = [
 # Disable automatic slash appending to prevent POST redirect issues
 APPEND_SLASH = False
 
+# CSRF settings
+# Exempt certain URLs from CSRF protection
+CSRF_EXEMPT_URLS = [
+    r'^/core/login/$',
+    r'^/core/register/$',
+    r'^/core/check-username/$',
+    r'^/core/check-email/$',
+    r'^/core/forgot-password/$',
+]
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+    # Change default permission to allow unauthenticated access
+    # Individual views will specify their permission requirements
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
 }
 
