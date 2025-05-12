@@ -21,11 +21,14 @@ export async function GET(
       },
     });
 
+    // Log backend response for debugging
+    const responseText = await response.clone().text();
     console.log(`Backend farm/${farmId} response status:`, response.status);
-    
+    console.log(`Backend farm/${farmId} response body:`, responseText);
+
     if (!response.ok) {
       return new Response(
-        JSON.stringify({ error: `Failed to fetch farm with id ${farmId}` }), 
+        JSON.stringify({ error: `Failed to fetch farm with id ${farmId}`, backend: responseText }), 
         {
           status: response.status,
           headers: {

@@ -140,39 +140,8 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
       title: 'Environmental Conditions',
       icon: <IconTemperature size={20} />,
       color: 'orange',
-      fields: [
-        {
-          fieldType: 'number',
-          label: 'Temperature',
-          key: 'temperature',
-          unit: '°C',
-          min: -20,
-          max: 50,
-          description: 'Average temperature',
-        },
-        {
-          fieldType: 'number',
-          label: 'Humidity',
-          key: 'humidity',
-          unit: '%',
-          min: 0,
-          max: 100,
-          description: 'Relative humidity',
-        },
-        {
-          fieldType: 'number',
-          label: 'Rainfall',
-          key: 'rainfall',
-          unit: 'mm',
-          description: 'Annual rainfall',
-        },
-        {
-          fieldType: 'number',
-          label: 'Area',
-          key: 'area',
-          unit: 'ha',
-          description: 'Field area',
-        },
+      fields: [        // Environmental fields are now displayed as read-only cards
+        // and removed from the editable form fields
       ],
     },
     {
@@ -265,13 +234,17 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
             label: farm.name
           }));
           
-          setFarms(formattedFarms);
-          
-          // Determine which farm ID to use
+          setFarms(formattedFarms);            // Determine which farm ID to use
           let selectedId: number | null = null;
           
           if (initialFarmId) {
-            selectedId = initialFarmId;
+            // Check if initialFarmId exists in the available farms
+            if (formattedFarms.some(farm => parseInt(farm.value) === initialFarmId)) {
+              selectedId = initialFarmId;
+            } else {
+              console.log(`Farm with ID ${initialFarmId} not found, using first available farm instead`);
+              selectedId = formattedFarms.length > 0 ? parseInt(formattedFarms[0].value) : null;
+            }
           } else if (formattedFarms.length > 0) {
             selectedId = parseInt(formattedFarms[0].value);
           }
@@ -291,14 +264,65 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
             
             // Fetch detailed farm data including soil information
             const details = await getFarmDetails(selectedId);
+            console.log('Fetched farm details:', details);
             if (details) {
               setFarmDetails(details);
               
               // Pre-fill soil data in the form if available
-              if (details.soil_nitrogen) form.setFieldValue('soil_n', parseFloat(details.soil_nitrogen));
-              if (details.soil_phosphorus) form.setFieldValue('soil_p', parseFloat(details.soil_phosphorus));
-              if (details.soil_potassium) form.setFieldValue('soil_k', parseFloat(details.soil_potassium));
-              if (details.soil_ph) form.setFieldValue('ph', parseFloat(details.soil_ph));
+              if (details.soil_nitrogen) {
+                console.log('Setting nitrogen value:', details.soil_nitrogen);
+                form.setFieldValue('soil_n', parseFloat(details.soil_nitrogen));
+              }
+              if (details.soil_phosphorus) {
+                console.log('Setting phosphorus value:', details.soil_phosphorus);
+                form.setFieldValue('soil_p', parseFloat(details.soil_phosphorus));
+              }
+              if (details.soil_potassium) {
+                console.log('Setting potassium value:', details.soil_potassium);
+                form.setFieldValue('soil_k', parseFloat(details.soil_potassium));
+              }
+              if (details.soil_ph) {
+                console.log('Setting pH value:', details.soil_ph);
+                form.setFieldValue('ph', parseFloat(details.soil_ph));
+              }
+              
+              // Set farm area from farm size hectares
+              if (details.size_hectares) {
+                console.log('Setting area value:', details.size_hectares);
+                form.setFieldValue('area', parseFloat(details.size_hectares));
+              }
+
+              // Get latest weather data from weather_records if available
+              try {
+                // Check if we have weather data in the farm details
+                if (details.weather_records && details.weather_records.length > 0) {
+                  const latestWeather = details.weather_records[0]; // Assuming sorted by date
+                  console.log('Latest weather data:', latestWeather);
+                  
+                  // Set temperature (average of min and max)
+                  if (latestWeather.temperature_min && latestWeather.temperature_max) {
+                    const avgTemp = (parseFloat(latestWeather.temperature_min) + parseFloat(latestWeather.temperature_max)) / 2;
+                    console.log('Setting temperature value:', avgTemp);
+                    form.setFieldValue('temperature', avgTemp);
+                  }
+                  
+                  // Set humidity
+                  if (latestWeather.humidity) {
+                    console.log('Setting humidity value:', latestWeather.humidity);
+                    form.setFieldValue('humidity', parseFloat(latestWeather.humidity));
+                  }
+                  
+                  // Set rainfall/precipitation
+                  if (latestWeather.precipitation) {
+                    console.log('Setting rainfall value:', latestWeather.precipitation);
+                    form.setFieldValue('rainfall', parseFloat(latestWeather.precipitation));
+                  }
+                } else {
+                  console.log('No weather data available for this farm');
+                }
+              } catch (weatherErr) {
+                console.error('Error setting weather data:', weatherErr);
+              }
             }
           }
           
@@ -362,11 +386,18 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
     try {
       // Make sure soil values are included from farm details if available
       if (farmDetails) {
+        // Include soil data
         if (farmDetails.soil_nitrogen) values.soil_n = parseFloat(farmDetails.soil_nitrogen);
         if (farmDetails.soil_phosphorus) values.soil_p = parseFloat(farmDetails.soil_phosphorus);
         if (farmDetails.soil_potassium) values.soil_k = parseFloat(farmDetails.soil_potassium);
         if (farmDetails.soil_ph) values.ph = parseFloat(farmDetails.soil_ph);
+        
+        // Include area from farm size
+        if (farmDetails.size_hectares) values.area = parseFloat(farmDetails.size_hectares);
       }
+      
+      // Include weather data
+      // Note: These values are already set in the form through useEffect
       
       console.log('Submitting form with values:', values);
       
@@ -458,7 +489,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
           </Badge>
         </Box>
         
-        {/* Soil Analysis Panel with Info Message */}
+        {/* Soil Analysis Panel */}
         <Card withBorder shadow="sm" p="md" mb="lg">
           <Group justify="space-between" mb="sm">
             <Group>
@@ -521,8 +552,7 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
             </Group>
           </Card>
             <Grid>
-            <Grid.Col span={{ base: 6, md: 3 }}>
-              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+            <Grid.Col span={{ base: 6, md: 3 }}>              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
                 <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Nitrogen (N)</Text>
                 <Group gap="xs" align="baseline">
                   <Text size="xl" fw={700} c={farmDetails?.soil_nitrogen ? 'blue.7' : 'gray.5'}>
@@ -566,6 +596,145 @@ export function CropClassificationForm({ farmId: initialFarmId, onSuccess }: Cro
                   </Text>
                 </Group>
                 <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-grape-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Temperature</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.temperature_min && farmDetails?.weather_records?.[0]?.temperature_max ? 'orange.7' : 'gray.5'}>
+                    {farmDetails?.weather_records?.[0]?.temperature_min && farmDetails?.weather_records?.[0]?.temperature_max
+                      ? ((parseFloat(farmDetails.weather_records[0].temperature_min) + parseFloat(farmDetails.weather_records[0].temperature_max)) / 2).toFixed(1)
+                      : 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>°C</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Humidity</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.humidity ? 'blue.7' : 'gray.5'}>
+                    {farmDetails?.weather_records?.[0]?.humidity || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>%</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-blue-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Rainfall</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.weather_records?.[0]?.precipitation ? 'blue.7' : 'gray.5'}>
+                    {farmDetails?.weather_records?.[0]?.precipitation || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>mm</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-blue-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Area</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c={farmDetails?.size_hectares ? 'green.7' : 'gray.5'}>
+                    {farmDetails?.size_hectares || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>ha</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-green-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+          </Grid>
+        </Card>
+
+        {/* Farm and Weather Data Panel */}
+        <Card withBorder shadow="sm" p="md" mb="lg">
+          <Group justify="space-between" mb="sm">
+            <Group>
+              <ThemeIcon size="lg" color="orange" variant="light">
+                <IconTemperature size={20} />
+              </ThemeIcon>
+              <Title order={4}>Environmental Data</Title>
+            </Group>
+            <Tooltip 
+              label="These values are automatically retrieved from your farm record and weather data" 
+              position="left"
+              multiline
+              w={200}
+            >
+              <ActionIcon variant="subtle" color="gray">
+                <IconInfoCircle size={20} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+          
+          <Card withBorder p="md" radius="md" bg="rgba(255, 165, 56, 0.08)" mb="md">
+            <Box mb="sm">
+              <Text size="sm" fw={600} c="orange.7" mb={4}>
+                <IconLock size={16} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }} />
+                Environmental data from farm records
+              </Text>
+              <Text size="sm" mb="sm" c="dimmed" lh={1.5}>
+                These values are automatically pulled from your farm profile and weather data. 
+                Accurate environmental data helps provide better crop recommendations.
+              </Text>
+            </Box>
+          </Card>
+          
+          <Grid>
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Temperature</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c="orange.7">
+                    {form.values.temperature || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>°C</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Humidity</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c="orange.7">
+                    {form.values.humidity || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>%</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Rainfall</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c="orange.7">
+                    {form.values.rainfall || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>mm</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
+              </Card>
+            </Grid.Col>
+            
+            <Grid.Col span={{ base: 6, md: 3 }}>
+              <Card withBorder p="xs" radius="md" bg="white" style={{ minHeight: '80px' }}>
+                <Text size="xs" fw={500} c="dimmed" tt="uppercase" mb={2}>Area</Text>
+                <Group gap="xs" align="baseline">
+                  <Text size="xl" fw={700} c="orange.7">
+                    {form.values.area || 'N/A'}
+                  </Text>
+                  <Text size="xs" c="dimmed" fw={600}>ha</Text>
+                </Group>
+                <Box mt={5} style={{ height: '3px', width: '40%', background: 'var(--mantine-color-orange-5)', borderRadius: '2px' }}></Box>
               </Card>
             </Grid.Col>
           </Grid>

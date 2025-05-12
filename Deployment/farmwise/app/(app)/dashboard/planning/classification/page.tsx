@@ -18,11 +18,10 @@ import { notifications } from '@mantine/notifications';
 
 export default function CropClassificationPage() {
   const router = useRouter();
-  const [activeStep, setActiveStep] = useState(0);
-  const [classificationResult, setClassificationResult] = useState<any>(null);
-
-  // Hardcoded farmId for demo - in real app this would come from context/route
-  const farmId = 1;
+  const [activeStep, setActiveStep] = useState(0);  const [classificationResult, setClassificationResult] = useState<any>(null);
+  
+  // Use a farm ID that exists in the database (from our query, we know IDs 14 and 15 exist)
+  const farmId = 14;
 
   const handleClassificationSuccess = (result: any) => {
     setClassificationResult(result);

@@ -1683,6 +1683,47 @@ def fetch_open_meteo_data(latitude, longitude):
                 })
         else:
             print("⚠️ Missing or incomplete daily data in Open-Meteo API response")
+        
+        # Fetch annual rainfall data using historical API
+        try:
+            # Calculate the start and end dates for the past year
+            end_date = now.date()
+            start_date = end_date.replace(year=end_date.year - 1)
+            
+            historical_url = "https://archive-api.open-meteo.com/v1/archive"
+            historical_params = {
+                'latitude': lat,
+                'longitude': lon,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'daily': 'precipitation_sum',
+                'timezone': 'auto',
+            }
+            
+            print(f"🌐 Sending request to Open-Meteo Historical API: {historical_url}")
+            historical_response = requests.get(historical_url, params=historical_params, timeout=15)
+            
+            if historical_response.status_code == 200:
+                historical_data = historical_response.json()
+                if 'daily' in historical_data and 'precipitation_sum' in historical_data['daily']:
+                    # Calculate annual rainfall sum
+                    precipitation_values = historical_data['daily']['precipitation_sum']
+                    # Filter out None values before summing
+                    valid_values = [p for p in precipitation_values if p is not None]
+                    annual_rainfall = sum(valid_values)
+                    
+                    # Add to processed data
+                    processed_data['annual_rainfall'] = round(annual_rainfall, 2)
+                    print(f"✅ Annual rainfall data fetched: {annual_rainfall} mm")
+                else:
+                    print("⚠️ Missing precipitation data in historical response")
+                    processed_data['annual_rainfall'] = None
+            else:
+                print(f"⚠️ Failed to fetch historical rainfall data: {historical_response.status_code}")
+                processed_data['annual_rainfall'] = None
+        except Exception as historical_error:
+            print(f"⚠️ Error fetching historical rainfall data: {str(historical_error)}")
+            processed_data['annual_rainfall'] = None
             
         print(f"✅ Successfully processed weather data from Open-Meteo API")
         return processed_data

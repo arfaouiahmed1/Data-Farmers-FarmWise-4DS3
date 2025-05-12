@@ -2,15 +2,23 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import UserProfile, Farm, Farmer, Admin, Weather, DetectedWeed, Crop, FarmCrop, Scan, Recommendation, InventoryItem, Equipment, CropClassification
 
+class WeatherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Weather
+        fields = '__all__'
+
 class FarmSerializer(serializers.ModelSerializer):
+    weather_records = WeatherSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Farm
         fields = ['id', 'name', 'address', 'description', 'size_hectares', 'size_category',
                   'soil_type', 'soil_nitrogen', 'soil_phosphorus', 'soil_potassium', 'soil_ph',
                   'has_water_access', 'irrigation_type', 'has_road_access', 'has_electricity', 
                   'storage_capacity', 'farming_method', 'year_established',
-                  'estimated_price', 'boundary_geojson', 'created_at', 'updated_at', 'owner']
-        read_only_fields = ['created_at', 'updated_at', 'owner']
+                  'estimated_price', 'boundary_geojson', 'created_at', 'updated_at', 'owner',
+                  'weather_records']
+        read_only_fields = ['created_at', 'updated_at', 'owner', 'weather_records']
     
     def validate_boundary_geojson(self, value):
         """
@@ -44,11 +52,6 @@ class FarmSerializer(serializers.ModelSerializer):
                 return Farm.objects.create(**validated_data)
         except Exception as e:
             raise serializers.ValidationError(f"Error creating farm: {str(e)}")
-
-class WeatherSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Weather
-        fields = '__all__'
 
 class CropSerializer(serializers.ModelSerializer):
     class Meta:

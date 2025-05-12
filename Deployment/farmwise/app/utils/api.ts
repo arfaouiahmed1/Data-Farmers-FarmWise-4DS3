@@ -55,8 +55,9 @@ export function getCurrentUser(): any | null {
  */
 export async function getUserFarms(): Promise<any[]> {
   try {
-    // Try to fetch user farms from the API
-    const response = await fetch('/api/farms', {
+    // Try to fetch user farms directly from the core API endpoint
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${API_BASE_URL}/core/user-farms/`, {
       headers: getAuthHeaders(),
     });
     
@@ -84,7 +85,10 @@ export async function getFarmDetails(farmId: number): Promise<any | null> {
   try {
     if (!farmId) return null;
     
-    const response = await fetch(`/api/farms/${farmId}`, {
+    console.log(`Fetching details for farm ID: ${farmId}`);
+    // Using direct core endpoint to avoid the Next.js API redirect that's causing issues
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${API_BASE_URL}/core/farms/${farmId}/`, {
       headers: getAuthHeaders(),
     });
     
@@ -92,7 +96,17 @@ export async function getFarmDetails(farmId: number): Promise<any | null> {
       const data = await response.json();
       return data;
     } else {
-      console.error('Failed to fetch farm details:', response.status);
+      const errorText = await response.text();
+      console.error(`Failed to fetch farm details (${response.status}):`, errorText);
+      
+      // Show notification with error
+      if (typeof window !== 'undefined' && (window as any).notifications) {
+        (window as any).notifications.show({
+          title: 'Error fetching farm',
+          message: `Could not load farm ID ${farmId}. Please try a different farm.`,
+          color: 'red',
+        });
+      }
       return null;
     }
   } catch (error) {
