@@ -141,6 +141,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       ]
     },
     { 
+      icon: IconPlant2, 
+      color: 'green', 
+      label: 'Crop Health', 
+      path: '/dashboard/crop-health'
+    },
+    { 
       icon: IconCloud, 
       color: 'cyan', 
       label: 'Weather', 
