@@ -1,0 +1,212 @@
+/* global-styles.css - Common styles for FarmWise application */
+
+/* Global Reset & Base Styles */
+:root {
+  /* Animation durations */
+  --transition-fast: 150ms;
+  --transition-medium: 250ms;
+  --transition-slow: 350ms;
+
+  /* Common box shadows */
+  --shadow-subtle: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-elevation-2: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-elevation-3: 0 10px 20px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1);
+
+  /* Z-index layers */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+}
+
+/* Smooth scrolling for the entire site */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Adjusted based on header height plus extra padding */
+}
+
+/* Ensure sections have proper padding for scroll targets */
+section[id] {
+  scroll-margin-top: 80px;
+  padding-top: 16px; /* Add some padding at the top of each section */
+  margin-top: -16px; /* Offset the padding to maintain visual layout */
+}
+
+/* Style for when user is actively scrolling */
+body.user-scrolling {
+  /* This class is used to track when the user is manually scrolling */
+  /* We don't add visual styles, just use it as a marker */
+}
+
+/* Improved focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--mantine-color-farmGreen-5);
+  outline-offset: 2px;
+}
+
+/* Common card hover effects */
+.hover-card {
+  transition: transform var(--transition-medium) ease,
+              box-shadow var(--transition-medium) ease;
+}
+
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-elevation-2);
+}
+
+/* Colored text effect */
+.gradient-text {
+  color: var(--mantine-color-farmGreen-5);
+}
+
+/* Subtle background patterns */
+.bg-pattern-dots {
+  background-image: radial-gradient(var(--mantine-color-gray-2) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.bg-pattern-lines {
+  background-image: linear-gradient(
+    to right,
+    var(--mantine-color-gray-1) 1px,
+    transparent 1px
+  );
+  background-size: 20px 100%;
+}
+
+/* Glass morphism effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-subtle);
+}
+
+[data-mantine-color-scheme="dark"] .glass-effect {
+  background: rgba(25, 25, 25, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animated button styles */
+.animated-button {
+  transition: transform var(--transition-fast) ease,
+              box-shadow var(--transition-fast) ease,
+              background-color var(--transition-fast) ease;
+}
+
+.animated-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevation-1);
+}
+
+.animated-button:active {
+  transform: translateY(0);
+}
+
+/* Improved image handling */
+.responsive-image {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* Consistent section spacing */
+.section-spacing {
+  padding-top: var(--mantine-spacing-xl);
+  padding-bottom: var(--mantine-spacing-xl);
+}
+
+@media (min-width: 768px) {
+  .section-spacing {
+    padding-top: calc(var(--mantine-spacing-xl) * 1.5);
+    padding-bottom: calc(var(--mantine-spacing-xl) * 1.5);
+  }
+}
+
+@media (min-width: 992px) {
+  .section-spacing {
+    padding-top: calc(var(--mantine-spacing-xl) * 2);
+    padding-bottom: calc(var(--mantine-spacing-xl) * 2);
+  }
+}
+
+/* Improved form elements */
+.enhanced-input {
+  transition: border-color var(--transition-fast) ease,
+              box-shadow var(--transition-fast) ease;
+}
+
+.enhanced-input:focus {
+  border-color: var(--mantine-color-farmGreen-5);
+  box-shadow: 0 0 0 2px rgba(92, 180, 118, 0.2);
+}
+
+/* Consistent card styles */
+.content-card {
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--shadow-subtle);
+  transition: box-shadow var(--transition-medium) ease;
+}
+
+.content-card:hover {
+  box-shadow: var(--shadow-elevation-1);
+}
+
+/* Dark mode adjustments */
+[data-mantine-color-scheme="dark"] .content-card {
+  background-color: var(--mantine-color-dark-7);
+  border: 1px solid var(--mantine-color-dark-4);
+}
+
+/* Utility classes */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn var(--transition-medium) ease-in-out;
+}
+
+.animate-slideUp {
+  animation: slideUp var(--transition-medium) ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}

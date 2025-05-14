@@ -1,12 +1,12 @@
 import '@mantine/core/styles.css';
 import '@mantine/charts/styles.css';
 import '@mantine/carousel/styles.css';
-import '@mantine/dates/styles.css'; // Import Mantine dates styles
-import './globals.css'; // Import global styles
-// --- Add Leaflet and Geoman CSS imports ---
+import '@mantine/dates/styles.css';
+import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
-import '@/styles/custom-calendar.css'; // Import custom calendar styles
+import '@/styles/custom-calendar.css';
+import '@/styles/global-styles.css'; // Import new global styles
 
 import React from 'react';
 import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
@@ -21,40 +21,8 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Enhance the theme for better dashboard visibility
-  const enhancedTheme = {
-    ...theme,
-    components: {
-      ...theme.components,
-      Container: {
-        defaultProps: {
-          p: 'xs',
-        },
-      },
-      Card: {
-        defaultProps: {
-          padding: 'xs',
-        },
-      },
-      Paper: {
-        defaultProps: {
-          p: 'xs',
-        },
-      },
-    },
-    spacing: {
-      ...theme.spacing,
-      xs: '0.5rem',
-      sm: '0.75rem',
-      md: '1rem',
-    },
-    fontSizes: {
-      ...theme.fontSizes,
-      xs: '0.7rem',
-      sm: '0.8rem',
-      md: '0.9rem',
-    },
-  };
+  // Use the enhanced theme directly from theme.ts
+  // No need to override here as we've already defined these in the theme file
 
   return (
     <html lang="en" {...mantineHtmlProps}>
@@ -84,20 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthRedirect />
-        <MantineProvider theme={enhancedTheme} defaultColorScheme="light">
-          {/* ClientShell is removed from here */}
+        <MantineProvider theme={theme} defaultColorScheme="light">
           {children}
         </MantineProvider>
-
-        {/* Global Style for Scroll Padding - moved to regular style tag */}
-        <style>
-          {`
-            html {
-              scroll-padding-top: 70px; 
-              scroll-behavior: smooth; 
-            }
-          `}
-        </style>
       </body>
     </html>
   );

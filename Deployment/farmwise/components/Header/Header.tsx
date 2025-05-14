@@ -26,7 +26,7 @@ import { useDisclosure } from '@mantine/hooks';
 import Link from 'next/link';
 import Image from 'next/image'; // Import the Next.js Image component
 import { usePathname, useRouter } from 'next/navigation'; // Added usePathname and useRouter hooks
-import { IconUser, IconSettings, IconLogout, IconInfoCircle, IconBell } from '@tabler/icons-react';
+import { IconUser, IconSettings, IconLogout, IconInfoCircle, IconBell, IconDashboard, IconLayoutDashboard } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 // import { IconPlant2 } from '@tabler/icons-react'; // Remove this import
 import { ColorSchemeToggle } from '../ColorSchemeToggle/ColorSchemeToggle';
@@ -51,6 +51,7 @@ export function AppHeader() {
   const [userData, setUserData] = useState<any>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [logoutModalOpened, { open: openLogoutModal, close: closeLogoutModal }] = useDisclosure(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   // Add state for notifications
   const [notifications, setNotifications] = useState([
     { id: '1', title: 'Welcome to FarmWise', message: 'Get started by exploring our features', color: 'green', date: new Date() },
@@ -62,12 +63,12 @@ export function AppHeader() {
   useEffect(() => {
     // Don't run on the server
     if (typeof window === 'undefined') return;
-    
+
     const checkAuth = async () => {
       setIsLoadingUser(true);
       const isUserAuthenticated = authService.isAuthenticated();
       setIsAuthenticated(isUserAuthenticated);
-      
+
       if (isUserAuthenticated) {
         try {
           // Always try to get fresh data from the API first
@@ -84,7 +85,7 @@ export function AppHeader() {
       }
       setIsLoadingUser(false);
     };
-    
+
     checkAuth();
 
     // Listen for storage events (in case user data is updated in another tab)
@@ -95,21 +96,124 @@ export function AppHeader() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Cleanup listener on unmount
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [pathname]);
 
+  // Set up intersection observer to track active section
+  useEffect(() => {
+    // Only run on homepage
+    if (pathname !== '/') return;
+
+    console.log("Setting up intersection observer");
+
+    // Handle initial hash in URL
+    if (window.location.hash) {
+      const id = window.location.hash.substring(1); // Remove the # character
+      console.log("Initial hash detected:", id);
+
+      // Set active section based on hash
+      setActiveSection(id);
+
+      // Find the element and scroll to it
+      const element = document.getElementById(id);
+      if (element) {
+        // Use requestAnimationFrame to ensure the DOM is fully loaded and rendered
+        requestAnimationFrame(() => {
+          // First scroll to the element
+          element.scrollIntoView({ behavior: 'auto' });
+
+          // Then adjust for header height
+          const headerHeight = 64;
+          const additionalOffset = 16;
+          const currentScroll = window.scrollY;
+
+          // Apply offset correction
+          window.scrollTo({
+            top: currentScroll - headerHeight - additionalOffset,
+            behavior: 'auto'
+          });
+        });
+      } else {
+        console.error(`Element with id "${id}" not found on initial load`);
+      }
+    }
+
+    // Improved options for the intersection observer
+    const options = {
+      root: null, // Use the viewport as the root
+      rootMargin: '-80px 0px -70% 0px', // Top margin accounts for header height
+      threshold: [0.1, 0.2, 0.5], // Multiple thresholds for better detection
+    };
+
+    // Improved callback for the intersection observer
+    const handleIntersect = (entries: IntersectionObserverEntry[]) => {
+      // Process only if user is not actively scrolling via click
+      // This prevents conflicts between manual navigation and auto-detection
+      const isUserInitiatedScroll = document.body.classList.contains('user-scrolling');
+
+      if (!isUserInitiatedScroll) {
+        // Sort entries by their intersection ratio and position in viewport
+        const visibleEntries = entries
+          .filter(entry => entry.isIntersecting)
+          .sort((a, b) => {
+            // First sort by intersection ratio
+            const ratioComparison = b.intersectionRatio - a.intersectionRatio;
+            if (Math.abs(ratioComparison) > 0.1) return ratioComparison;
+
+            // If ratios are similar, prefer the one closer to the top of viewport
+            return a.boundingClientRect.top - b.boundingClientRect.top;
+          });
+
+        if (visibleEntries.length > 0) {
+          // Get the most visible section
+          const mostVisibleSection = visibleEntries[0].target.id;
+
+          // Only update if it's different from current active section
+          if (mostVisibleSection !== activeSection) {
+            console.log("Setting active section to:", mostVisibleSection);
+            setActiveSection(mostVisibleSection);
+
+            // Update URL hash without scrolling (only if not during user-initiated scroll)
+            window.history.replaceState(
+              null,
+              '',
+              `/#${mostVisibleSection}`
+            );
+          }
+        }
+      }
+    };
+
+    // Create the observer
+    const observer = new IntersectionObserver(handleIntersect, options);
+
+    // Observe all sections
+    const sections = ['features', 'analytics', 'how-it-works', 'pricing', 'testimonials'];
+    sections.forEach((section) => {
+      const element = document.getElementById(section);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    // Cleanup
+    return () => {
+      observer.disconnect();
+    };
+  }, [pathname]);
+
   // Get user initials for avatar
   const getUserInitials = () => {
     if (!userData) return 'U';
-    
+
     // Check if first_name exists and is not empty
     const first = userData.first_name ? userData.first_name.charAt(0) : '';
     const last = userData.last_name ? userData.last_name.charAt(0) : '';
-    
+
     // If we have neither first nor last name, try username or email
     if (!first && !last) {
       if (userData.username) {
@@ -120,24 +224,56 @@ export function AppHeader() {
       }
       return 'U'; // Default fallback
     }
-    
+
     return (first + last).toUpperCase();
   };
 
-  // Smooth scroll handler (only for homepage)
+  // Fixed smooth scroll handler (only for homepage)
   const handleScroll = (event: React.MouseEvent<HTMLAnchorElement>, link: string) => {
     event.preventDefault();
+    console.log("Scroll handler triggered for:", link);
+
+    // Extract the section ID from the link
     const id = link.replace('/#', '');
     const element = document.getElementById(id);
-    if (element) {
-      const headerOffset = 65; // Height of the header + a little extra padding
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
+    if (element) {
+      // Mark that user is actively scrolling to prevent intersection observer conflicts
+      document.body.classList.add('user-scrolling');
+
+      // Update active section immediately for better UI feedback
+      setActiveSection(id);
+
+      // Update URL hash without scrolling
+      window.history.pushState(null, '', link);
+
+      // Use the native scrollIntoView with smooth behavior
+      // This is more reliable than manual position calculations
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
       });
+
+      // Apply offset correction after the default scroll
+      // This ensures we account for the fixed header
+      setTimeout(() => {
+        const headerHeight = 64; // Height of the header
+        const additionalOffset = 16; // Additional padding for better visibility
+        const currentScroll = window.scrollY;
+
+        // Apply offset correction
+        window.scrollTo({
+          top: currentScroll - headerHeight - additionalOffset,
+          behavior: 'smooth'
+        });
+
+        // Remove the user-scrolling class after scrolling is complete
+        setTimeout(() => {
+          document.body.classList.remove('user-scrolling');
+        }, 1000); // Wait for scroll animation to complete
+      }, 50);
+    } else {
+      console.error(`Element with id "${id}" not found`);
     }
   };
 
@@ -150,14 +286,18 @@ export function AppHeader() {
   // Generate items based on current path
   const items = links.map((link) => {
     const isHomepage = pathname === '/';
+    const sectionId = link.link.replace('/#', '');
+    const isActive = activeSection === sectionId;
+
     if (isHomepage) {
-      // On homepage, use smooth scroll
+      // On homepage, use smooth scroll with active state
       return (
         <a
           key={link.label}
           href={link.link}
-          className={classes.link}
+          className={`${classes.link} ${isActive ? classes.linkActive : ''}`}
           onClick={(event) => handleScroll(event, link.link)}
+          aria-current={isActive ? 'page' : undefined}
         >
           {link.label}
         </a>
@@ -165,7 +305,11 @@ export function AppHeader() {
     } else {
       // On other pages, use standard Link to navigate back to homepage + hash
       return (
-        <Link key={link.label} href={link.link} className={classes.link}>
+        <Link
+          key={link.label}
+          href={link.link}
+          className={classes.link}
+        >
           {link.label}
         </Link>
       );
@@ -189,7 +333,7 @@ export function AppHeader() {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
     const diffMinutes = Math.floor(diffTime / (1000 * 60));
-    
+
     if (diffDays > 0) {
       return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     } else if (diffHours > 0) {
@@ -231,23 +375,43 @@ export function AppHeader() {
         {/* Right Section: Auth Buttons + Toggle */}
         <Group visibleFrom="sm">
           <ColorSchemeToggle />
-          
+
           {isAuthenticated ? (
             <>
+              {/* Dashboard Button */}
+              <Tooltip label="Dashboard" withArrow position="bottom">
+                <ActionIcon
+                  component={Link}
+                  href="/dashboard"
+                  variant="outline"
+                  radius="md"
+                  size="lg"
+                  className={`${classes.iconButton} ${classes.dashboardButton}`}
+                >
+                  <IconLayoutDashboard size={20} />
+                </ActionIcon>
+              </Tooltip>
+
+              {/* Notifications Menu */}
               <Menu shadow="md" width={320} position="bottom-end" closeOnItemClick={false} opened={notificationsMenuOpened} onChange={notificationsMenuOpened ? closeNotificationsMenu : openNotificationsMenu}>
                 <Menu.Target>
                   <Tooltip label="Notifications" withArrow position="bottom">
-                    <ActionIcon variant="subtle" radius="xl" size="lg" color="gray">
+                    <ActionIcon
+                      variant="outline"
+                      radius="md"
+                      size="lg"
+                      className={`${classes.iconButton} ${classes.notificationButton}`}
+                    >
                       <IconBell size={20} />
                       {notifications.length > 0 && (
-                        <Box 
-                          pos="absolute" 
-                          top={3} 
-                          right={3} 
-                          w={14} 
-                          h={14} 
-                          bg="red" 
-                          style={{ 
+                        <Box
+                          pos="absolute"
+                          top={3}
+                          right={3}
+                          w={14}
+                          h={14}
+                          bg="red"
+                          style={{
                             borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
@@ -268,9 +432,9 @@ export function AppHeader() {
                     <Group justify="space-between" mb="xs">
                       <Text fw={600}>Notifications</Text>
                       {notifications.length > 0 && (
-                        <Button 
-                          variant="subtle" 
-                          color="gray" 
+                        <Button
+                          variant="subtle"
+                          color="gray"
                           size="xs"
                           onClick={handleClearAllNotifications}
                         >
@@ -279,9 +443,9 @@ export function AppHeader() {
                       )}
                     </Group>
                   </Box>
-                  
+
                   <Divider />
-                  
+
                   <ScrollArea h={notifications.length > 0 ? 320 : 'auto'} scrollbarSize={6}>
                     {notifications.length > 0 ? (
                       <Stack gap={0}>
@@ -292,8 +456,8 @@ export function AppHeader() {
                                 <Badge color={notification.color} size="sm" variant="filled" />
                                 <Text size="sm" fw={600}>{notification.title}</Text>
                               </Group>
-                              <CloseButton 
-                                size="xs" 
+                              <CloseButton
+                                size="xs"
                                 onClick={() => handleClearNotification(notification.id)}
                                 title="Clear notification"
                                 aria-label="Clear notification"
@@ -318,7 +482,7 @@ export function AppHeader() {
                   </ScrollArea>
                 </Menu.Dropdown>
               </Menu>
-            
+
               <Menu shadow="md" width={200} position="bottom-end">
                 <Menu.Target>
                   <UnstyledButton>
@@ -366,10 +530,23 @@ export function AppHeader() {
             </>
           ) : (
             <>
-              <Button variant="default" component={Link} href="/login">
+              <Button
+                variant="default"
+                component={Link}
+                href="/login"
+                className={classes.authButton}
+                radius="md"
+              >
                 Log in
               </Button>
-              <Button component={Link} href="/signup" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }}>
+              <Button
+                component={Link}
+                href="/signup"
+                variant="filled"
+                color="farmGreen"
+                className={classes.authButton}
+                radius="md"
+              >
                 Sign up
               </Button>
             </>
@@ -405,35 +582,62 @@ export function AppHeader() {
         >
           <ScrollArea h={`calc(100vh - 60px)`} mx="-md">
             <Box py="md">
-              {links.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.link}
-                  className={classes.link}
-                  onClick={(event) => {
-                    toggle();
-                    if (pathname === '/') {
-                      handleScroll(event, link.link);
-                    }
-                  }}
-                  style={{
-                    padding: 'var(--mantine-spacing-md)',
-                    display: 'block',
-                    borderRadius: 0
-                  }}
-                >
-                  {link.label}
-                </a>
-              ))}
+              {links.map((link) => {
+                const sectionId = link.link.replace('/#', '');
+                const isActive = activeSection === sectionId;
+
+                return (
+                  <a
+                    key={link.label}
+                    href={link.link}
+                    className={`${classes.link} ${isActive ? classes.linkActive : ''}`}
+                    onClick={(event) => {
+                      if (pathname === '/') {
+                        // First close the drawer to prevent UI issues
+                        toggle();
+                        // Then handle the scroll with a slight delay
+                        setTimeout(() => {
+                          handleScroll(event, link.link);
+                        }, 150);
+                      } else {
+                        toggle();
+                      }
+                    }}
+                    style={{
+                      padding: 'var(--mantine-spacing-md)',
+                      display: 'block',
+                      borderRadius: 0
+                    }}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    {link.label}
+                  </a>
+                );
+              })}
 
               <Divider my="md" />
-              
+
               {!isAuthenticated ? (
                 <Group grow px="md">
-                  <Button variant="default" component={Link} href="/login" onClick={toggle}>
+                  <Button
+                    variant="default"
+                    component={Link}
+                    href="/login"
+                    onClick={toggle}
+                    className={classes.authButton}
+                    radius="md"
+                  >
                     Log in
                   </Button>
-                  <Button component={Link} href="/signup" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }} onClick={toggle}>
+                  <Button
+                    component={Link}
+                    href="/signup"
+                    variant="filled"
+                    color="farmGreen"
+                    onClick={toggle}
+                    className={classes.authButton}
+                    radius="md"
+                  >
                     Sign up
                   </Button>
                 </Group>
@@ -472,4 +676,4 @@ export function AppHeader() {
       </Modal>
     </Box>
   );
-} 
+}

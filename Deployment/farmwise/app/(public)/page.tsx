@@ -138,13 +138,13 @@ const featureItemVariant = (i: number) => ({
 
 const widgetVariant = {
   hidden: { opacity: 0, x: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     x: 0,
     transition: { duration: 0.5, ease: 'easeOut' }
   },
-  exit: { 
-    opacity: 0, 
+  exit: {
+    opacity: 0,
     x: -20,
     transition: { duration: 0.3 }
   }
@@ -232,7 +232,7 @@ interface Feature {
 
 // 1. Recommendation Widgets
   const CropSuitabilityWidget = () => (
-    <motion.div 
+    <motion.div
       key="crop-suitability"
       initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
     >
@@ -252,7 +252,7 @@ interface Feature {
                       {crop.suitability}%
                     </Text>
                   </Group>
-                  <Progress 
+                  <Progress
                     value={crop.suitability} color={crop.color} size="md" radius="xl"
                     animated={true} striped={true}
                   />
@@ -267,16 +267,16 @@ interface Feature {
       </Paper>
     </motion.div>
   );
-  
+
   const YieldEstimationWidget = () => (
-    <motion.div 
+    <motion.div
       key="yield-estimation"
       initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
     >
       <Paper withBorder p="md" radius="md" shadow="sm" style={{ borderLeft: `3px solid var(--mantine-color-farmGreen-6)` }}>
         <Text size="sm" fw={500} c="dimmed" mb="md">Yield Estimation (kg/ha)</Text>
         <Box mb="md">
-          <LineChart 
+          <LineChart
             h={120} data={yieldChartData} dataKey="date" withYAxis yAxisProps={{ width: 30 }} gridAxis="y"
             series={[
               { name: 'YieldEst', color: 'farmGreen.6', label: 'Estimated Yield' },
@@ -307,9 +307,9 @@ interface Feature {
       </Paper>
     </motion.div>
   );
-  
+
   const ResourceUsageWidget = () => (
-    <motion.div 
+    <motion.div
       key="resource-usage"
       initial="hidden" animate="visible" exit="exit" variants={widgetVariant}
     >
@@ -319,7 +319,7 @@ interface Feature {
             <Tabs.Tab value="water" leftSection={<IconDroplet size={16} />}>Water</Tabs.Tab>
             <Tabs.Tab value="fertilizer" leftSection={<IconTestPipe size={16} />}>Fertilizer</Tabs.Tab>
           </Tabs.List>
-          
+
           <Tabs.Panel value="water">
             <Group justify="space-between" mb="md">
               <Stack gap={0}> <Text size="sm" c="dimmed">Current Usage</Text> <Group gap="xs"> <Text size="lg" fw={600}>{resourceData.water.current}</Text> <Text size="xs" c="dimmed">m³/ha</Text> </Group> </Stack>
@@ -334,7 +334,7 @@ interface Feature {
                 <Text size="xs" c="dimmed">Potential savings: {resourceData.water.savings}% following optimized schedule.</Text>
               </Group>
           </Tabs.Panel>
-          
+
           <Tabs.Panel value="fertilizer">
             <Group justify="space-between" mb="md">
               <Stack gap={0}> <Text size="sm" c="dimmed">Current Usage</Text> <Group gap="xs"> <Text size="lg" fw={600}>{resourceData.fertilizer.current}</Text> <Text size="xs" c="dimmed">kg/ha</Text> </Group> </Stack>
@@ -463,7 +463,7 @@ const DiseaseIdentificationWidget = () => (
                         <IconLeaf size={40} />
                     </motion.div>
                      {/* Scanning Line */}
-                  <motion.div 
+                  <motion.div
                         style={{ position: 'absolute', top: '20%', left: '25%', width: '50%', height: '2px', background: 'var(--mantine-color-cyan-4)', boxShadow: '0 0 4px var(--mantine-color-cyan-3)', opacity: 0 }}
                         animate={{ opacity: [0, 1, 1, 0], y: ['0%', '50%', '50%', '0%'] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
@@ -471,7 +471,7 @@ const DiseaseIdentificationWidget = () => (
             </motion.div>
             </Center>
              {/* Result Badge */}
-            <motion.div 
+            <motion.div
                 style={{ position: 'absolute', bottom: rem(10), left: 0, right: 0, textAlign: 'center', opacity: 0}}
                 animate={{ opacity: [0, 0, 1, 1, 0] }}
                 transition={{ repeat: Infinity, duration: 5, delay: 1, times: [0, 0.4, 0.5, 0.9, 1] }}
@@ -527,7 +527,7 @@ const TreatmentRecommendationsWidget = () => (
       </Paper>
               </motion.div>
   );
-              
+
 const WeedDetectionWidget = () => (
               <motion.div
       key="weed-detection"
@@ -896,7 +896,7 @@ export default function HomePage() {
   const FeatureCard: React.FC<{ feature: Feature; index: number; isActive: boolean; onSelect: (id: string) => void }> =
     ({ feature, index, isActive, onSelect }) => (
     <div
-      style={{ 
+      style={{
         height: '100%',
         width: '100%',
         position: 'relative',
@@ -910,8 +910,8 @@ export default function HomePage() {
         padding="xl"
         withBorder
         onClick={() => feature.widgetComponent && onSelect(feature.id)}
-        style={{ 
-          cursor: feature.widgetComponent ? 'pointer' : 'default', 
+        style={{
+          cursor: feature.widgetComponent ? 'pointer' : 'default',
           height: '100%',
           opacity: 1,
           position: 'relative'
@@ -971,10 +971,10 @@ export default function HomePage() {
   return (
     <>
       {/* Hero Section */}
-      <motion.div 
+      <motion.div
         className={classes.hero}
-        initial="hidden" 
-        animate="visible" 
+        initial="hidden"
+        animate="visible"
         variants={sectionVariant} // Apply section animation
       >
         {/* Background Carousel */}
@@ -1009,7 +1009,7 @@ export default function HomePage() {
              <motion.div variants={itemVariant}> {/* Animate content block */}
                 <Title className={classes.heroTitle}>
                     Grow Smarter with{' '}
-                    <Text component="span" variant="gradient" gradient={{ from: 'farmGreen', to: 'cyan' }} inherit>
+                    <Text component="span" inherit>
                         FarmWise
                     </Text>
                 </Title>
@@ -1023,8 +1023,8 @@ export default function HomePage() {
             <motion.div variants={itemVariant}> {/* Animate content block */}
                 <Group mt="xl">
                   <Button
-                      variant="gradient"
-                      gradient={{ from: 'farmGreen', to: 'cyan' }}
+                      variant="filled"
+                      color="farmGreen"
                       size="xl"
                       radius="xl"
                       className={classes.heroControl}
@@ -1034,12 +1034,13 @@ export default function HomePage() {
                       Get Started Now
                   </Button>
                      <Button
-                        variant="white" // Secondary action
+                        variant="outline"
+                        color="gray.0"
                         size="xl"
                         radius="xl"
                         className={classes.heroControl}
                         component={Link}
-                        href="#features" // Link to features section
+                        href="#features"
                     >
                         Explore Features
                     </Button>
@@ -1319,10 +1320,10 @@ export default function HomePage() {
 
           {/* Stepper - Use motion.div for the container */}
            <motion.div variants={itemVariant}>
-            <Stepper 
+            <Stepper
                 active={-1} // No active step initially
-              mt="xl" 
-              color="farmGreen" 
+              mt="xl"
+              color="farmGreen"
               allowNextStepsSelect={false}
                 orientation="horizontal" // Explicitly horizontal
               >
@@ -1401,9 +1402,8 @@ export default function HomePage() {
                          <Button
                            fullWidth
                            size="lg" // Larger button
-                           variant={tier.buttonVariant as any}
-                           gradient={tier.buttonVariant === 'gradient' ? { from: 'farmGreen', to: 'cyan' } : undefined}
-                           color={tier.buttonVariant === 'gradient' ? undefined : 'farmGreen'}
+                           variant={tier.buttonVariant === 'gradient' ? 'filled' : tier.buttonVariant}
+                           color="farmGreen"
                            mt="md" // Reduced margin top
                            component={Link}
                            href={tier.price === 'Contact Us' ? '/contact' : '/signup'}
@@ -1494,8 +1494,8 @@ export default function HomePage() {
                 <Button
                     size="xl"
                     radius="xl"
-                    variant="gradient"
-                    gradient={{ from: 'farmGreen', to: 'cyan' }}
+                    variant="filled"
+                    color="farmGreen"
                     component={Link}
                     href="/signup"
                 >
@@ -1505,22 +1505,6 @@ export default function HomePage() {
           </motion.div>
         </Container>
       </motion.section>
-
-      {/* Consider adding a Footer here */}
-      {/*
-      <footer className={classes.footer}>
-          <Container size="lg">
-              <Group justify="space-between">
-                  <Text size="sm" c="dimmed">&copy; {new Date().getFullYear()} FarmWise. All rights reserved.</Text>
-                  <Group gap="xs">
-                      <ActionIcon size="lg" variant="default" radius="xl"> <IconBrandTwitter /> </ActionIcon>
-                      <ActionIcon size="lg" variant="default" radius="xl"> <IconBrandInstagram /> </ActionIcon>
-                      <ActionIcon size="lg" variant="default" radius="xl"> <IconBrandLinkedin /> </ActionIcon>
-                  </Group>
-              </Group>
-          </Container>
-      </footer>
-      */}
     </>
   );
 }

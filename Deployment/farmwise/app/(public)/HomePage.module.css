@@ -2,23 +2,42 @@
   /* Removed wrapper padding, handled by AppShell */
 }
 
-/* Styles for shared section title - adjusted margins */
+/* Styles for shared section title with enhanced styling */
 .sectionTitle {
-  font-family: var(--mantine-font-family-headings); /* Ensure heading font */
-  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-dark-1));
+  font-family: var(--mantine-font-family-headings);
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-0));
   font-weight: 800;
   line-height: 1.1;
-  font-size: rem(36px);
-  margin-bottom: var(--mantine-spacing-xl); /* Increase bottom margin */
-  margin-top: 0; /* Remove top margin, handled by sectionWrapper */
+  font-size: rem(40px);
+  margin-bottom: var(--mantine-spacing-xl);
+  margin-top: 0;
+  position: relative;
+  display: inline-block;
 
-  /* Use standard em values for breakpoints */
+  /* Add subtle gradient underline */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(to right, var(--mantine-color-farmGreen-6), var(--mantine-color-dataBlue-5));
+    border-radius: 2px;
+  }
+
   @media (max-width: 62em) { /* md */
-    font-size: rem(32px);
+    font-size: rem(36px);
   }
 
   @media (max-width: 48em) { /* sm */
-    font-size: rem(28px);
+    font-size: rem(30px);
+    text-align: center;
+
+    &::after {
+      left: 50%;
+      transform: translateX(-50%);
+    }
   }
 }
 
@@ -28,98 +47,153 @@
     padding-bottom: calc(var(--mantine-spacing-xl) * 2);
 }
 
-/* Hero Section Styles */
+/* Enhanced Hero Section Styles */
 .hero {
-    position: relative;
-    height: calc(100vh - rem(60px)); /* Full viewport height minus header */
-    overflow: hidden; /* Prevent potential overflow from absolute carousel */
-    border-radius: var(--mantine-radius-lg); /* Apply theme large radius */
-  }
+  position: relative;
+  height: calc(100vh - rem(60px));
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--shadow-elevation-2);
+}
 
 .heroCarousel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
-  
-  .heroInner {
-    position: relative;
-    z-index: 3;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start; /* Align text to the left */
-    padding-top: calc(var(--mantine-spacing-xl) * 3);
-    padding-bottom: calc(var(--mantine-spacing-xl) * 3);
 
-    @media (max-width: 48em) { /* sm */
-        align-items: center; /* Center text on small screens */
-        text-align: center;
-      }
-  }
-  
-  .heroTitle {
-    color: var(--mantine-color-white);
-    font-family: var(--mantine-font-family-headings);
-    font-weight: 800;
-    font-size: rem(52px);
-    line-height: 1.1;
-    margin-bottom: var(--mantine-spacing-md);
-  
-    @media (max-width: 62em) { /* md */
-      font-size: rem(44px);
-    }
-    @media (max-width: 48em) { /* sm */
-        font-size: rem(36px);
-      }
-  }
-  
-  .heroDescription {
-    color: var(--mantine-color-gray-4); /* Lighter text on dark background */
-    max-width: rem(600px);
-    font-size: var(--mantine-font-size-xl);
+.heroInner {
+  position: relative;
+  z-index: 3;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: calc(var(--mantine-spacing-xl) * 3);
+  padding-bottom: calc(var(--mantine-spacing-xl) * 3);
 
-    @media (max-width: 48em) { /* sm */
-        font-size: var(--mantine-font-size-lg);
-        max-width: 100%;
-      }
+  /* Add subtle animation for hero content */
+  animation: fadeInUp 1s ease-out;
+
+  @media (max-width: 48em) {
+    align-items: center;
+    text-align: center;
+    padding-top: calc(var(--mantine-spacing-xl) * 2);
+    padding-bottom: calc(var(--mantine-spacing-xl) * 2);
   }
-  
-  .heroControl {
-    margin-top: calc(var(--mantine-spacing-xl) * 1.5);
+}
+
+.heroTitle {
+  color: var(--mantine-color-white);
+  font-family: var(--mantine-font-family-headings);
+  font-weight: 800;
+  font-size: rem(56px);
+  line-height: 1.1;
+  margin-bottom: var(--mantine-spacing-md);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+  /* Add color highlight to part of the text */
+  & span {
+    color: var(--mantine-color-farmGreen-4);
+    display: inline;
   }
 
-/* Feature Card Adjustments */
+  @media (max-width: 62em) {
+    font-size: rem(48px);
+  }
+
+  @media (max-width: 48em) {
+    font-size: rem(38px);
+  }
+}
+
+.heroDescription {
+  color: var(--mantine-color-gray-2);
+  max-width: rem(600px);
+  font-size: var(--mantine-font-size-xl);
+  line-height: 1.6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  margin-bottom: var(--mantine-spacing-xl);
+
+  @media (max-width: 48em) {
+    font-size: var(--mantine-font-size-lg);
+    max-width: 100%;
+  }
+}
+
+.heroControl {
+  margin-top: var(--mantine-spacing-xl);
+  display: inline-flex;
+  gap: var(--mantine-spacing-md);
+
+  /* Add subtle animation for buttons */
+  animation: fadeIn 1.5s ease-out;
+  animation-delay: 0.5s;
+  animation-fill-mode: both;
+}
+
+/* Hero animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Enhanced Feature Card Styles */
 .featureCard {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   border: 1px solid transparent;
-  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  background: light-dark(
+    linear-gradient(to bottom right, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6)),
+    linear-gradient(to bottom right, rgba(30, 30, 30, 0.6), rgba(20, 20, 20, 0.8))
+  );
+  backdrop-filter: blur(5px);
   z-index: 5;
+  border-radius: var(--mantine-radius-md);
 }
 
 /* Active feature card styling */
 .featureCardActive {
   border-color: var(--mantine-color-farmGreen-6);
-  box-shadow: var(--mantine-shadow-md);
-  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+  background: light-dark(
+    linear-gradient(to bottom right, rgba(240, 250, 244, 0.9), rgba(230, 245, 235, 0.8)),
+    linear-gradient(to bottom right, rgba(40, 70, 50, 0.7), rgba(30, 60, 40, 0.9))
+  );
   z-index: 6;
+  transform: translateY(-3px);
 }
 
 .featureCard:hover {
   transform: translateY(-5px);
-  box-shadow: var(--mantine-shadow-lg);
-  border-color: var(--mantine-color-farmGreen-3);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  border-color: var(--mantine-color-farmGreen-4);
 }
 
+/* Shine effect */
 .featureCard::before {
   content: '';
   position: absolute;
@@ -130,10 +204,10 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.2),
     transparent
   );
-  transition: 0.5s;
+  transition: 0.6s ease;
   pointer-events: none;
 }
 
@@ -141,25 +215,74 @@
   left: 100%;
 }
 
+/* Border glow effect for active cards */
+.featureCardActive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background-color: var(--mantine-color-farmGreen-5);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 .featureTitle {
   margin-bottom: var(--mantine-spacing-sm);
+  font-weight: 700;
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-0));
+  font-size: var(--mantine-font-size-lg);
 }
 
-/* Add this new class */
 .featureCardList {
-  /* flex-grow: 1; */ /* Allow the list to grow and push content down - REMOVED */
+  margin-top: var(--mantine-spacing-md);
 }
 
-/* Pricing Card Adjustments */
+/* Enhanced Pricing Card Styles */
 .pricingCard {
   display: flex;
   flex-direction: column;
-  height: 100%; 
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  height: 100%;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
+  background: light-dark(
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(250, 250, 250, 0.8)),
+    linear-gradient(to bottom, rgba(30, 30, 30, 0.7), rgba(25, 25, 25, 0.9))
+  );
+  backdrop-filter: blur(5px);
+
+  /* Add subtle border */
+  border: 1px solid light-dark(
+    rgba(0, 0, 0, 0.05),
+    rgba(255, 255, 255, 0.1)
+  );
 
   &:hover {
-    transform: scale(1.02);
-    box-shadow: var(--mantine-shadow-lg);
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1), 0 8px 15px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Popular plan highlight */
+  &[data-popular="true"] {
+    border-color: var(--mantine-color-farmGreen-5);
+    box-shadow: 0 8px 20px rgba(92, 180, 118, 0.15);
+
+    &::before {
+      content: 'Most Popular';
+      position: absolute;
+      top: 12px;
+      right: -30px;
+      background: var(--mantine-color-farmGreen-6);
+      color: white;
+      padding: 4px 30px;
+      font-size: 12px;
+      font-weight: 600;
+      transform: rotate(45deg);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
   }
 
   & > button {
@@ -173,15 +296,49 @@
 /* Testimonials */
 /* Add specific Blockquote styles here if needed */
 
-/* CTA Section Styles */
+/* Enhanced CTA Section Styles */
 .ctaSection {
-    background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
-    padding-top: calc(var(--mantine-spacing-xl) * 3);
-    padding-bottom: calc(var(--mantine-spacing-xl) * 3);
+  background: light-dark(
+    var(--mantine-color-farmGreen-0),
+    var(--mantine-color-dark-8)
+  );
+  padding-top: calc(var(--mantine-spacing-xl) * 3);
+  padding-bottom: calc(var(--mantine-spacing-xl) * 3);
+  position: relative;
+  overflow: hidden;
+
+  /* Add subtle pattern overlay */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(var(--mantine-color-farmGreen-1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.4;
+    pointer-events: none;
+  }
 }
 
 .ctaInner {
-    /* Styles for content within CTA if needed */
+  position: relative;
+  z-index: 2;
+
+  /* Add subtle animation */
+  & > * {
+    animation: fadeInUp 0.8s ease-out;
+    animation-fill-mode: both;
+  }
+
+  & > *:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  & > *:nth-child(3) {
+    animation-delay: 0.4s;
+  }
 }
 
 /* Remove old specific styles if they conflict */
@@ -196,8 +353,8 @@
 }
 
 /* Remove potentially unused styles */
-/* .wrapper > section { ... } */ 
-/* .wrapper > :last-child { ... } */ 
+/* .wrapper > section { ... } */
+/* .wrapper > :last-child { ... } */
 
 /* Weather Widget Styles */
 .weatherWidget {
@@ -211,7 +368,7 @@
     rgba(0, 0, 0, 0.1),
     rgba(255, 255, 255, 0.1)
   );
-  
+
   @media (max-width: 48em) { /* sm */
     display: none; /* Hide weather widget on small screens */
   }
@@ -221,7 +378,7 @@
 .analyticsCard {
   transition: transform 150ms ease, box-shadow 150ms ease;
   height: 100%;
-  
+
   &:hover {
     transform: translateY(-5px);
     box-shadow: var(--mantine-shadow-lg);
@@ -238,7 +395,7 @@
 .dataCard {
   transition: all 0.3s ease;
   height: 100%;
-  
+
   &:hover {
     transform: translateY(-5px);
     box-shadow: var(--mantine-shadow-md);
@@ -249,7 +406,7 @@
 .animatedProgress {
   position: relative;
   overflow: hidden;
-  
+
   &::after {
     content: '';
     position: absolute;
@@ -258,9 +415,9 @@
     height: 100%;
     width: 100%;
     background: linear-gradient(
-      90deg, 
-      rgba(255,255,255,0) 0%, 
-      rgba(255,255,255,0.3) 50%, 
+      90deg,
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,0.3) 50%,
       rgba(255,255,255,0) 100%
     );
     animation: progressShine 2s infinite;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Group, useMantineColorScheme, Tooltip, ActionIcon } from '@mantine/core';
 import { IconSun, IconMoon } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import classes from '../Header/Header.module.css';
 
 export function ColorSchemeToggle() {
   const { setColorScheme, colorScheme } = useMantineColorScheme();
@@ -26,11 +27,12 @@ export function ColorSchemeToggle() {
       <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
         <ActionIcon
           onClick={() => setColorScheme(isDark ? 'light' : 'dark')}
-          variant="gradient"
-          gradient={{ from: 'farmGreen', to: 'cyan', deg: 45 }}
+          variant="filled"
+          color="farmGreen"
           size="lg"
           radius="md"
           aria-label={label}
+          className={classes.iconButton}
         >
           {/* Render the correct icon only when mounted */}
           {isDark ? <IconSun size={18} /> : <IconMoon size={18} />}

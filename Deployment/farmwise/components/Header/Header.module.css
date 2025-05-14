@@ -1,40 +1,124 @@
 .header {
-    height: rem(60px);
-    border-bottom: rem(1px) solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
-    /* Make base background transparent */
-    background-color: transparent;
-    /* Ensure header stays on top */
-    position: sticky; 
-    top: 0;
-    z-index: 100; /* High z-index */
-    transition: background-color 0.3s ease, border-color 0.3s ease; /* Add transition */
+  height: rem(64px);
+  border-bottom: rem(1px) solid transparent;
+  background-color: transparent;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-sticky);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.inner {
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.link {
+  display: block;
+  line-height: 1;
+  padding: rem(10px) rem(14px);
+  border-radius: var(--mantine-radius-md);
+  text-decoration: none;
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-1));
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+
+  /* Underline effect on hover and active state */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: var(--mantine-color-farmGreen-6);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+    opacity: 0;
+    border-radius: 1px;
   }
-  
-  .inner {
-    height: rem(60px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .link {
-    display: block;
-    line-height: 1;
-    padding: rem(8px) rem(12px);
-    border-radius: var(--mantine-radius-lg);
-    text-decoration: none;
-    color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0));
-    font-size: var(--mantine-font-size-sm);
-    font-weight: 500;
-  
-    @mixin hover {
-      background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+
+  &:hover {
+    color: light-dark(var(--mantine-color-farmGreen-7), var(--mantine-color-farmGreen-4));
+
+    &::after {
+      width: 60%;
+      opacity: 1;
     }
-  } 
+  }
+}
+
+/* Active link styling */
+.linkActive {
+  color: light-dark(var(--mantine-color-farmGreen-7), var(--mantine-color-farmGreen-4));
+  font-weight: 600;
+
+  &::after {
+    width: 70%;
+    opacity: 1;
+    height: 3px;
+  }
+}
+
+.logoLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+}
 
 /* Style for blurred header on scroll */
 .headerBlurred {
-    background-color: rgba(var(--mantine-color-body-rgb), 0.85); /* Use theme body color with alpha */
-    backdrop-filter: blur(10px);
-    border-color: transparent; /* Make border transparent when blurred */
-} 
+  background-color: light-dark(
+    rgba(255, 255, 255, 0.85),
+    rgba(20, 20, 20, 0.85)
+  );
+  backdrop-filter: blur(10px);
+  border-bottom: rem(1px) solid light-dark(
+    rgba(0, 0, 0, 0.05),
+    rgba(255, 255, 255, 0.05)
+  );
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Button styles */
+.authButton {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevation-1);
+  }
+}
+
+/* Icon button styles */
+.iconButton {
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevation-1);
+  }
+}
+
+/* Specific styles for each icon button type */
+.dashboardButton {
+  background-color: light-dark(var(--mantine-color-farmGreen-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-farmGreen-7), var(--mantine-color-farmGreen-4));
+  border-color: light-dark(var(--mantine-color-farmGreen-2), var(--mantine-color-dark-4));
+}
+
+.notificationButton {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-3));
+  border-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+}

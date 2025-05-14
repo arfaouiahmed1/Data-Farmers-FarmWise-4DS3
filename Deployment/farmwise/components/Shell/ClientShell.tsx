@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppShell, useMantineTheme } from '@mantine/core';
-// import { MantineProvider } from '@mantine/core'; // Removed redundant provider import
-// import { theme } from '../../theme'; // Removed theme import
-import { AppHeader } from '../Header/Header'; // Adjust path relative to components/Shell
-import classes from '../Header/Header.module.css'; // Import header CSS for the blur class
-import { useWindowScroll } from '@mantine/hooks'; // Import useWindowScroll hook
+import { AppHeader } from '../Header/Header';
+import { Footer } from '../Footer/Footer';
+import classes from '../Header/Header.module.css';
+import { useWindowScroll } from '@mantine/hooks';
 
 interface ClientShellProps {
   children: React.ReactNode;
@@ -19,7 +18,7 @@ export function ClientShell({ children }: ClientShellProps) {
 
   useEffect(() => {
     // Set blurred state based on scroll position
-    setHeaderBlurred(scroll.y > 10); 
+    setHeaderBlurred(scroll.y > 10);
   }, [scroll]);
 
   return (
@@ -29,21 +28,23 @@ export function ClientShell({ children }: ClientShellProps) {
         header={{ height: 60 }}
         // Add navbar/aside props here later if needed
       >
-        <AppShell.Header 
+        <AppShell.Header
           className={headerBlurred ? classes.headerBlurred : ''}
           style={{
             // Optionally set background color directly for transition
-            // backgroundColor: headerBlurred 
-            //    ? theme.fn.rgba(theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white, 0.85) 
+            // backgroundColor: headerBlurred
+            //    ? theme.fn.rgba(theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white, 0.85)
             //    : 'transparent',
-            // transition: 'background-color 0.3s ease' 
+            // transition: 'background-color 0.3s ease'
           }}
         >
           <AppHeader />
         </AppShell.Header>
 
-        <AppShell.Main>{children}</AppShell.Main>
+        <AppShell.Main>
+          {children}
+          <Footer />
+        </AppShell.Main>
       </AppShell>
-    // </MantineProvider> // Removed redundant provider
   );
-} 
+}
