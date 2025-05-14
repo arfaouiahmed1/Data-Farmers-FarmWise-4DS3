@@ -42,14 +42,15 @@ import { useRouter } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
 import authService from '../../api/auth';
 import classes from './LoginPage.module.css';
+import '@/styles/auth-common.css';
 import { useDebouncedValue } from '@mantine/hooks';
 import { isValidEmail } from '@/app/utils/emailUtils';
 
 // Animation variants
 const containerVariant = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.4, ease: "easeOut" }
   },
@@ -57,8 +58,8 @@ const containerVariant = {
 
 const notificationVariant = {
   hidden: { opacity: 0, y: -20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3, ease: "easeOut" }
   },
@@ -72,7 +73,7 @@ const formVariant = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { 
+    transition: {
       duration: 0.4,
       staggerChildren: 0.1,
     }
@@ -81,8 +82,8 @@ const formVariant = {
 
 const itemVariant = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3 }
   }
@@ -96,15 +97,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Identity checking state
   const [debouncedIdentity] = useDebouncedValue(usernameOrEmail, 500);
   const [isCheckingIdentity, setIsCheckingIdentity] = useState(false);
   const [identityExists, setIdentityExists] = useState(false);
   const [identityChecked, setIdentityChecked] = useState(false);
-  
+
   const router = useRouter();
-  
+
   // Check identity availability when debounced identity changes
   useEffect(() => {
     const checkIdentity = async () => {
@@ -114,19 +115,19 @@ export default function LoginPage() {
         setIdentityExists(false);
         return;
       }
-      
+
       // Determine if input is an email
       const isEmail = debouncedIdentity.includes('@');
-      
+
       // If it looks like an email but is invalid, don't check with server
       if (isEmail && !isValidEmail(debouncedIdentity)) {
         setIdentityChecked(true);
         setIdentityExists(false);
         return;
       }
-      
+
       setIsCheckingIdentity(true);
-      
+
       try {
         // Check if it's an email or username based on current login method or content
         if (isEmail) {
@@ -136,7 +137,7 @@ export default function LoginPage() {
           const result = await authService.checkUsername(debouncedIdentity);
           setIdentityExists(result.exists);
         }
-        
+
         setIdentityChecked(true);
       } catch (err) {
         console.error('Error checking identity:', err);
@@ -144,33 +145,33 @@ export default function LoginPage() {
         setIsCheckingIdentity(false);
       }
     };
-    
+
     checkIdentity();
   }, [debouncedIdentity]);
-  
+
   // Get appropriate error message for identity field
   const getIdentityErrorMessage = () => {
     if (usernameOrEmail.length === 0) return '';
     if (usernameOrEmail.length > 0 && usernameOrEmail.length < 3) return 'Too short (minimum 3 characters)';
-    
+
     if (usernameOrEmail.includes('@')) {
       if (!isValidEmail(usernameOrEmail)) return 'Invalid email format';
       if (identityChecked && !identityExists) return 'Email not found';
     } else {
       if (identityChecked && !identityExists) return 'Username not found';
     }
-    
+
     return '';
   };
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!usernameOrEmail || !password) {
       setError('Please enter both username/email and password');
       return;
     }
-    
+
     if (usernameOrEmail.length >= 3 && !identityExists && identityChecked) {
       const type = usernameOrEmail.includes('@') ? 'email' : 'username';
       setError(`No account exists with this ${type}`);
@@ -179,20 +180,20 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     setError('');
-    
+
     try {
       // Determine if input is email or username based on format
       const isEmail = usernameOrEmail.includes('@') && isValidEmail(usernameOrEmail);
-      
+
       // Send the appropriate credential type
       const loginData = {
         [isEmail ? 'email' : 'username']: usernameOrEmail,
         password
       };
-      
+
       // Send login request
       await authService.login(loginData);
-      
+
       // Successful login, redirect to dashboard
       router.push('/dashboard');
     } catch (err: any) {
@@ -204,30 +205,30 @@ export default function LoginPage() {
   };
 
   return (
-    <Container size={420} py={40}>
+    <Container className="auth-container">
       <motion.div
         initial="hidden"
         animate="visible"
         variants={containerVariant}
         className={classes.wrapper}
       >
-        <Box className={classes.headerWrapper}>
-          <ThemeIcon size={56} radius="xl" className={classes.iconWrapper}>
+        <Box className="auth-header">
+          <ThemeIcon size={56} radius="xl" className="auth-icon-wrapper">
             <IconLogin stroke={1.5} />
           </ThemeIcon>
-          
-          <Title ta="center" className={classes.title}>
+
+          <Title ta="center" className="auth-title">
             Welcome back
           </Title>
-          <Text c="dimmed" size="sm" ta="center" mt={5}>
+          <Text className="auth-subtitle" ta="center">
             Don't have an account yet?{' '}
-            <Anchor size="sm" component={Link} href="/signup" className={classes.link}>
+            <Anchor size="sm" component={Link} href="/signup" className="auth-link">
               Create account
             </Anchor>
           </Text>
         </Box>
 
-        <Paper withBorder shadow="md" p={30} mt={30} radius="lg" className={classes.formWrapper} bg="var(--mantine-color-body)">
+        <Paper withBorder shadow="md" className="auth-form-wrapper" radius="lg" bg="var(--mantine-color-body)">
           <form onSubmit={handleLogin} name="login-form" id="login-form" method="post" autoComplete="on">
             <AnimatePresence>
               {error && (
@@ -237,22 +238,21 @@ export default function LoginPage() {
                   animate="visible"
                   exit="exit"
                 >
-                  <Notification 
+                  <Notification
                     icon={<IconAlertCircle size="1.1rem" />}
-                    color="red" 
-                    withCloseButton 
+                    color="red"
+                    withCloseButton
                     onClose={() => setError('')}
-                    mb="md"
                     radius="md"
-                    className={classes.notification}
+                    className="auth-notification"
                   >
                     {error}
                   </Notification>
                 </motion.div>
               )}
             </AnimatePresence>
-            
-            <motion.div 
+
+            <motion.div
               variants={formVariant}
               initial="hidden"
               animate="visible"
@@ -284,12 +284,12 @@ export default function LoginPage() {
                     ]}
                     fullWidth
                     radius="md"
-                    className={classes.segmentedControl}
+                    className="auth-segmented-control"
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
-                  <TextInput 
+                  <TextInput
                     label={
                       <Group gap={5}>
                         <span>{loginMethod === 'username' ? 'Username' : 'Email'}</span>
@@ -302,8 +302,8 @@ export default function LoginPage() {
                         </Tooltip>
                       </Group>
                     }
-                    placeholder={loginMethod === 'username' ? 'Your username' : 'you@example.com'} 
-                    required 
+                    placeholder={loginMethod === 'username' ? 'Your username' : 'you@example.com'}
+                    required
                     type={loginMethod === 'email' ? 'email' : 'text'}
                     value={usernameOrEmail}
                     onChange={(e) => setUsernameOrEmail(e.currentTarget.value)}
@@ -328,14 +328,14 @@ export default function LoginPage() {
                       ) : null
                     }
                     radius="md"
-                    className={classes.input}
+                    className="auth-input"
                     error={getIdentityErrorMessage()}
                     autoComplete={loginMethod === 'username' ? 'username' : 'email'}
                     name={loginMethod === 'username' ? 'username' : 'email'}
                     id={loginMethod === 'username' ? 'username' : 'email'}
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <PasswordInput
                     label="Password"
@@ -349,34 +349,33 @@ export default function LoginPage() {
                       </ThemeIcon>
                     }
                     radius="md"
-                    className={classes.input}
+                    className="auth-input"
                     autoComplete="current-password"
                     name="password"
                     id="password"
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <Group justify="space-between" mt="xs">
                     <Text size="xs">
-                      <Anchor component={Link} href="/forgot-password" className={classes.link}>
+                      <Anchor component={Link} href="/forgot-password" className="auth-link">
                         Forgot your password?
                       </Anchor>
                     </Text>
                   </Group>
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
-                  <Button 
-                    fullWidth 
+                  <Button
+                    fullWidth
                     radius="md"
                     type="submit"
                     loading={isSubmitting}
                     rightSection={<IconArrowRight size={18} />}
-                    className={classes.button}
-                    mt="md"
+                    className="auth-button"
                     disabled={
-                      isSubmitting || 
+                      isSubmitting ||
                       (usernameOrEmail.length >= 3 && !identityExists && identityChecked) ||
                       !usernameOrEmail ||
                       !password
@@ -388,22 +387,22 @@ export default function LoginPage() {
               </Stack>
             </motion.div>
 
-            <Divider label="Or continue with" labelPosition="center" mt="lg" mb="md" />
-            
-            <Group grow mb="md" mt="md">
-              <Button 
-                variant="outline" 
+            <Divider label="Or continue with" labelPosition="center" className="auth-divider" />
+
+            <Group grow>
+              <Button
+                variant="outline"
                 leftSection={<IconBrandGoogle stroke={1.5} />}
                 radius="md"
-                className={classes.socialButton}
+                className="auth-social-button"
               >
                 Google
               </Button>
               <Button
                 variant="outline"
                 leftSection={<IconBrandFacebook stroke={1.5} />}
-                radius="md" 
-                className={classes.socialButton}
+                radius="md"
+                className="auth-social-button"
               >
                 Facebook
               </Button>
@@ -421,4 +420,4 @@ function Center({ children }: { children: React.ReactNode }) {
       {children}
     </Group>
   );
-} 
+}

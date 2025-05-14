@@ -18,10 +18,10 @@
 }
 
 .iconWrapper {
-  background: linear-gradient(45deg, var(--mantine-color-green-6), var(--mantine-color-blue-5));
+  background: var(--mantine-color-farmGreen-6);
   color: var(--mantine-color-white);
   margin-bottom: 1.5rem;
-  box-shadow: 0 8px 20px -8px rgba(var(--mantine-color-green-6-rgb), 0.4);
+  box-shadow: 0 8px 20px -8px rgba(var(--mantine-color-farmGreen-6-rgb), 0.4);
 }
 
 .formWrapper {
@@ -64,6 +64,11 @@
   background-color: var(--mantine-color-default-hover);
 }
 
+.segmentedControl [data-active] {
+  background-color: var(--mantine-color-farmGreen-0);
+  color: var(--mantine-color-farmGreen-7);
+}
+
 .socialButton {
   transition: all 0.2s ease;
   border-color: var(--mantine-color-default-border);
@@ -81,6 +86,6 @@
 }
 
 .link:hover {
-  color: var(--mantine-color-green-6);
+  color: var(--mantine-color-farmGreen-6);
   text-decoration: none;
 }

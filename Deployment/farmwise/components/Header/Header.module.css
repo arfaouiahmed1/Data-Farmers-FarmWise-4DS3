@@ -18,7 +18,8 @@
 .link {
   display: block;
   line-height: 1;
-  padding: rem(10px) rem(14px);
+  padding: rem(12px) rem(16px);
+  margin: 0 rem(2px);
   border-radius: var(--mantine-radius-md);
   text-decoration: none;
   color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-1));
@@ -92,6 +93,8 @@
 /* Button styles */
 .authButton {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin: 0 rem(4px);
+  height: 38px;
 
   &:hover {
     transform: translateY(-2px);
@@ -118,7 +121,7 @@
 }
 
 .notificationButton {
-  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
-  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-3));
-  border-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+  background-color: light-dark(var(--mantine-color-farmGreen-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-farmGreen-7), var(--mantine-color-farmGreen-4));
+  border-color: light-dark(var(--mantine-color-farmGreen-2), var(--mantine-color-dark-4));
 }

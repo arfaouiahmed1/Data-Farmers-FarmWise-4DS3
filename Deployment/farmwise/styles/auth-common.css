@@ -1,0 +1,175 @@
+/* Common styles for authentication pages */
+
+/* Consistent spacing variables */
+:root {
+  --auth-spacing-xs: 0.5rem;
+  --auth-spacing-sm: 0.75rem;
+  --auth-spacing-md: 1rem;
+  --auth-spacing-lg: 1.5rem;
+  --auth-spacing-xl: 2rem;
+
+  --auth-form-padding: 2rem;
+  --auth-container-padding: 3rem 1rem;
+  --auth-border-radius: var(--mantine-radius-md);
+}
+
+/* Common container styles */
+.auth-container {
+  padding: var(--auth-container-padding);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Common form wrapper styles */
+.auth-form-wrapper {
+  padding: var(--auth-form-padding);
+  border-radius: var(--auth-border-radius);
+  width: 100%;
+  margin-top: var(--auth-spacing-xl);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Common header styles */
+.auth-header {
+  margin-bottom: var(--auth-spacing-xl);
+  text-align: center;
+}
+
+/* Common icon wrapper styles */
+.auth-icon-wrapper {
+  background: var(--mantine-color-farmGreen-6);
+  color: var(--mantine-color-white);
+  margin-bottom: var(--auth-spacing-lg);
+  box-shadow: 0 8px 20px -8px rgba(var(--mantine-color-farmGreen-6-rgb), 0.4);
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Common title styles */
+.auth-title {
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: var(--auth-spacing-sm);
+}
+
+/* Common subtitle styles */
+.auth-subtitle {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  margin-top: var(--auth-spacing-xs);
+  max-width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Common form styles */
+.auth-form {
+  width: 100%;
+}
+
+/* Common input styles */
+.auth-input {
+  margin-bottom: var(--auth-spacing-md);
+  transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+  transform: translateY(-2px);
+}
+
+/* Common checkbox styles */
+.auth-checkbox {
+  transition: transform 0.2s ease;
+}
+
+.auth-checkbox:hover {
+  transform: translateY(-2px);
+}
+
+/* Common button styles */
+.auth-button {
+  margin-top: var(--auth-spacing-lg);
+  background: var(--mantine-color-farmGreen-6);
+  color: var(--mantine-color-white);
+  transition: all 0.3s ease;
+  height: 42px;
+  font-weight: 500;
+}
+
+.auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px -5px rgba(var(--mantine-color-farmGreen-6-rgb), 0.4);
+  background: var(--mantine-color-farmGreen-7);
+}
+
+/* Common link styles */
+.auth-link {
+  color: var(--mantine-color-dimmed);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.auth-link:hover {
+  color: var(--mantine-color-farmGreen-6);
+  text-decoration: none;
+}
+
+/* Common divider styles */
+.auth-divider {
+  margin: var(--auth-spacing-xl) 0 var(--auth-spacing-lg);
+  opacity: 0.7;
+}
+
+/* Common social button styles */
+.auth-social-button {
+  transition: all 0.2s ease;
+  border: 1px solid var(--mantine-color-gray-3);
+  height: 42px;
+}
+
+.auth-social-button:hover {
+  transform: translateY(-2px);
+  background-color: var(--mantine-color-default-hover);
+  box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Common segmented control styles */
+.auth-segmented-control {
+  background-color: var(--mantine-color-default-hover);
+  margin-bottom: var(--auth-spacing-md);
+}
+
+.auth-segmented-control [data-active] {
+  background-color: var(--mantine-color-farmGreen-0);
+  color: var(--mantine-color-farmGreen-7);
+}
+
+/* Common notification styles */
+.auth-notification {
+  margin-bottom: var(--auth-spacing-md);
+  border-radius: var(--auth-border-radius);
+}
+
+/* Common controls styles */
+.auth-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--auth-spacing-lg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  :root {
+    --auth-form-padding: 1.5rem;
+  }
+
+  .auth-title {
+    font-size: 1.75rem;
+  }
+}

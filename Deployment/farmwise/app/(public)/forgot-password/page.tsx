@@ -23,13 +23,14 @@ import { useRouter } from 'next/navigation';
 import { FormEvent } from 'react';
 import authService from '../../api/auth';
 import classes from './ForgotPasswordPage.module.css';
+import '@/styles/auth-common.css';
 import { isValidEmail } from '@/app/utils/emailUtils';
 
 // Animation variants
 const containerVariant = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.4, ease: "easeOut" }
   },
@@ -37,8 +38,8 @@ const containerVariant = {
 
 const notificationVariant = {
   hidden: { opacity: 0, y: -20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3, ease: "easeOut" }
   },
@@ -52,7 +53,7 @@ const formVariant = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { 
+    transition: {
       duration: 0.4,
       staggerChildren: 0.1,
     }
@@ -61,8 +62,8 @@ const formVariant = {
 
 const itemVariant = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3 }
   }
@@ -83,15 +84,15 @@ export default function ForgotPasswordPage() {
       setEmailValidation({ isValid: true, feedback: '' });
       return;
     }
-    
+
     // Validate email format
     const isValid = isValidEmail(email);
-    setEmailValidation({ 
-      isValid, 
-      feedback: isValid ? '' : 'Please enter a valid email address' 
+    setEmailValidation({
+      isValid,
+      feedback: isValid ? '' : 'Please enter a valid email address'
     });
   }, [email]);
-  
+
   // Get appropriate error message for email field
   const getEmailErrorMessage = () => {
     if (email.length === 0) return null;
@@ -101,7 +102,7 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!email) {
       setError('Please enter your email address');
       return;
@@ -114,14 +115,14 @@ export default function ForgotPasswordPage() {
 
     setIsSubmitting(true);
     setError('');
-    
+
     try {
       await authService.forgotPassword({ email });
-      
+
       // Set success message and clear email field
       setSuccess(true);
       setEmail('');
-      
+
       // Redirect to login page after showing success for a few seconds
       setTimeout(() => {
         router.push('/login');
@@ -135,27 +136,27 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <Container size={460} py={40}>
+    <Container className="auth-container">
       <motion.div
         initial="hidden"
         animate="visible"
         variants={containerVariant}
         className={classes.wrapper}
       >
-        <Box className={classes.headerWrapper}>
-          <ThemeIcon size={56} radius="xl" className={classes.iconWrapper}>
+        <Box className="auth-header">
+          <ThemeIcon size={56} radius="xl" className="auth-icon-wrapper">
             <IconKey stroke={1.5} />
           </ThemeIcon>
-          
-          <Title className={classes.title} ta="center">
+
+          <Title className="auth-title" ta="center">
             Forgot your password?
           </Title>
-          <Text c="dimmed" fz="sm" ta="center">
+          <Text className="auth-subtitle" ta="center">
             Enter your email to get a reset link
           </Text>
         </Box>
 
-        <Paper withBorder shadow="md" p={30} radius="lg" mt="xl" className={classes.formWrapper} bg="var(--mantine-color-body)">
+        <Paper withBorder shadow="md" className="auth-form-wrapper" radius="lg" bg="var(--mantine-color-body)">
           <AnimatePresence mode="wait">
             {success ? (
               <motion.div
@@ -165,18 +166,18 @@ export default function ForgotPasswordPage() {
                 animate="visible"
                 exit="exit"
               >
-                <Notification 
+                <Notification
                   icon={<IconCheck size="1.1rem" />}
-                  color="teal" 
+                  color="teal"
                   title="Email sent!"
                   withCloseButton={false}
-                  className={classes.notification}
+                  className="auth-notification"
                 >
                   We've sent a password reset link to your email address. You'll be redirected to the login page shortly.
                 </Notification>
               </motion.div>
             ) : (
-              <motion.form 
+              <motion.form
                 key="form"
                 variants={formVariant}
                 initial="hidden"
@@ -191,21 +192,20 @@ export default function ForgotPasswordPage() {
                       animate="visible"
                       exit="exit"
                     >
-                      <Notification 
+                      <Notification
                         icon={<IconAlertCircle size="1.1rem" />}
-                        color="red" 
-                        withCloseButton 
+                        color="red"
+                        withCloseButton
                         onClose={() => setError('')}
-                        mb="md"
                         radius="md"
-                        className={classes.notification}
+                        className="auth-notification"
                       >
                         {error}
                       </Notification>
                     </motion.div>
                   )}
                 </AnimatePresence>
-                
+
                 <motion.div variants={itemVariant}>
                   <TextInput
                     label="Your email"
@@ -215,7 +215,7 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.currentTarget.value)}
                     error={getEmailErrorMessage()}
                     radius="md"
-                    className={classes.input}
+                    className="auth-input"
                     leftSection={
                       <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                         <IconAt size="1rem" />
@@ -223,17 +223,17 @@ export default function ForgotPasswordPage() {
                     }
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
-                  <Group justify="space-between" mt="lg" className={classes.controls}>
-                    <Anchor c="dimmed" size="sm" component={Link} href="/login" className={classes.link}>
+                  <Group justify="space-between" mt="lg" className="auth-controls">
+                    <Anchor size="sm" component={Link} href="/login" className="auth-link">
                       <Center inline>
                         <IconArrowLeft style={{ width: rem(12), height: rem(12) }} stroke={1.5} />
                         <Box ml={5}>Back to login</Box>
                       </Center>
                     </Anchor>
-                    <Button 
-                      className={classes.button}
+                    <Button
+                      className="auth-button"
                       type="submit"
                       loading={isSubmitting}
                       radius="md"
@@ -251,4 +251,4 @@ export default function ForgotPasswordPage() {
       </motion.div>
     </Container>
   );
-} 
+}

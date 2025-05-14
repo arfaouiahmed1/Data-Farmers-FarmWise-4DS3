@@ -540,7 +540,7 @@ const WeedDetectionWidget = () => (
         </Group>
          <Box style={{ position: 'relative', height: rem(180), overflow: 'hidden' }}>
              {/* Simplified Field View */}
-             <Box style={{ height: '100%', background: 'linear-gradient(to bottom, var(--mantine-color-green-1), var(--mantine-color-green-3))', borderRadius: rem(4), padding: rem(10) }}>
+             <Box style={{ height: '100%', background: 'var(--mantine-color-green-1)', borderRadius: rem(4), padding: rem(10) }}>
                  {/* Crop Rows */}
                  {Array(5).fill(0).map((_, r) => (
                      <Group key={r} mb="xs" gap="sm" wrap="nowrap">
@@ -658,7 +658,7 @@ const SatelliteWidget: React.FC = () => {
                 <ThemeIcon size={40} radius={20} color="blue" variant="filled"> <IconRulerMeasure size={20} /> </ThemeIcon>
               </motion.div>
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: analysisComplete ? 1 : 0, y: analysisComplete ? 0 : 10 }} transition={{ duration: 0.5, delay: 0.6 }}>
-                <Badge size="lg" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }}> Medium Farm </Badge>
+                <Badge size="lg" color="blue" variant="filled"> Medium Farm </Badge>
               </motion.div>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: analysisComplete ? 1 : 0 }} transition={{ duration: 0.5, delay: 0.8 }}>
                  <Text size="xs" c="gray.3" ta="center">Confidence: 94%</Text>
@@ -815,7 +815,7 @@ const pricingTiers = [
             'Priority Email Support' // Refined
         ],
         buttonText: 'Choose Pro Plan', // Refined
-        buttonVariant: 'gradient' // Keep gradient for emphasis
+        buttonVariant: 'filled' // Use filled variant with farmGreen color
     },
     {
         title: 'Enterprise',
@@ -1052,7 +1052,7 @@ export default function HomePage() {
       {/* Features Section - Revamped Layout */}
       <section
         id="features"
-        className={classes.sectionWrapper}
+        className={`${classes.sectionWrapper} ${classes.firstSection}`}
         style={{ position: 'relative', zIndex: 2 }}
       >
         <Container size="xl"> {/* Use larger container for feature grid */}
@@ -1110,10 +1110,10 @@ export default function HomePage() {
 
       <Divider my="xl" />
 
-      {/* Data Visualizations Section - Minor Styling Adjustments */}
+      {/* Data Visualizations Section - Enhanced Styling */}
       <motion.section
         id="analytics"
-        className={classes.sectionWrapper}
+        className={`${classes.sectionWrapper} ${classes.analyticsSection}`}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
@@ -1124,23 +1124,37 @@ export default function HomePage() {
             <Title order={2} className={classes.sectionTitle} ta="center">
                 Farm Analytics Dashboard
             </Title>
-            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
-                Visualize your farm's key metrics. Gain insights into crop distribution, soil health, rainfall patterns, and yield projections to make informed decisions.
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={700} mx="auto">
+                Visualize your farm's key metrics in real-time. Gain actionable insights into crop distribution, soil health, rainfall patterns, and yield projections to make data-driven decisions.
             </Text>
           </motion.div>
 
-            {/* Using motion.div for each grid item for staggered animation */}
-            <Grid gutter="xl">
-              {/* Crop Distribution */}
-              <Grid.Col span={{ base: 12, md: 6, lg: 5 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}>
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
-                    <Group justify="space-between" mb="lg">
-                        <Text fw={600} size="lg">Crop Distribution</Text>
-                        <ThemeIcon variant="light" color="farmGreen" size="lg" radius="md">
-                            <IconPlant2 size={20} />
+          {/* Using motion.div for each grid item for staggered animation */}
+          <Grid gutter="xl">
+            {/* Crop Distribution */}
+            <Grid.Col span={{ base: 12, md: 6, lg: 5 }}>
+              <motion.div
+                variants={itemVariant}
+                style={{ height: '100%' }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Card shadow="md" className={classes.analyticsCard} style={{ height: '100%' }}>
+                  <Card.Section p="lg" bg="var(--mantine-color-farmGreen-0)">
+                    <Group justify="space-between">
+                      <Text component="div" className={classes.chartTitle}>
+                        <ThemeIcon size={28} radius="xl" className={classes.chartIcon}>
+                          <IconPlant2 size={16} />
                         </ThemeIcon>
+                        <span>Crop Distribution</span>
+                      </Text>
+                      <Badge color="farmGreen" variant="light" size="lg">Current Season</Badge>
                     </Group>
+                  </Card.Section>
+
+                  <Card.Section p="lg">
                     <Flex direction={{ base: 'column', sm: 'row' }} gap="lg" align="center">
                       <Box flex={1} miw={180}>
                         <PieChart
@@ -1148,6 +1162,9 @@ export default function HomePage() {
                           data={cropDistributionData}
                           tooltipDataSource="segment"
                           withTooltip
+                          withLabels
+                          labelsType="percent"
+                          labelsPosition="outside"
                           tooltipProps={{
                             content: ({ payload }) => (
                               <Paper px="md" py="sm" withBorder shadow="md" radius="md">
@@ -1167,70 +1184,100 @@ export default function HomePage() {
                             <Group key={item.name} gap="sm">
                               <Box w={14} h={14} bg={item.color} style={{ borderRadius: '3px' }} />
                               <Flex justify="space-between" style={{ flex: 1 }}>
-                                <Text size="sm">{item.name}</Text>
-                                <Text size="sm" c="dimmed">{item.value}%</Text>
+                                <Text component="span" size="sm">{item.name}</Text>
+                                <Text component="span" size="sm" fw={500}>{item.value}%</Text>
                               </Flex>
                             </Group>
                           ))}
                         </Stack>
                       </Box>
                     </Flex>
-                  </Paper>
-                </motion.div>
-              </Grid.Col>
+                  </Card.Section>
+                </Card>
+              </motion.div>
+            </Grid.Col>
 
-              {/* Soil Health */}
-              <Grid.Col span={{ base: 12, md: 6, lg: 7 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}>
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
-                     <Group justify="space-between" mb="lg">
-                        <Text fw={600} size="lg">Soil Health Overview</Text>
-                        <ThemeIcon variant="light" color="blue" size="lg" radius="md">
-                            <IconTestPipe size={20} />
+            {/* Soil Health */}
+            <Grid.Col span={{ base: 12, md: 6, lg: 7 }}>
+              <motion.div
+                variants={itemVariant}
+                style={{ height: '100%' }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                viewport={{ once: true }}
+              >
+                <Card shadow="md" className={classes.analyticsCard} style={{ height: '100%' }}>
+                  <Card.Section p="lg" bg="var(--mantine-color-blue-0)">
+                    <Group justify="space-between">
+                      <Text component="div" className={classes.chartTitle}>
+                        <ThemeIcon size={28} radius="xl" className={classes.chartIcon} style={{ backgroundColor: 'var(--mantine-color-blue-6)' }}>
+                          <IconTestPipe size={16} />
                         </ThemeIcon>
+                        <span>Soil Health Overview</span>
+                      </Text>
+                      <Badge color="blue" variant="light" size="lg">Updated Weekly</Badge>
                     </Group>
+                  </Card.Section>
+
+                  <Card.Section p="lg">
                     <ScrollArea h={280} type="auto">
                       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
                         {soilHealthData.map((field) => (
-                          <Box key={field.name} mb="md">
+                          <Paper key={field.name} p="md" withBorder radius="md" mb="md">
                             <Group justify="space-between" mb="xs">
-                              <Text size="sm" fw={500}>{field.name}</Text>
-                              <Badge variant="light" color={ ((field.nitrogen + field.phosphorus + field.potassium) / 3) > 70 ? 'green' : 'orange'}>
-                                  Score: {Math.round((field.nitrogen + field.phosphorus + field.potassium) / 3)}%
+                              <Text size="md" fw={600}>{field.name}</Text>
+                              <Badge variant="filled" color={((field.nitrogen + field.phosphorus + field.potassium) / 3) > 70 ? 'green' : 'orange'}>
+                                Score: {Math.round((field.nitrogen + field.phosphorus + field.potassium) / 3)}%
                               </Badge>
                             </Group>
-                            <Stack gap={8} mt="sm">
-                                <Box>
-                                    <Group justify="space-between"><Text size="xs" c="dimmed">Nitrogen</Text><Text size="xs">{field.nitrogen}%</Text></Group>
-                                    <Progress value={field.nitrogen} color="blue" size="sm" radius="sm" />
-                                </Box>
-                                <Box>
-                                    <Group justify="space-between"><Text size="xs" c="dimmed">Phosphorus</Text><Text size="xs">{field.phosphorus}%</Text></Group>
-                                    <Progress value={field.phosphorus} color="orange" size="sm" radius="sm"/>
-                                </Box>
-                                <Box>
-                                    <Group justify="space-between"><Text size="xs" c="dimmed">Potassium</Text><Text size="xs">{field.potassium}%</Text></Group>
-                                    <Progress value={field.potassium} color="violet" size="sm" radius="sm"/>
-                                </Box>
+                            <Stack gap={12} mt="md">
+                              <Box>
+                                <Group justify="space-between" mb={5}><Text component="span" size="sm" fw={500}>Nitrogen</Text><Text component="span" size="sm" fw={600} c="blue">{field.nitrogen}%</Text></Group>
+                                <Progress value={field.nitrogen} color="blue" size="md" radius="xl" striped animated />
+                              </Box>
+                              <Box>
+                                <Group justify="space-between" mb={5}><Text component="span" size="sm" fw={500}>Phosphorus</Text><Text component="span" size="sm" fw={600} c="orange">{field.phosphorus}%</Text></Group>
+                                <Progress value={field.phosphorus} color="orange" size="md" radius="xl" striped animated />
+                              </Box>
+                              <Box>
+                                <Group justify="space-between" mb={5}><Text component="span" size="sm" fw={500}>Potassium</Text><Text component="span" size="sm" fw={600} c="violet">{field.potassium}%</Text></Group>
+                                <Progress value={field.potassium} color="violet" size="md" radius="xl" striped animated />
+                              </Box>
                             </Stack>
-                          </Box>
+                          </Paper>
                         ))}
                       </SimpleGrid>
                     </ScrollArea>
-                  </Paper>
-                </motion.div>
-              </Grid.Col>
+                  </Card.Section>
+                </Card>
+              </motion.div>
+            </Grid.Col>
 
-              {/* Yearly Rainfall */}
-              <Grid.Col span={{ base: 12, md: 6, lg: 7 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}>
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
-                    <Group justify="space-between" mb="lg">
-                        <Text fw={600} size="lg">Annual Rainfall (mm)</Text>
-                         <ThemeIcon variant="light" color="cyan" size="lg" radius="md">
-                            <IconCloudRain size={20} />
+            {/* Yearly Rainfall */}
+            <Grid.Col span={{ base: 12, md: 6, lg: 7 }}>
+              <motion.div
+                variants={itemVariant}
+                style={{ height: '100%' }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                viewport={{ once: true }}
+              >
+                <Card shadow="md" className={classes.analyticsCard} style={{ height: '100%' }}>
+                  <Card.Section p="lg" bg="var(--mantine-color-cyan-0)">
+                    <Group justify="space-between">
+                      <Text component="div" className={classes.chartTitle}>
+                        <ThemeIcon size={28} radius="xl" className={classes.chartIcon} style={{ backgroundColor: 'var(--mantine-color-cyan-6)' }}>
+                          <IconCloudRain size={16} />
                         </ThemeIcon>
+                        <span>Annual Rainfall (mm)</span>
+                      </Text>
+                      <Badge color="cyan" variant="light" size="lg">Historical Data</Badge>
                     </Group>
+                  </Card.Section>
+
+                  <Card.Section p="lg">
                     <BarChart
                       h={280}
                       data={rainfallData}
@@ -1253,56 +1300,75 @@ export default function HomePage() {
                       }}
                       barProps={{ radius: 4 }}
                     />
-                  </Paper>
-                </motion.div>
-              </Grid.Col>
+                  </Card.Section>
+                </Card>
+              </motion.div>
+            </Grid.Col>
 
-              {/* Yield Projection */}
-              <Grid.Col span={{ base: 12, md: 6, lg: 5 }}>
-                <motion.div variants={itemVariant} style={{ height: '100%' }}>
-                  <Paper p="xl" withBorder shadow="md" radius="md" className={classes.analyticsCard} style={{ height: '100%' }}>
-                    <Group justify="space-between" mb="lg">
-                        <Text fw={600} size="lg">Yield Projection</Text>
-                         <ThemeIcon variant="light" color="yellow" size="lg" radius="md">
-                            <IconChartLine size={20} />
+            {/* Yield Projection */}
+            <Grid.Col span={{ base: 12, md: 6, lg: 5 }}>
+              <motion.div
+                variants={itemVariant}
+                style={{ height: '100%' }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                viewport={{ once: true }}
+              >
+                <Card shadow="md" className={classes.analyticsCard} style={{ height: '100%' }}>
+                  <Card.Section p="lg" bg="var(--mantine-color-yellow-0)">
+                    <Group justify="space-between">
+                      <Text component="div" className={classes.chartTitle}>
+                        <ThemeIcon size={28} radius="xl" className={classes.chartIcon} style={{ backgroundColor: 'var(--mantine-color-yellow-6)' }}>
+                          <IconChartLine size={16} />
                         </ThemeIcon>
+                        <span>Yield Projection</span>
+                      </Text>
+                      <Badge color="yellow" variant="light" size="lg">Live Forecast</Badge>
                     </Group>
-                    <Center style={{ flexDirection: 'column', height: 'calc(100% - 80px)' }}>
-                        <RingProgress
-                            size={160}
-                            thickness={16}
-                            roundCaps
-                            sections={[{ value: 75, color: 'farmGreen.6', tooltip: 'Projected completion: 75%' }]}
-                            label={
-                                <Stack align="center" gap={0}>
-                                    <Text ta="center" fw={700} size="xl">75%</Text>
-                                    <Text ta="center" size="xs" c="dimmed">Target</Text>
-                                </Stack>
-                            }
-                            mb="lg"
-                        />
+                  </Card.Section>
+
+                  <Card.Section p="lg">
+                    <Center style={{ flexDirection: 'column', height: 'calc(100% - 20px)' }}>
+                      <RingProgress
+                        size={180}
+                        thickness={18}
+                        roundCaps
+                        sections={[{ value: 75, color: 'farmGreen.6', tooltip: 'Projected completion: 75%' }]}
+                        label={
+                          <Stack align="center" gap={0}>
+                            <Text component="div" ta="center" fw={800} size="2rem">75%</Text>
+                            <Text component="div" ta="center" size="xs" c="dimmed">Target</Text>
+                          </Stack>
+                        }
+                        mb="lg"
+                      />
+                      <Paper withBorder p="md" radius="md" mt="md" bg="var(--mantine-color-gray-0)">
                         <Stack align="center" gap="xs">
-                             <Text size="lg" fw={700} ta="center" component="div">
-                               On Track <Badge color="green" variant="light" size="sm">+5% vs Last Year</Badge>
-                             </Text>
-                             <Text size="sm" c="dimmed" ta="center">
-                               Current projection based on available data. Monitor conditions closely.
-                             </Text>
+                          <Group gap="xs">
+                            <Text component="span" size="lg" fw={700} ta="center">On Track</Text>
+                            <Badge color="green" variant="filled" size="lg">+5% vs Last Year</Badge>
+                          </Group>
+                          <Text size="sm" c="dimmed" ta="center">
+                            Current projection based on available data. Monitor conditions closely.
+                          </Text>
                         </Stack>
+                      </Paper>
                     </Center>
-                  </Paper>
-                </motion.div>
-              </Grid.Col>
-            </Grid>
+                  </Card.Section>
+                </Card>
+              </motion.div>
+            </Grid.Col>
+          </Grid>
         </Container>
       </motion.section>
 
       <Divider my="xl" />
 
-      {/* How It Works Section - Minor Styling Adjustments */}
+      {/* How It Works Section - Enhanced Styling */}
       <motion.section
         id="how-it-works"
-        className={classes.sectionWrapper}
+        className={`${classes.sectionWrapper} ${classes.stepsSection}`}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
@@ -1313,41 +1379,60 @@ export default function HomePage() {
             <Title order={2} className={classes.sectionTitle} ta="center">
               Simple Steps to Smarter Farming
             </Title>
-            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
-                Getting started with FarmWise is easy. Follow these simple steps to begin optimizing your farm today.
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={700} mx="auto">
+                Getting started with FarmWise is easy. Follow these simple steps to begin optimizing your farm today and see results in no time.
             </Text>
           </motion.div>
 
-          {/* Stepper - Use motion.div for the container */}
-           <motion.div variants={itemVariant}>
+          {/* Enhanced Stepper with better visual elements */}
+          <motion.div variants={itemVariant} className={classes.stepperWrapper}>
             <Stepper
-                active={-1} // No active step initially
-              mt="xl"
+              active={-1} // No active step initially
               color="farmGreen"
               allowNextStepsSelect={false}
-                orientation="horizontal" // Explicitly horizontal
-              >
-                {howItWorksSteps.map((step, index) => (
-                  <Stepper.Step
-                      key={step.title}
-                      icon={<step.icon size={24} />}
-                      label={`Step ${index + 1}`}
-                      description={step.title}
-                  >
-                    <Text size="sm">{step.description}</Text>
-                  </Stepper.Step>
-                ))}
+              orientation="horizontal" // Explicitly horizontal
+              iconSize={42}
+              iconPosition="top"
+              styles={{
+                stepIcon: {
+                  borderWidth: 2,
+                  boxShadow: '0 0 10px rgba(92, 180, 118, 0.3)'
+                },
+                separator: {
+                  backgroundColor: 'var(--mantine-color-farmGreen-3)',
+                  height: 2,
+                  marginTop: 20
+                },
+                step: { flex: 1 }
+              }}
+            >
+              {howItWorksSteps.map((step, index) => (
+                <Stepper.Step
+                  key={step.title}
+                  icon={<step.icon size={24} />}
+                  label={
+                    <Text fw={600} mt="sm" size="md">{`Step ${index + 1}`}</Text>
+                  }
+                  description={
+                    <Text fw={700} size="lg" mt={4}>{step.title}</Text>
+                  }
+                >
+                  <Paper withBorder p="md" radius="md" className={classes.stepContent} mt="md">
+                    <Text size="md" lh={1.6}>{step.description}</Text>
+                  </Paper>
+                </Stepper.Step>
+              ))}
             </Stepper>
-           </motion.div>
+          </motion.div>
         </Container>
       </motion.section>
 
       <Divider my="xl" />
 
-      {/* Pricing Section - Minor Styling Adjustments */}
+      {/* Pricing Section - Enhanced Styling */}
       <motion.section
         id="pricing"
-        className={classes.sectionWrapper}
+        className={`${classes.sectionWrapper} ${classes.pricingSection}`}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
@@ -1358,60 +1443,70 @@ export default function HomePage() {
             <Title order={2} className={classes.sectionTitle} ta="center">
                 Choose Your Plan
             </Title>
-            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={600} mx="auto">
-              Start optimizing your farm today with a plan that fits your needs and budget. Flexible options available.
+            <Text c="dimmed" ta="center" mt="sm" mb="xl" maw={700} mx="auto">
+              Start optimizing your farm today with a plan that fits your needs and budget. All plans include core features with flexible options for growth.
             </Text>
            </motion.div>
 
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl" mt="xl">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl" mt={40}>
                 {pricingTiers.map((tier, index) => (
                   // Wrap each card in motion.div for staggered animation
-                  <motion.div key={tier.title} variants={itemVariant} style={{ height: '100%' }}>
-                    <Paper withBorder p="xl" radius="md" className={classes.pricingCard} style={{ height: '100%' }}>
+                  <motion.div
+                    key={tier.title}
+                    variants={itemVariant}
+                    style={{ height: '100%' }}
+                  >
+                    <Card
+                      className={classes.pricingCard}
+                      style={{ height: '100%' }}
+                      data-popular={index === 1 ? "true" : undefined}
+                    >
                        <Stack justify="space-between" style={{ height: '100%' }}>
                          {/* Top part: Title & Price */}
                          <Box>
-                            <Text ta="center" fz="xl" fw={600} mt="sm"> {/* Increased font size */}
+                            <Text className={classes.pricingTitle}>
                                 {tier.title}
                             </Text>
-                            <Text ta="center" fz="2.5rem" fw={700} mt="md" lh={1.1}> {/* Larger price */}
+                            <Text className={classes.pricingPrice}>
                                 {tier.price}
                                 <Text span fz="sm" c="dimmed" fw={400}>{tier.period}</Text>
                             </Text>
                          </Box>
 
                          {/* Middle part: Features */}
-                         <Box my="xl">
-                             <List
-                                spacing="sm"
-                                size="sm"
-                                center
-                                icon={
-                                <ThemeIcon color="farmGreen" size={20} radius="xl"> {/* Smaller icon */}
-                                    <IconCheck style={{ width: rem(12), height: rem(12) }} />
-                                </ThemeIcon>
-                                }
-                             >
+                         <Box className={classes.pricingFeatureList}>
+                             <Stack gap="md">
                                 {tier.features.map((feature) => (
-                                    <List.Item key={feature}>{feature}</List.Item>
+                                    <Group key={feature} gap="xs" className={classes.pricingFeature}>
+                                        <ThemeIcon
+                                          color="farmGreen"
+                                          size={22}
+                                          radius="xl"
+                                          className={classes.pricingFeatureIcon}
+                                        >
+                                            <IconCheck style={{ width: rem(14), height: rem(14) }} />
+                                        </ThemeIcon>
+                                        <Text component="span" size="md">{feature}</Text>
+                                    </Group>
                                 ))}
-                            </List>
+                            </Stack>
                          </Box>
 
                          {/* Bottom part: Button */}
                          <Button
                            fullWidth
-                           size="lg" // Larger button
-                           variant={tier.buttonVariant === 'gradient' ? 'filled' : tier.buttonVariant}
+                           size="lg"
+                           radius="md"
+                           variant={tier.buttonVariant}
                            color="farmGreen"
-                           mt="md" // Reduced margin top
+                           className={classes.pricingButton}
                            component={Link}
                            href={tier.price === 'Contact Us' ? '/contact' : '/signup'}
                          >
                             {tier.buttonText}
                          </Button>
                        </Stack>
-                    </Paper>
+                    </Card>
                   </motion.div>
                 ))}
             </SimpleGrid>

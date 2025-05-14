@@ -378,19 +378,6 @@ export function AppHeader() {
 
           {isAuthenticated ? (
             <>
-              {/* Dashboard Button */}
-              <Tooltip label="Dashboard" withArrow position="bottom">
-                <ActionIcon
-                  component={Link}
-                  href="/dashboard"
-                  variant="outline"
-                  radius="md"
-                  size="lg"
-                  className={`${classes.iconButton} ${classes.dashboardButton}`}
-                >
-                  <IconLayoutDashboard size={20} />
-                </ActionIcon>
-              </Tooltip>
 
               {/* Notifications Menu */}
               <Menu shadow="md" width={320} position="bottom-end" closeOnItemClick={false} opened={notificationsMenuOpened} onChange={notificationsMenuOpened ? closeNotificationsMenu : openNotificationsMenu}>
@@ -508,6 +495,9 @@ export function AppHeader() {
 
                 <Menu.Dropdown>
                   <Menu.Label>Account</Menu.Label>
+                  <Menu.Item leftSection={<IconLayoutDashboard size={14} />} component={Link} href="/dashboard">
+                    Dashboard
+                  </Menu.Item>
                   <Menu.Item leftSection={<IconUser size={14} />} component={Link} href="/dashboard/profile">
                     Profile
                   </Menu.Item>

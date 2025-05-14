@@ -142,7 +142,7 @@ export function Footer() {
 
     return (
       <div key={group.title} className={classes.wrapper}>
-        <Text className={classes.title}>{group.title}</Text>
+        <Text component="div" className={classes.title}>{group.title}</Text>
         <Stack gap={8}>{links}</Stack>
       </div>
     );
@@ -150,55 +150,52 @@ export function Footer() {
 
   return (
     <footer className={classes.footer}>
-      <Container size="lg">
+      <Container size="lg" px="xl">
         <div className={classes.inner}>
           <div className={classes.logoSection}>
             <Link href="/" className={classes.logoLink}>
               <Image
                 src="/Farmwise Logo.svg"
                 alt="FarmWise Logo"
-                width={150}
-                height={40}
+                width={160}
+                height={45}
                 priority
               />
             </Link>
-            <Text size="sm" c="dimmed" mt="md" className={classes.description}>
+            <Text component="div" className={classes.description}>
               Empowering farmers with AI-driven insights for modern agriculture.
+              Our platform helps optimize yields, reduce costs, and promote sustainable farming practices.
             </Text>
-            <Group gap="xs" mt="md" className={classes.social}>
+            <Group className={classes.social}>
               {footerData.socialLinks.map((link, index) => (
                 <ActionIcon
                   key={index}
                   size="lg"
-                  variant="subtle"
-                  color="gray"
+                  variant="filled"
                   component="a"
                   href={link.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={classes.socialIcon}
                 >
-                  <link.icon size={22} stroke={1.5} />
+                  <link.icon size={20} stroke={1.5} />
                 </ActionIcon>
               ))}
             </Group>
           </div>
           <div className={classes.groups}>{groups}</div>
         </div>
-        <Divider my="sm" />
         <div className={classes.afterFooter}>
-          <Text c="dimmed" size="sm">
+          <Text component="div" c="dimmed" size="sm" fw={500}>
             © {currentYear} FarmWise. All rights reserved.
           </Text>
-          <Group gap={8} className={classes.afterFooterLinks}>
+          <Group className={classes.afterFooterLinks}>
             <Anchor component={Link} href="/terms" className={classes.afterFooterLink}>
               Terms
             </Anchor>
-            <Text size="xs" c="dimmed">•</Text>
             <Anchor component={Link} href="/privacy" className={classes.afterFooterLink}>
               Privacy
             </Anchor>
-            <Text size="xs" c="dimmed">•</Text>
             <Anchor component={Link} href="/cookies" className={classes.afterFooterLink}>
               Cookies
             </Anchor>

@@ -59,9 +59,16 @@ body.user-scrolling {
   box-shadow: var(--shadow-elevation-2);
 }
 
-/* Colored text effect */
+/* Brand colored text effect */
+.brand-text {
+  color: var(--mantine-color-farmGreen-6);
+  font-weight: 600;
+}
+
+/* Legacy class for backward compatibility */
 .gradient-text {
-  color: var(--mantine-color-farmGreen-5);
+  color: var(--mantine-color-farmGreen-6);
+  font-weight: 600;
 }
 
 /* Subtle background patterns */

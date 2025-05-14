@@ -9,7 +9,6 @@ import {
   Text,
   Container,
   Anchor,
-  Stack,
   Checkbox,
   Notification,
   Loader,
@@ -19,21 +18,20 @@ import {
   ThemeIcon,
   Divider,
   SimpleGrid,
-  rem,
   Box,
 } from '@mantine/core';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
-import { 
-  IconAlertCircle, 
-  IconCheck, 
-  IconX, 
-  IconInfoCircle, 
-  IconAt, 
-  IconUser, 
-  IconId, 
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconX,
+  IconInfoCircle,
+  IconAt,
+  IconUser,
+  IconId,
   IconLock,
   IconUserPlus,
   IconArrowRight,
@@ -42,6 +40,7 @@ import {
 } from '@tabler/icons-react';
 import authService from '../../api/auth';
 import classes from './SignupPage.module.css';
+import '@/styles/auth-common.css';
 import PasswordStrengthIndicator from '@/components/Auth/PasswordStrengthIndicator';
 import { validatePassword } from '@/app/utils/passwordUtils';
 import { validateEmail, isValidEmail } from '@/app/utils/emailUtils';
@@ -50,8 +49,8 @@ import { useDebouncedValue } from '@mantine/hooks';
 // Animation variants
 const containerVariant = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.4, ease: "easeOut" }
   },
@@ -59,8 +58,8 @@ const containerVariant = {
 
 const notificationVariant = {
   hidden: { opacity: 0, y: -20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3, ease: "easeOut" }
   },
@@ -74,7 +73,7 @@ const formVariant = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { 
+    transition: {
       duration: 0.4,
       staggerChildren: 0.08,
     }
@@ -83,8 +82,8 @@ const formVariant = {
 
 const itemVariant = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3 }
   }
@@ -101,23 +100,23 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  
+
   // Username checking state
   const [debouncedUsername] = useDebouncedValue(username, 500);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameExists, setUsernameExists] = useState(false);
   const [usernameChecked, setUsernameChecked] = useState(false);
-  
+
   // Email checking state
   const [debouncedEmail] = useDebouncedValue(email, 500);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
   const [emailValidation, setEmailValidation] = useState({ isValid: true, isDisposable: false, feedback: '' });
-  
+
   // Password validation state
   const [passwordValidation, setPasswordValidation] = useState(validatePassword(''));
-  
+
   const router = useRouter();
 
   // Check username availability when debounced username changes
@@ -129,14 +128,14 @@ export default function SignupPage() {
         setUsernameExists(false);
         return;
       }
-      
+
       // Set checked but invalid if too short
       if (debouncedUsername.length < 3) {
         setUsernameChecked(true);
         setUsernameExists(false);
         return;
       }
-      
+
       setIsCheckingUsername(true);
       try {
         const result = await authService.checkUsername(debouncedUsername);
@@ -148,10 +147,10 @@ export default function SignupPage() {
         setIsCheckingUsername(false);
       }
     };
-    
+
     checkUsername();
   }, [debouncedUsername]);
-  
+
   // Check email when debounced email changes
   useEffect(() => {
     const checkEmail = async () => {
@@ -162,18 +161,18 @@ export default function SignupPage() {
         setEmailValidation({ isValid: true, isDisposable: false, feedback: '' });
         return;
       }
-      
+
       // First, validate the email format
       const validation = validateEmail(debouncedEmail);
       setEmailValidation(validation);
-      
+
       // Don't check with server if format is invalid
       if (!validation.isValid || debouncedEmail.length < 5) {
         setEmailChecked(true);
         setEmailExists(false);
         return;
       }
-      
+
       setIsCheckingEmail(true);
       try {
         const result = await authService.checkEmail(debouncedEmail);
@@ -185,15 +184,15 @@ export default function SignupPage() {
         setIsCheckingEmail(false);
       }
     };
-    
+
     // Don't wait for debounce if email is clearly invalid
     if (debouncedEmail && !isValidEmail(debouncedEmail)) {
       setEmailValidation(validateEmail(debouncedEmail));
     }
-    
+
     checkEmail();
   }, [debouncedEmail]);
-  
+
   // Update password validation when password changes
   useEffect(() => {
     setPasswordValidation(validatePassword(password));
@@ -201,51 +200,51 @@ export default function SignupPage() {
 
   const handleSignup = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     // Validate form inputs
     if (!username || !email || !password || !confirmPassword) {
       setError('Please fill in all required fields');
       return;
     }
-    
+
     if (usernameExists) {
       setError('Username is already taken. Please choose another one.');
       return;
     }
-    
+
     if (!emailValidation.isValid) {
       setError('Please enter a valid email address');
       return;
     }
-    
+
     if (emailExists) {
       setError('Email is already registered. Please use another email or try to login.');
       return;
     }
-    
+
     if (emailValidation.isDisposable) {
       setError('Please use a permanent email address, not a disposable one');
       return;
     }
-    
+
     if (!passwordValidation.isValid) {
       setError('Please choose a stronger password');
       return;
     }
-    
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
+
     if (!termsAccepted) {
       setError('You must accept the terms and conditions');
       return;
     }
-    
+
     setIsSubmitting(true);
     setError('');
-    
+
     try {
       await authService.register({
         username,
@@ -254,19 +253,19 @@ export default function SignupPage() {
         first_name: firstName,
         last_name: lastName
       });
-      
+
       // Show success message
       setSuccess(true);
-      
+
       // Redirect to onboarding after a short delay
       setTimeout(() => {
         router.push('/onboarding');
       }, 2000);
-      
+
     } catch (err: any) {
       const responseData = err.response?.data;
       let errorMessage = 'Registration failed. Please try again.';
-      
+
       // Extract detailed error messages from the API response
       if (responseData) {
         if (responseData.username) {
@@ -279,7 +278,7 @@ export default function SignupPage() {
           errorMessage = responseData.error;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -289,11 +288,11 @@ export default function SignupPage() {
   // Get appropriate error message for email field
   const getEmailErrorMessage = () => {
     if (email.length === 0) return null;
-    
+
     if (!emailValidation.isValid) return 'Invalid email format';
     if (emailValidation.isDisposable) return 'Please use a permanent email address';
     if (emailChecked && emailExists) return 'Email already registered';
-    
+
     return null;
   };
 
@@ -302,35 +301,35 @@ export default function SignupPage() {
     if (username.length === 0) return null;
     if (username.length < 3) return 'Username must be at least 3 characters';
     if (usernameChecked && usernameExists) return 'Username already taken';
-    
+
     return null;
   };
 
   return (
-    <Container size={500} py={40}>
+    <Container className="auth-container">
       <motion.div
         initial="hidden"
         animate="visible"
         variants={containerVariant}
         className={classes.wrapper}
       >
-        <Box className={classes.headerWrapper}>
-          <ThemeIcon size={56} radius="xl" className={classes.iconWrapper}>
+        <Box className="auth-header">
+          <ThemeIcon size={56} radius="xl" className="auth-icon-wrapper">
             <IconUserPlus stroke={1.5} />
           </ThemeIcon>
-          
-          <Title ta="center" className={classes.title}>
+
+          <Title ta="center" className="auth-title">
             Create your FarmWise Account
           </Title>
-          <Text c="dimmed" size="sm" ta="center" mt={5}>
+          <Text className="auth-subtitle" ta="center">
             Already have an account?{' '}
-            <Anchor size="sm" component={Link} href="/login" className={classes.link}>
+            <Anchor size="sm" component={Link} href="/login" className="auth-link">
               Sign in
             </Anchor>
           </Text>
         </Box>
 
-        <Paper withBorder shadow="md" p={30} mt={30} radius="lg" className={classes.formWrapper} bg="var(--mantine-color-body)">
+        <Paper withBorder shadow="md" className="auth-form-wrapper" radius="lg" bg="var(--mantine-color-body)">
           <AnimatePresence mode="wait">
             {success ? (
               <motion.div
@@ -340,19 +339,19 @@ export default function SignupPage() {
                 animate="visible"
                 exit="exit"
               >
-                <Notification 
+                <Notification
                   icon={<IconCheck size="1.1rem" />}
-                  color="teal" 
+                  color="teal"
                   title="Account created successfully!"
                   withCloseButton={false}
-                  className={classes.notification}
+                  className="auth-notification"
                 >
                   Welcome to FarmWise! Redirecting you to onboarding...
                 </Notification>
               </motion.div>
             ) : (
               <motion.form
-                key="form" 
+                key="form"
                 onSubmit={handleSignup}
                 variants={formVariant}
                 initial="hidden"
@@ -366,21 +365,20 @@ export default function SignupPage() {
                       animate="visible"
                       exit="exit"
                     >
-                      <Notification 
+                      <Notification
                         icon={<IconAlertCircle size="1.1rem" />}
-                        color="red" 
-                        withCloseButton 
+                        color="red"
+                        withCloseButton
                         onClose={() => setError('')}
-                        mb="md"
                         radius="md"
-                        className={classes.notification}
+                        className="auth-notification"
                       >
                         {error}
                       </Notification>
                     </motion.div>
                   )}
                 </AnimatePresence>
-                
+
                 <motion.div variants={itemVariant}>
                   <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
                     <TextInput
@@ -389,7 +387,7 @@ export default function SignupPage() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.currentTarget.value)}
                       radius="md"
-                      className={classes.input}
+                      className="auth-input"
                       leftSection={
                         <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                           <IconId size="1rem" />
@@ -402,7 +400,7 @@ export default function SignupPage() {
                       value={lastName}
                       onChange={(e) => setLastName(e.currentTarget.value)}
                       radius="md"
-                      className={classes.input}
+                      className="auth-input"
                       leftSection={
                         <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                           <IconId size="1rem" />
@@ -411,7 +409,7 @@ export default function SignupPage() {
                     />
                   </SimpleGrid>
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <TextInput
                     required
@@ -432,7 +430,7 @@ export default function SignupPage() {
                     onChange={(e) => setUsername(e.currentTarget.value)}
                     error={getUsernameErrorMessage()}
                     radius="md"
-                    className={classes.input}
+                    className="auth-input"
                     leftSection={
                       <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                         <IconUser size="1rem" />
@@ -455,7 +453,7 @@ export default function SignupPage() {
                     }
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <TextInput
                     required
@@ -477,7 +475,7 @@ export default function SignupPage() {
                     onChange={(e) => setEmail(e.currentTarget.value)}
                     error={getEmailErrorMessage()}
                     radius="md"
-                    className={classes.input}
+                    className="auth-input"
                     leftSection={
                       <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                         <IconAt size="1rem" />
@@ -500,7 +498,7 @@ export default function SignupPage() {
                     }
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <Popover width="target" position="bottom" shadow="md" withArrow>
                     <Popover.Target>
@@ -524,7 +522,7 @@ export default function SignupPage() {
                           value={password}
                           onChange={(e) => setPassword(e.currentTarget.value)}
                           radius="md"
-                          className={classes.input}
+                          className="auth-input"
                           leftSection={
                             <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                               <IconLock size="1rem" />
@@ -551,7 +549,7 @@ export default function SignupPage() {
                     </Popover.Dropdown>
                   </Popover>
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <PasswordInput
                     required
@@ -562,7 +560,7 @@ export default function SignupPage() {
                     onChange={(e) => setConfirmPassword(e.currentTarget.value)}
                     error={confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match' : null}
                     radius="md"
-                    className={classes.input}
+                    className="auth-input"
                     leftSection={
                       <ThemeIcon variant="subtle" color="gray" size="sm" radius="xl">
                         <IconLock size="1rem" />
@@ -583,7 +581,7 @@ export default function SignupPage() {
                     }
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
                   <Checkbox
                     mt="xl"
@@ -591,11 +589,11 @@ export default function SignupPage() {
                     label={
                       <Text size="sm">
                         I agree to the{' '}
-                        <Anchor href="#" target="_blank" className={classes.link}>
+                        <Anchor href="#" target="_blank" className="auth-link">
                           Terms of Service
                         </Anchor>{' '}
                         and{' '}
-                        <Anchor href="#" target="_blank" className={classes.link}>
+                        <Anchor href="#" target="_blank" className="auth-link">
                           Privacy Policy
                         </Anchor>
                       </Text>
@@ -603,25 +601,25 @@ export default function SignupPage() {
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.currentTarget.checked)}
                     required
-                    className={classes.checkbox}
+                    className="auth-checkbox"
                   />
                 </motion.div>
-                
+
                 <motion.div variants={itemVariant}>
-                  <Button 
-                    fullWidth 
+                  <Button
+                    fullWidth
                     radius="md"
                     type="submit"
                     loading={isSubmitting}
-                    className={classes.button}
+                    className="auth-button"
                     rightSection={<IconArrowRight size={18} />}
                     disabled={
-                      isSubmitting || 
-                      usernameExists || 
-                      emailExists || 
-                      !emailValidation.isValid || 
+                      isSubmitting ||
+                      usernameExists ||
+                      emailExists ||
+                      !emailValidation.isValid ||
                       emailValidation.isDisposable ||
-                      !passwordValidation.isValid || 
+                      !passwordValidation.isValid ||
                       password !== confirmPassword ||
                       !password ||
                       !username ||
@@ -635,25 +633,25 @@ export default function SignupPage() {
               </motion.form>
             )}
           </AnimatePresence>
-          
+
           {!success && (
             <>
-              <Divider label="Or continue with" labelPosition="center" mt="lg" mb="md" />
-              
-              <Group grow mb="md" mt="md">
-                <Button 
-                  variant="outline" 
+              <Divider label="Or continue with" labelPosition="center" className="auth-divider" />
+
+              <Group grow>
+                <Button
+                  variant="outline"
                   leftSection={<IconBrandGoogle stroke={1.5} />}
                   radius="md"
-                  className={classes.socialButton}
+                  className="auth-social-button"
                 >
                   Google
                 </Button>
                 <Button
                   variant="outline"
                   leftSection={<IconBrandFacebook stroke={1.5} />}
-                  radius="md" 
-                  className={classes.socialButton}
+                  radius="md"
+                  className="auth-social-button"
                 >
                   Facebook
                 </Button>
@@ -664,4 +662,4 @@ export default function SignupPage() {
       </motion.div>
     </Container>
   );
-} 
+}
