@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mockCategories } from '../../../utils/api/mockData';
 
 const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000';
 

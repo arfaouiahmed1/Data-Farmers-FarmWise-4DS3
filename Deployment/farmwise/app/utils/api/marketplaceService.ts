@@ -1,31 +1,64 @@
 import { getSession } from "../auth/auth-utils";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000';
+// Use Next.js API routes instead of calling Django directly
+const API_BASE_URL = '';
 
-// Helper to fetch with authentication
+// Helper to fetch with authentication - use Next.js API routes
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const session = await getSession();
-  const token = session?.accessToken;
-
+  const session = await getSession(); // Get session, which includes the accessToken
   const headers = new Headers(options.headers || {});
-  if (token) {
-    headers.append('Authorization', `Token ${token}`);
+
+  if (!session?.accessToken) {
+    // If we don't have a token and this is a write operation, throw an error
+    if (options.method && options.method !== 'GET' && options.method !== 'HEAD') {
+      throw new Error('Authentication required for this operation');
+    }
+    console.warn('No authentication token available for request to:', url);
+  } else {
+    // Use Token prefix instead of Bearer to match Django's TokenAuthentication
+    headers.append('Authorization', `Token ${session.accessToken}`);
   }
+
   if (!(options.body instanceof FormData) && options.method !== 'GET' && options.method !== 'HEAD') {
     headers.append('Content-Type', 'application/json');
   }
 
-  return fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+
+  // Handle authentication errors
+  if (response.status === 401) {
+    // Token might be invalid, clear it
+    if (typeof window !== 'undefined') {
+      console.warn('Authentication token is invalid or expired. Clearing session data.');
+      localStorage.removeItem('farmwise_session');
+
+      // Check if we should also clear the main token
+      const responseText = await response.text();
+      if (responseText.includes('Invalid token')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+
+        // Redirect to login page if this is a critical operation
+        if (options.method && options.method !== 'GET') {
+          window.location.href = '/login';
+        }
+      }
+    }
+
+    throw new Error('Authentication required. Please log in again.');
+  }
+
+  return response;
 };
 
 // Mapping functions to convert between backend and frontend data models
 export const mapProductToListing = (product: any) => {
   // Determine listing type based on category
   let listingType = 'resource'; // Default
-  if (product.category_name.toLowerCase().includes('land') || 
+  if (product.category_name.toLowerCase().includes('land') ||
       product.category_name.toLowerCase().includes('farm')) {
     listingType = 'land';
-  } else if (product.category_name.toLowerCase().includes('equipment') || 
+  } else if (product.category_name.toLowerCase().includes('equipment') ||
              product.category_name.toLowerCase().includes('machinery') ||
              product.category_name.toLowerCase().includes('tool')) {
     listingType = 'equipment';
@@ -96,9 +129,9 @@ export const mapListingToProduct = (listing: any) => {
     category: listing.category || listing.category_id,
     image_url: listing.mainImage || (listing.images && listing.images.length > 0 ? listing.images[0] : ''),
     location_text: listing.location,
-    quantity: listing.type === 'land' ? listing.size.value : 
+    quantity: listing.type === 'land' ? listing.size.value :
               listing.type === 'resource' ? listing.quantity.value : 1,
-    unit: listing.type === 'land' ? (listing.size.unit === 'acres' ? 'acre' : 
+    unit: listing.type === 'land' ? (listing.size.unit === 'acres' ? 'acre' :
                                      listing.size.unit === 'hectares' ? 'hectare' : 'sq_meters') :
           listing.type === 'resource' ? listing.quantity.unit : 'unit',
     is_active: listing.isActive || true
@@ -109,16 +142,58 @@ export const mapListingToProduct = (listing: any) => {
 export const fetchProducts = async (filters = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value) queryParams.append(key, value.toString());
     });
-    
-    const url = `${API_BASE_URL}/api/marketplace/products/?${queryParams.toString()}`;
+
+    const url = `/api/marketplace/products?${queryParams.toString()}`;
+
+    // Check if we have a valid token before making the request
+    const session = await getSession();
+    if (!session?.accessToken) {
+      console.warn('No authentication token available for fetchProducts. Redirecting to login.');
+      if (typeof window !== 'undefined') {
+        // Clear any potentially invalid tokens
+        localStorage.removeItem('farmwise_session');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+
+        // Redirect to login page
+        window.location.href = '/login';
+        return []; // Return empty array while redirecting
+      }
+    }
+
     const response = await fetchWithAuth(url);
-    
-    if (!response.ok) throw new Error('Failed to fetch products');
-    
+
+    if (!response.ok) {
+      let errorText;
+      try {
+        // Try to parse as JSON first
+        const errorJson = await response.json();
+        errorText = JSON.stringify(errorJson);
+      } catch {
+        // If not JSON, get as text
+        errorText = await response.text();
+      }
+
+      if (response.status === 401) {
+        console.error('Authentication error fetching products. Token may be invalid.');
+        // Clear any potentially invalid tokens
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('farmwise_session');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+
+          // Redirect to login page
+          window.location.href = '/login';
+        }
+      }
+
+      throw new Error(`Failed to fetch products: ${response.status} ${errorText}`);
+    }
+
     const data = await response.json();
     return data.map(mapProductToListing);
   } catch (error) {
@@ -129,11 +204,14 @@ export const fetchProducts = async (filters = {}) => {
 
 export const fetchMyProducts = async () => {
   try {
-    const url = `${API_BASE_URL}/api/marketplace/products/my_products/`;
+    const url = `/api/marketplace/products/my-products`;
     const response = await fetchWithAuth(url);
-    
-    if (!response.ok) throw new Error('Failed to fetch my products');
-    
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch my products: ${response.status} ${errorText}`);
+    }
+
     const data = await response.json();
     return data.map(mapProductToListing);
   } catch (error) {
@@ -144,11 +222,14 @@ export const fetchMyProducts = async () => {
 
 export const fetchProductById = async (id: string) => {
   try {
-    const url = `${API_BASE_URL}/api/marketplace/products/${id}/`;
+    const url = `/api/marketplace/products/${id}`;
     const response = await fetchWithAuth(url);
-    
-    if (!response.ok) throw new Error('Failed to fetch product');
-    
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch product: ${response.status} ${errorText}`);
+    }
+
     const data = await response.json();
     return mapProductToListing(data);
   } catch (error) {
@@ -159,17 +240,17 @@ export const fetchProductById = async (id: string) => {
 
 export const createProduct = async (product: any) => {
   try {
-    const url = `${API_BASE_URL}/api/marketplace/products/`;
+    const url = `/api/marketplace/products`;
     const response = await fetchWithAuth(url, {
       method: 'POST',
       body: JSON.stringify(mapListingToProduct(product))
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to create product');
+      const errorText = await response.text();
+      throw new Error(`Failed to create product: ${response.status} ${errorText}`);
     }
-    
+
     const data = await response.json();
     return mapProductToListing(data);
   } catch (error) {
@@ -180,17 +261,17 @@ export const createProduct = async (product: any) => {
 
 export const updateProduct = async (id: string, product: any) => {
   try {
-    const url = `${API_BASE_URL}/api/marketplace/products/${id}/`;
+    const url = `/api/marketplace/products/${id}`;
     const response = await fetchWithAuth(url, {
       method: 'PUT',
       body: JSON.stringify(mapListingToProduct(product))
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to update product');
+      const errorText = await response.text();
+      throw new Error(`Failed to update product: ${response.status} ${errorText}`);
     }
-    
+
     const data = await response.json();
     return mapProductToListing(data);
   } catch (error) {
@@ -201,13 +282,16 @@ export const updateProduct = async (id: string, product: any) => {
 
 export const deleteProduct = async (id: string) => {
   try {
-    const url = `${API_BASE_URL}/api/marketplace/products/${id}/`;
+    const url = `/api/marketplace/products/${id}`;
     const response = await fetchWithAuth(url, {
       method: 'DELETE'
     });
-    
-    if (!response.ok) throw new Error('Failed to delete product');
-    
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete product: ${response.status} ${errorText}`);
+    }
+
     return true;
   } catch (error) {
     console.error(`Error deleting product ${id}:`, error);
@@ -221,9 +305,9 @@ export const activateProduct = async (id: string) => {
     const response = await fetchWithAuth(url, {
       method: 'POST'
     });
-    
+
     if (!response.ok) throw new Error('Failed to activate product');
-    
+
     return await response.json();
   } catch (error) {
     console.error(`Error activating product ${id}:`, error);
@@ -237,9 +321,9 @@ export const deactivateProduct = async (id: string) => {
     const response = await fetchWithAuth(url, {
       method: 'POST'
     });
-    
+
     if (!response.ok) throw new Error('Failed to deactivate product');
-    
+
     return await response.json();
   } catch (error) {
     console.error(`Error deactivating product ${id}:`, error);
@@ -250,11 +334,14 @@ export const deactivateProduct = async (id: string) => {
 // Categories API calls
 export const fetchCategories = async () => {
   try {
-    const url = `${API_BASE_URL}/api/marketplace/categories/`;
+    const url = `/api/marketplace/categories`;
     const response = await fetchWithAuth(url);
-    
-    if (!response.ok) throw new Error('Failed to fetch categories');
-    
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch categories: ${response.status} ${errorText}`);
+    }
+
     return await response.json();
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -267,9 +354,9 @@ export const fetchMyOrders = async () => {
   try {
     const url = `${API_BASE_URL}/api/marketplace/orders/`;
     const response = await fetchWithAuth(url);
-    
+
     if (!response.ok) throw new Error('Failed to fetch orders');
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -281,9 +368,9 @@ export const fetchOrderById = async (id: string) => {
   try {
     const url = `${API_BASE_URL}/api/marketplace/orders/${id}/`;
     const response = await fetchWithAuth(url);
-    
+
     if (!response.ok) throw new Error('Failed to fetch order');
-    
+
     return await response.json();
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
@@ -298,12 +385,12 @@ export const createOrder = async (order: any) => {
       method: 'POST',
       body: JSON.stringify(order)
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Failed to create order');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error creating order:', error);
@@ -317,9 +404,9 @@ export const cancelOrder = async (id: string) => {
     const response = await fetchWithAuth(url, {
       method: 'POST'
     });
-    
+
     if (!response.ok) throw new Error('Failed to cancel order');
-    
+
     return await response.json();
   } catch (error) {
     console.error(`Error cancelling order ${id}:`, error);
@@ -334,9 +421,9 @@ export const updateOrderStatus = async (id: string, status: string) => {
       method: 'PATCH',
       body: JSON.stringify({ status })
     });
-    
+
     if (!response.ok) throw new Error('Failed to update order status');
-    
+
     return await response.json();
   } catch (error) {
     console.error(`Error updating order status ${id}:`, error);
@@ -352,12 +439,12 @@ export const predictPrice = async (listingData: any) => {
       method: 'POST',
       body: JSON.stringify(listingData)
     });
-    
+
     if (!response.ok) throw new Error('Failed to predict price');
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error predicting price:', error);
     throw error;
   }
-}; 
+};

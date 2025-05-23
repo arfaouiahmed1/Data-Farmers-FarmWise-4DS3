@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Title, 
-  Grid, 
-  Card, 
-  Text, 
-  Group, 
+import {
+  Title,
+  Grid,
+  Card,
+  Text,
+  Group,
   Stack,
   Button,
   ActionIcon,
@@ -23,10 +23,12 @@ import {
   Box,
   Loader,
 } from '@mantine/core';
-import { IconSearch, IconPlus, IconMapPin, IconTractor, IconBuildingWarehouse, IconSeedingOff } from '@tabler/icons-react';
+import { IconSearch, IconPlus, IconMapPin, IconTractor, IconBuildingWarehouse, IconSeedingOff, IconRefresh, IconDatabase } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchProducts } from '@/app/utils/api/marketplaceService';
+import { createSampleMarketplaceData } from '@/app/utils/api/createSampleData';
+import { isAuthenticated } from '@/app/utils/auth/auth-utils';
 import classes from './Marketplace.module.css';
 import { Listing } from './types';
 import { notifications } from '@mantine/notifications';
@@ -40,47 +42,79 @@ export default function MarketplacePage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Load listings from API
+    // Load listings from API
   useEffect(() => {
     const loadListings = async () => {
       try {
         setLoading(true);
+        setError(null);
+
+        // Check if user is authenticated
+        const isAuth = await isAuthenticated();
+        if (!isAuth) {
+          console.warn('User is not authenticated. Redirecting to login page.');
+          window.location.href = '/login';
+          return;
+        }
+
         // In a real implementation, you would pass filters to the API
         const data = await fetchProducts();
         setListings(data);
-        setError(null);
+        console.log('Loaded listings:', data.length);
       } catch (err: any) {
         console.error('Failed to load listings:', err);
-        setError(err.message || 'Failed to load listings');
-        notifications.show({
-          title: 'Error',
-          message: 'Failed to load marketplace listings',
-          color: 'red',
-        });
+
+        // Check if this is an authentication error
+        if (err.message && (
+          err.message.includes('Authentication required') ||
+          err.message.includes('Invalid token') ||
+          err.message.includes('401')
+        )) {
+          setError('Authentication error. Please log in again.');
+          notifications.show({
+            title: 'Authentication Error',
+            message: 'Please log in again to access the marketplace.',
+            color: 'red',
+          });
+
+          // Redirect to login page after a short delay
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        } else {
+          setError(err.message || 'Failed to load listings');
+          notifications.show({
+            title: 'Error',
+            message: 'Failed to load marketplace listings.',
+            color: 'orange',
+          });
+        }
+
+        // Set empty array to show no listings available message
+        setListings([]);
       } finally {
         setLoading(false);
       }
     };
-    
+
     loadListings();
   }, []);
-  
+
   // Filter listings based on active tab and search query
   const filteredListings = listings.filter(listing => {
     // Filter by category
     if (activeTab !== 'all' && listing.type !== activeTab) return false;
-    
+
     // Filter by search query
-    if (searchQuery && !listing.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
+    if (searchQuery && !listing.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !listing.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
+
     // Filter by price
     if (listing.price < priceRange[0] || listing.price > priceRange[1]) return false;
-    
+
     // Filter by location
     if (locationFilter && !listing.location.includes(locationFilter)) return false;
-    
+
     return true;
   });
 
@@ -97,14 +131,76 @@ export default function MarketplacePage() {
   // Get listing path
   const getListingPath = (listing: any) => `/dashboard/marketplace/${listing.type}/${listing.id}`;
 
+  // Refresh function
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchProducts();
+      setListings(data);
+      notifications.show({
+        title: 'Success',
+        message: 'Marketplace data refreshed successfully',
+        color: 'green',
+      });
+    } catch (err: any) {
+      console.error('Failed to refresh listings:', err);
+      setError(err.message || 'Failed to refresh listings');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to refresh marketplace data',
+        color: 'red',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create sample data function
+  const handleCreateSampleData = async () => {
+    try {
+      setLoading(true);
+      await createSampleMarketplaceData();
+      // Refresh the listings after creating sample data
+      const data = await fetchProducts();
+      setListings(data);
+    } catch (err: any) {
+      console.error('Failed to create sample data:', err);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to create sample data',
+        color: 'red',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Container fluid px="md">
       <Group justify="space-between" mb="lg">
         <Title className={classes.pageTitle}>FarmWise Marketplace</Title>
         <Group>
-          <Button 
-            component={Link} 
-            href="/dashboard/marketplace/create" 
+          <Button
+            variant="outline"
+            leftSection={<IconDatabase size={16} />}
+            onClick={handleCreateSampleData}
+            loading={loading}
+            color="green"
+          >
+            Create Sample Data
+          </Button>
+          <Button
+            variant="outline"
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleRefresh}
+            loading={loading}
+          >
+            Refresh
+          </Button>
+          <Button
+            component={Link}
+            href="/dashboard/marketplace/create"
             leftSection={<IconPlus size={16} />}
             variant="filled"
           >
@@ -212,13 +308,13 @@ export default function MarketplacePage() {
 
               <Stack mt="md" gap="xs">
                 <Text fw={700} lineClamp={1}>{listing.title}</Text>
-                
+
                 <Group gap="xs">
                   {getListingIcon(listing.type)}
                   <Text size="sm" c="dimmed">{listing.type.charAt(0).toUpperCase() + listing.type.slice(1)}</Text>
-                  
+
                   <Text size="sm" c="dimmed">•</Text>
-                  
+
                   <Group gap={4}>
                     <IconMapPin size={14} />
                     <Text size="sm" c="dimmed">{listing.location}</Text>
@@ -245,14 +341,14 @@ export default function MarketplacePage() {
                         <Text size="sm" c="dimmed">/{listing.rentalInfo.period}</Text>
                       )}
                     </Group>
-                    
+
                     {listing.type === 'land' && listing.predictedValue && (
                       <Text size="xs" c={listing.predictedValue > listing.price ? "green.7" : "red.7"}>
                         Estimated value: {listing.predictedValue.toLocaleString()} {listing.currency}
                       </Text>
                     )}
                   </Stack>
-                  
+
                   <Badge color={listing.priceType === 'sale' ? 'blue' : 'green'}>
                     {listing.priceType === 'sale' ? 'For Sale' : 'For Rent'}
                   </Badge>
@@ -264,4 +360,4 @@ export default function MarketplacePage() {
       )}
     </Container>
   );
-} 
+}

@@ -151,8 +151,7 @@ CORS_ALLOWED_ORIGINS = [
     # "https://your-frontend-domain.com",
 ]
 
-# For more flexibility in development, use CORS_ALLOW_ALL_ORIGINS
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True # For development, allow all origins
 
 # Add more permissive CORS settings for development
 CORS_ALLOW_CREDENTIALS = True
@@ -215,3 +214,77 @@ DEFAULT_FROM_EMAIL = 'noreply@farmwise.com'
 # EMAIL_HOST_PASSWORD = 'your-password'
 # EMAIL_USE_TLS = True
 # DEFAULT_FROM_EMAIL = 'noreply@farmwise.com'
+
+# Swagger/OpenAPI settings
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': "Enter 'Token [your_token]'"
+        }
+    },
+    'USE_SESSION_AUTH': False, # Set to True if you want to use session auth for Swagger UI
+    'LOGIN_URL': 'rest_framework:login',
+    'LOGOUT_URL': 'rest_framework:logout',
+}
+
+# Logging Configuration (Optional, for better debugging)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO', # Change to DEBUG for more verbose output
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG', # To see SQL queries
+            'propagate': False,
+        },
+    },
+}
+
+# Email Configuration (Example for development - use a real SMTP server in production)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_HOST = 'smtp.example.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@example.com'
+# EMAIL_HOST_PASSWORD = 'your-email-password'
+# DEFAULT_FROM_EMAIL = 'webmaster@localhost'
+
+# Celery Configuration (if using Celery for background tasks)
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+# CELERY_TIMEZONE = TIME_ZONE
+
+# Add this line to ensure the test token is recognized
+# This is for development only and should be handled securely in production
+# If you have a specific user for testing, you can create a token for them
+# and use that token in your frontend tests.
+# Example: from rest_framework.authtoken.models import Token
+# test_user, created = User.objects.get_or_create(username='testuser')
+# if created:
+#     test_user.set_password('testpassword')
+#     test_user.save()
+# token, created = Token.objects.get_or_create(user=test_user)
+# print(f"Test user token: {token.key}")
+
+# For now, we will rely on the frontend sending the correct token.
+# The backend will validate it as usual.

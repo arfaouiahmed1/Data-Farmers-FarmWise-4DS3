@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Placeholder for session management - replace with your actual session logic
-async function getSession(): Promise<{ accessToken: string | null } | null> {
-    console.warn('Using placeholder getSession in [id]/route.ts. Implement actual session handling.');
-    // Example: return { accessToken: "your_test_token_if_needed" }; 
-    return { accessToken: null }; 
-}
+import { getSession } from '@/app/utils/auth/auth-utils';
 
 const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000';
 
@@ -13,6 +7,11 @@ const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000';
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
     const session = await getSession();
     const token = session?.accessToken;
+
+    // Require authentication token for non-GET requests
+    if (!token && options.method && options.method !== 'GET') {
+        throw new Error('Authentication token is required for this operation');
+    }
 
     const headers = new Headers(options.headers || {});
     if (token) {
@@ -28,8 +27,8 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     const { id } = params;
     try {
-        const res = await fetchWithAuth(`${DJANGO_API_URL}/api/marketplace/products/${id}/`, { 
-            method: 'GET' 
+        const res = await fetchWithAuth(`${DJANGO_API_URL}/api/marketplace/products/${id}/`, {
+            method: 'GET'
         });
         if (!res.ok) {
             const errorData = await res.text();
@@ -55,12 +54,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         if (!res.ok) {
             const errorData = await res.text();
+            if (res.status === 401 || res.status === 403) {
+                return NextResponse.json({
+                    message: 'Authentication required or permission denied',
+                    details: errorData
+                }, { status: res.status });
+            }
             return NextResponse.json({ message: `Failed to update product ${id}`, details: errorData }, { status: res.status });
         }
         const data = await res.json();
         return NextResponse.json(data);
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Error updating product ${id}:`, error);
+        if (error.message && error.message.includes('Authentication token is required')) {
+            return NextResponse.json({
+                message: 'Authentication required',
+                details: error.message
+            }, { status: 401 });
+        }
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
     }
 }
@@ -77,19 +88,31 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
             const errorData = await res.text();
             // Django DELETE often returns 204 No Content on success, check for that
             if (res.status === 204) {
-                return NextResponse.json(null, { status: 204 });    
+                return NextResponse.json(null, { status: 204 });
+            }
+            if (res.status === 401 || res.status === 403) {
+                return NextResponse.json({
+                    message: 'Authentication required or permission denied',
+                    details: errorData
+                }, { status: res.status });
             }
             return NextResponse.json({ message: `Failed to delete product ${id}`, details: errorData }, { status: res.status });
         }
         // If res.ok and not 204 (e.g. DRF sometimes returns 200 with obj before delete), handle as success or adapt based on actual backend
-        if (res.status === 204) { 
+        if (res.status === 204) {
              return NextResponse.json(null, { status: 204 });
         }
         const data = await res.json(); // Or simply return 204 if no body
         return NextResponse.json(data); // Or just status 200/204
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Error deleting product ${id}:`, error);
+        if (error.message && error.message.includes('Authentication token is required')) {
+            return NextResponse.json({
+                message: 'Authentication required',
+                details: error.message
+            }, { status: 401 });
+        }
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
     }
-} 
+}

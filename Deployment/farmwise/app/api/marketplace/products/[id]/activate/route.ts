@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Placeholder for session management
-async function getSession(): Promise<{ accessToken: string | null } | null> {
-    console.warn('Using placeholder getSession in activate/route.ts. Implement actual session handling.');
-    return { accessToken: null }; // Requires a real token for the backend action
-}
+import { getSession } from '@/app/utils/auth/auth-utils';
 
 const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000';
 
@@ -16,7 +11,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
     }
     const headers = new Headers(options.headers || {});
     headers.append('Authorization', `Token ${token}`);
-    // Content-Type might not be needed for a POST without a body, 
+    // Content-Type might not be needed for a POST without a body,
     // but DRF custom actions might expect it or handle its absence.
     // If issues arise, explicitly set Content-Type: application/json if backend expects it.
     return fetch(url, { ...options, headers });
@@ -45,4 +40,4 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
     }
-} 
+}
