@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Title, 
-  Group, 
-  Button, 
-  Paper, 
-  Card, 
-  Text, 
-  Image, 
-  Badge, 
-  ActionIcon, 
-  Menu, 
-  Table, 
-  Tabs, 
+import {
+  Container,
+  Title,
+  Group,
+  Button,
+  Paper,
+  Card,
+  Text,
+  Image,
+  Badge,
+  ActionIcon,
+  Menu,
+  Table,
+  Tabs,
   Flex,
   Modal,
   Stack,
@@ -27,13 +27,13 @@ import {
   Grid,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { 
-  IconArrowLeft, 
-  IconDotsVertical, 
-  IconEdit, 
-  IconTrash, 
-  IconEye, 
-  IconPlus, 
+import {
+  IconArrowLeft,
+  IconDotsVertical,
+  IconEdit,
+  IconTrash,
+  IconEye,
+  IconPlus,
   IconSearch,
   IconMapPin,
   IconTractor,
@@ -47,11 +47,11 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { notifications } from '@mantine/notifications';
-import { 
-  fetchMyProducts, 
-  deleteProduct, 
-  activateProduct, 
-  deactivateProduct 
+import {
+  fetchMyProducts,
+  deleteProduct,
+  activateProduct,
+  deactivateProduct
 } from '@/app/utils/api/marketplaceService';
 import { Listing } from '../types';
 import classes from '../Marketplace.module.css';
@@ -67,7 +67,7 @@ export default function MyListingsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Load user's listings from API
   useEffect(() => {
     const loadMyListings = async () => {
@@ -88,24 +88,24 @@ export default function MyListingsPage() {
         setLoading(false);
       }
     };
-    
+
     loadMyListings();
   }, []);
-  
+
   // Filter listings based on active tab, search query, and status filter
   const filteredListings = listings.filter(listing => {
     // Filter by tab (listing type)
     if (activeTab !== 'all' && listing.type !== activeTab) return false;
-    
+
     // Filter by search query
     if (searchQuery && !listing.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
+
     // Filter by status
     if (statusFilter !== 'all' && listing.status !== statusFilter) return false;
-    
+
     return true;
   });
-  
+
   // Get icon based on listing type
   const getListingTypeIcon = (type: string) => {
     switch (type) {
@@ -119,7 +119,7 @@ export default function MyListingsPage() {
         return null;
     }
   };
-  
+
   // Get formatted price
   const getFormattedPrice = (listing: Listing) => {
     return (
@@ -131,7 +131,7 @@ export default function MyListingsPage() {
       </>
     );
   };
-  
+
   // Get status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -151,23 +151,23 @@ export default function MyListingsPage() {
         return null;
     }
   };
-  
+
   const handleView = (listing: Listing) => {
     router.push(`/dashboard/marketplace/${listing.type}/${listing.id}`);
   };
-  
+
   const handleEdit = (listing: Listing) => {
     router.push(`/dashboard/marketplace/create?edit=${listing.id}&type=${listing.type}`);
   };
-  
+
   const handleDelete = (listing: Listing) => {
     setSelectedListing(listing);
     open();
   };
-  
+
   const confirmDelete = async () => {
     if (!selectedListing) return;
-    
+
     try {
       setProcessingId(selectedListing.id);
       await deleteProduct(selectedListing.id);
@@ -189,7 +189,7 @@ export default function MyListingsPage() {
       setProcessingId(null);
     }
   };
-  
+
   const handleStatusChange = async (listing: Listing, activate: boolean) => {
     try {
       setProcessingId(listing.id);
@@ -208,12 +208,12 @@ export default function MyListingsPage() {
           color: 'green',
         });
       }
-      
+
       // Update listing status in the state
-      setListings(prev => 
-        prev.map(l => 
-          l.id === listing.id 
-            ? { ...l, isActive: activate, status: activate ? 'active' : 'deactivated' } 
+      setListings(prev =>
+        prev.map(l =>
+          l.id === listing.id
+            ? { ...l, isActive: activate, status: activate ? 'active' : 'deactivated' }
             : l
         )
       );
@@ -228,31 +228,32 @@ export default function MyListingsPage() {
       setProcessingId(null);
     }
   };
-  
+
   return (
     <Container fluid px="md">
       <Group justify="space-between" mb="lg">
         <Group>
-          <Button 
-            component={Link} 
-            href="/dashboard/marketplace" 
-            variant="subtle" 
+          <Button
+            component={Link}
+            href="/dashboard/marketplace"
+            variant="subtle"
             leftSection={<IconArrowLeft size={16} />}
           >
             Back to Marketplace
           </Button>
           <Title className={classes.pageTitle}>My Listings</Title>
         </Group>
-        <Button 
-          component={Link} 
-          href="/dashboard/marketplace/create" 
+        <Button
+          component={Link}
+          href="/dashboard/marketplace/create"
           leftSection={<IconPlus size={16} />}
           variant="filled"
+          color="farmGreen"
         >
           Add New Listing
         </Button>
       </Group>
-      
+
       <Paper shadow="xs" p="md" mb="lg">
         <Grid>
           <Grid.Col span={{ base: 12, md: 6 }}>
@@ -281,10 +282,11 @@ export default function MyListingsPage() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Group justify="flex-end">
-              <Button 
-                variant="subtle" 
+              <Button
+                variant="subtle"
                 leftSection={<IconRefresh size={16} />}
                 onClick={() => window.location.reload()}
+                color="farmGreen"
               >
                 Refresh
               </Button>
@@ -293,7 +295,7 @@ export default function MyListingsPage() {
         </Grid>
       </Paper>
 
-      <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'all')}>
+      <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'all')} color="farmGreen">
         <Tabs.List>
           <Tabs.Tab value="all">All Listing Types</Tabs.Tab>
           <Tabs.Tab value="land" leftSection={<IconMapPin size={16} />}>Land</Tabs.Tab>
@@ -304,13 +306,13 @@ export default function MyListingsPage() {
 
       {loading ? (
         <Paper p="xl" ta="center">
-          <Loader size="md" />
+          <Loader size="md" color="farmGreen" />
           <Text mt="md">Loading your listings...</Text>
         </Paper>
       ) : error ? (
         <Paper p="xl" ta="center">
           <Text size="lg" fw={500} c="red">Error: {error}</Text>
-          <Button mt="md" onClick={() => window.location.reload()}>
+          <Button mt="md" onClick={() => window.location.reload()} color="farmGreen">
             Retry
           </Button>
         </Paper>
@@ -322,16 +324,17 @@ export default function MyListingsPage() {
               setSearchQuery('');
               setStatusFilter('all');
               setActiveTab('all');
-            }}>
+            }} color="farmGreen">
               Clear Filters
             </Button>
           ) : (
-            <Button 
-              component={Link} 
-              href="/dashboard/marketplace/create" 
+            <Button
+              component={Link}
+              href="/dashboard/marketplace/create"
               mt="md"
               variant="filled"
               leftSection={<IconPlus size={16} />}
+              color="farmGreen"
             >
               Create Your First Listing
             </Button>
@@ -381,25 +384,25 @@ export default function MyListingsPage() {
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                    <ActionIcon 
-                      variant="subtle" 
-                      color="blue" 
+                    <ActionIcon
+                      variant="subtle"
+                      color="farmGreen"
                       onClick={() => handleView(listing)}
                       title="View listing"
                     >
                       <IconEye size={18} />
                     </ActionIcon>
-                    <ActionIcon 
-                      variant="subtle" 
-                      color="green" 
+                    <ActionIcon
+                      variant="subtle"
+                      color="farmGreen"
                       onClick={() => handleEdit(listing)}
                       title="Edit listing"
                     >
                       <IconEdit size={18} />
                     </ActionIcon>
-                    <ActionIcon 
-                      variant="subtle" 
-                      color="red" 
+                    <ActionIcon
+                      variant="subtle"
+                      color="red"
                       onClick={() => handleDelete(listing)}
                       title="Delete listing"
                       loading={processingId === listing.id}
@@ -412,10 +415,10 @@ export default function MyListingsPage() {
                           <IconDotsVertical size={18} />
                         </ActionIcon>
                       </Menu.Target>
-                      
+
                       <Menu.Dropdown>
                         {listing.isActive || listing.status === 'active' ? (
-                          <Menu.Item 
+                          <Menu.Item
                             leftSection={<IconX size={14} />}
                             color="orange"
                             onClick={() => handleStatusChange(listing, false)}
@@ -424,7 +427,7 @@ export default function MyListingsPage() {
                             Deactivate
                           </Menu.Item>
                         ) : (
-                          <Menu.Item 
+                          <Menu.Item
                             leftSection={<IconCheck size={14} />}
                             color="green"
                             onClick={() => handleStatusChange(listing, true)}
@@ -435,8 +438,8 @@ export default function MyListingsPage() {
                         )}
                         <Menu.Item leftSection={<IconTag size={14} />}>Mark as Sold</Menu.Item>
                         <Menu.Divider />
-                        <Menu.Item 
-                          leftSection={<IconTrash size={14} />} 
+                        <Menu.Item
+                          leftSection={<IconTrash size={14} />}
                           color="red"
                           onClick={() => handleDelete(listing)}
                           disabled={processingId === listing.id}
@@ -452,7 +455,7 @@ export default function MyListingsPage() {
           </Table.Tbody>
         </Table>
       )}
-      
+
       {/* Delete confirmation modal */}
       <Modal
         opened={opened}
@@ -466,8 +469,8 @@ export default function MyListingsPage() {
           </Text>
           <Group justify="flex-end">
             <Button variant="outline" onClick={close}>Cancel</Button>
-            <Button 
-              color="red" 
+            <Button
+              color="red"
               onClick={confirmDelete}
               loading={processingId === selectedListing?.id}
             >
@@ -478,4 +481,4 @@ export default function MyListingsPage() {
       </Modal>
     </Container>
   );
-} 
+}

@@ -1,28 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Title, 
-  Group, 
-  Paper, 
-  Button, 
-  TextInput, 
-  Textarea, 
-  NumberInput, 
-  Select, 
-  Radio, 
-  Stack, 
-  Text, 
-  Card, 
-  Stepper, 
+import {
+  Container,
+  Title,
+  Group,
+  Paper,
+  Button,
+  TextInput,
+  Textarea,
+  NumberInput,
+  Select,
+  Radio,
+  Stack,
+  Text,
+  Card,
+  Stepper,
   Tabs,
   Checkbox,
-  SimpleGrid, 
+  SimpleGrid,
   FileInput,
   Alert,
   Loader,
   Badge,
+  Image,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { DatePickerInput } from '@mantine/dates';
@@ -38,14 +39,14 @@ export default function CreateListingPage() {
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
   const editType = searchParams.get('type');
-  
+
   const [active, setActive] = useState(0);
   const [listingType, setListingType] = useState<string>(editType || 'land');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!editId);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<{value: string, label: string}[]>([]);
-  
+
   // Form for creating a new listing
   const form = useForm({
     initialValues: {
@@ -55,7 +56,7 @@ export default function CreateListingPage() {
       price: 0,
       priceType: 'sale',
       location: '',
-      
+
       // Land specific fields
       landSize: 0,
       landUnit: 'hectares',
@@ -63,26 +64,26 @@ export default function CreateListingPage() {
       hasWaterAccess: false,
       hasElectricityAccess: false,
       hasRoadAccess: false,
-      
+
       // Equipment specific fields
       equipmentCategory: '',
       brand: '',
       model: '',
       condition: 'Good',
-      
+
       // Resource specific fields
       resourceCategory: '',
       quantityValue: 0,
       quantityUnit: 'kg',
-      
+
       // Rental specific fields
       rentalPeriod: 'month',
       minimumRental: 1,
-      
-      // Image URL (for now, later would be file upload)
-      imageUrl: '',
+
+      // Image files for upload
+      images: [] as File[],
     },
-    
+
     validate: {
       title: (value) => (value.length < 3 ? 'Title must be at least 3 characters' : null),
       description: (value) => (value.length < 10 ? 'Description must be at least 10 characters' : null),
@@ -90,7 +91,7 @@ export default function CreateListingPage() {
       location: (value) => (value.length < 3 ? 'Location is required' : null),
     },
   });
-  
+
   // Load categories and existing listing data if editing
   useEffect(() => {
     const loadData = async () => {
@@ -103,7 +104,7 @@ export default function CreateListingPage() {
             label: cat.name
           })));
         }
-        
+
         // If editing, load the product data
         if (editId) {
           setInitialLoading(true);
@@ -117,8 +118,8 @@ export default function CreateListingPage() {
                 price: product.price,
                 priceType: product.priceType,
                 location: product.location,
-                imageUrl: product.mainImage || '',
-                
+                images: [], // Reset images for editing
+
                 // Type-specific fields
                 ...(product.type === 'land' && {
                   landSize: product.size?.value || 0,
@@ -128,26 +129,26 @@ export default function CreateListingPage() {
                   hasElectricityAccess: product.access?.electricity || false,
                   hasRoadAccess: product.access?.road || false,
                 }),
-                
+
                 ...(product.type === 'equipment' && {
                   equipmentCategory: product.category || '',
                   brand: product.brand || '',
                   model: product.model || '',
                   condition: product.condition || 'Good',
                 }),
-                
+
                 ...(product.type === 'resource' && {
                   resourceCategory: product.category || '',
                   quantityValue: product.quantity?.value || 0,
                   quantityUnit: product.quantity?.unit || 'kg',
                 }),
-                
+
                 ...(product.priceType === 'rent' && product.type === 'equipment' && product.rentalInfo && {
                   rentalPeriod: product.rentalInfo.period || 'month',
                   minimumRental: product.rentalInfo.minimumRental || 1,
                 }),
               });
-              
+
               setListingType(product.type);
             }
           } catch (err: any) {
@@ -167,10 +168,10 @@ export default function CreateListingPage() {
         setError('Failed to load categories. Please try again.');
       }
     };
-    
+
     loadData();
   }, [editId, form]);
-  
+
   const nextStep = () => {
     if (active === 0) {
       const validation = form.validate();
@@ -178,14 +179,14 @@ export default function CreateListingPage() {
     }
     setActive((current) => (current < 2 ? current + 1 : current));
   };
-  
+
   const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
-  
+
   const handleSubmit = async (values: typeof form.values) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Map form values to product/listing data
       const productData = {
         // Common fields
@@ -194,11 +195,12 @@ export default function CreateListingPage() {
         price: values.price,
         priceType: values.priceType,
         location: values.location,
-        mainImage: values.imageUrl,
-        
+        // Handle image upload - for now using placeholder
+        mainImage: values.images.length > 0 ? URL.createObjectURL(values.images[0]) : '',
+
         // Type-specific fields based on the selected type
         type: listingType,
-        
+
         // Land-specific fields
         ...(listingType === 'land' && {
           size: {
@@ -213,7 +215,7 @@ export default function CreateListingPage() {
             irrigation: false // Default value
           }
         }),
-        
+
         // Equipment-specific fields
         ...(listingType === 'equipment' && {
           category: values.equipmentCategory,
@@ -227,7 +229,7 @@ export default function CreateListingPage() {
             }
           })
         }),
-        
+
         // Resource-specific fields
         ...(listingType === 'resource' && {
           category: values.resourceCategory,
@@ -237,7 +239,7 @@ export default function CreateListingPage() {
           }
         })
       };
-      
+
       // Create or update the product
       if (editId) {
         await updateProduct(editId, productData);
@@ -254,7 +256,7 @@ export default function CreateListingPage() {
           color: 'green',
         });
       }
-      
+
       // Redirect to my listings page
       router.push('/dashboard/marketplace/my-listings');
     } catch (err: any) {
@@ -269,7 +271,7 @@ export default function CreateListingPage() {
       setLoading(false);
     }
   };
-  
+
   // Determine which fields to show based on the listing type
   const renderTypeSpecificFields = () => {
     switch (listingType) {
@@ -295,14 +297,14 @@ export default function CreateListingPage() {
                 {...form.getInputProps('landUnit')}
               />
             </SimpleGrid>
-            
+
             <TextInput
               label="Soil Type"
               placeholder="E.g., Loamy, Clay, Sandy"
               mt="md"
               {...form.getInputProps('soilType')}
             />
-            
+
             <Title order={5} mt="md" mb="xs">Access & Utilities</Title>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <Checkbox
@@ -320,7 +322,7 @@ export default function CreateListingPage() {
             </SimpleGrid>
           </>
         );
-        
+
       case 'equipment':
         return (
           <>
@@ -337,7 +339,7 @@ export default function CreateListingPage() {
               required
               {...form.getInputProps('equipmentCategory')}
             />
-            
+
             <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
               <TextInput
                 label="Brand"
@@ -350,7 +352,7 @@ export default function CreateListingPage() {
                 {...form.getInputProps('model')}
               />
             </SimpleGrid>
-            
+
             <Select
               label="Condition"
               data={[
@@ -365,7 +367,7 @@ export default function CreateListingPage() {
             />
           </>
         );
-        
+
       case 'resource':
         return (
           <>
@@ -382,7 +384,7 @@ export default function CreateListingPage() {
               required
               {...form.getInputProps('resourceCategory')}
             />
-            
+
             <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
               <NumberInput
                 label="Quantity"
@@ -405,15 +407,15 @@ export default function CreateListingPage() {
             </SimpleGrid>
           </>
         );
-        
+
       default:
         return null;
     }
   };
-  
+
   const renderRentalFields = () => {
     if (form.values.priceType !== 'rent') return null;
-    
+
     return (
       <>
         <Title order={5} mt="md" mb="xs">Rental Details</Title>
@@ -438,7 +440,7 @@ export default function CreateListingPage() {
             {...form.getInputProps('minimumRental')}
           />
         </SimpleGrid>
-        
+
         <DatePickerInput
           label="Available From"
           placeholder="Select date"
@@ -447,7 +449,7 @@ export default function CreateListingPage() {
       </>
     );
   };
-  
+
   // Show loading state if loading initial data
   if (initialLoading) {
     return (
@@ -459,14 +461,14 @@ export default function CreateListingPage() {
       </Container>
     );
   }
-  
+
   return (
     <Container size="md" py="xl">
       <Group mb="xl">
-        <Button 
-          component={Link} 
-          href="/dashboard/marketplace/my-listings" 
-          variant="subtle" 
+        <Button
+          component={Link}
+          href="/dashboard/marketplace/my-listings"
+          variant="subtle"
           leftSection={<IconArrowLeft size={16} />}
         >
           Back to My Listings
@@ -475,13 +477,13 @@ export default function CreateListingPage() {
           {editId ? 'Edit Listing' : 'Create New Listing'}
         </Title>
       </Group>
-      
+
       {error && (
         <Alert icon={<IconExclamationCircle />} title="Error" color="red" mb="lg">
           {error}
         </Alert>
       )}
-      
+
       <Stepper active={active} onStepClick={setActive} mb="xl">
         <Stepper.Step
           label="Basic Info"
@@ -496,7 +498,7 @@ export default function CreateListingPage() {
                   required
                   {...form.getInputProps('title')}
                 />
-                
+
                 <Textarea
                   label="Description"
                   placeholder="Provide details about what you're selling"
@@ -504,13 +506,16 @@ export default function CreateListingPage() {
                   required
                   {...form.getInputProps('description')}
                 />
-                
-                <TextInput
-                  label="Image URL"
-                  placeholder="Enter URL for the main product image"
-                  {...form.getInputProps('imageUrl')}
+
+                <FileInput
+                  label="Product Images"
+                  placeholder="Upload product images"
+                  multiple
+                  accept="image/*"
+                  leftSection={<IconUpload size={16} />}
+                  {...form.getInputProps('images')}
                 />
-                
+
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                   <NumberInput
                     label="Price"
@@ -519,7 +524,7 @@ export default function CreateListingPage() {
                     required
                     {...form.getInputProps('price')}
                   />
-                  
+
                   <Radio.Group
                     label="Price Type"
                     {...form.getInputProps('priceType')}
@@ -530,22 +535,22 @@ export default function CreateListingPage() {
                     </Group>
                   </Radio.Group>
                 </SimpleGrid>
-                
+
                 <TextInput
                   label="Location"
                   placeholder="Enter city, region or address"
                   required
                   {...form.getInputProps('location')}
                 />
-                
+
                 <Group justify="flex-end" mt="md">
-                  <Button type="submit">Continue</Button>
+                  <Button type="submit" color="farmGreen">Continue</Button>
                 </Group>
               </Stack>
             </form>
           </Paper>
         </Stepper.Step>
-        
+
         <Stepper.Step
           label="Listing Type"
           description="Select type and details"
@@ -559,26 +564,50 @@ export default function CreateListingPage() {
                   onChange={setListingType}
                   required
                 >
-                  <Group mt="xs">
-                    <Radio value="land" label="Land" icon={<IconMapPin size={14} />} />
-                    <Radio value="equipment" label="Equipment" icon={<IconTractor size={14} />} />
-                    <Radio value="resource" label="Resource" icon={<IconSeedingOff size={14} />} />
-                  </Group>
+                  <Stack mt="xs" gap="sm">
+                    <Radio
+                      value="land"
+                      label={
+                        <Group gap="xs">
+                          <IconMapPin size={16} />
+                          <Text>Land</Text>
+                        </Group>
+                      }
+                    />
+                    <Radio
+                      value="equipment"
+                      label={
+                        <Group gap="xs">
+                          <IconTractor size={16} />
+                          <Text>Equipment</Text>
+                        </Group>
+                      }
+                    />
+                    <Radio
+                      value="resource"
+                      label={
+                        <Group gap="xs">
+                          <IconSeedingOff size={16} />
+                          <Text>Resources</Text>
+                        </Group>
+                      }
+                    />
+                  </Stack>
                 </Radio.Group>
-                
+
                 {renderTypeSpecificFields()}
-                
+
                 {form.values.priceType === 'rent' && renderRentalFields()}
-                
+
                 <Group justify="space-between" mt="md">
-                  <Button variant="outline" onClick={prevStep}>Back</Button>
-                  <Button type="submit">Continue</Button>
+                  <Button variant="outline" onClick={prevStep} color="farmGreen">Back</Button>
+                  <Button type="submit" color="farmGreen">Continue</Button>
                 </Group>
               </Stack>
             </form>
           </Paper>
         </Stepper.Step>
-        
+
         <Stepper.Step
           label="Review & Submit"
           description="Confirm listing details"
@@ -586,14 +615,15 @@ export default function CreateListingPage() {
           <Paper p="md" shadow="xs" mt="md">
             <Stack>
               <Title order={4}>Review Your Listing</Title>
-              
+
               <Card withBorder>
                 <Card.Section>
-                  {form.values.imageUrl ? (
-                    <img 
-                      src={form.values.imageUrl} 
-                      alt={form.values.title} 
-                      style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                  {form.values.images.length > 0 ? (
+                    <Image
+                      src={URL.createObjectURL(form.values.images[0])}
+                      alt={form.values.title}
+                      height={200}
+                      fit="cover"
                     />
                   ) : (
                     <div style={{ height: '200px', background: '#f1f1f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -601,47 +631,47 @@ export default function CreateListingPage() {
                     </div>
                   )}
                 </Card.Section>
-                
-                <Stack mt="md" spacing="xs">
-                  <Group position="apart">
+
+                <Stack mt="md" gap="xs">
+                  <Group justify="space-between">
                     <Text fw={700} size="xl">{form.values.title}</Text>
                     <Badge>{listingType.charAt(0).toUpperCase() + listingType.slice(1)}</Badge>
                   </Group>
-                  
+
                   <Text c="dimmed">{form.values.location}</Text>
-                  
-                  <Text fw={700} size="lg" c="blue">
-                    {form.values.price} TND 
+
+                  <Text fw={700} size="lg" c="farmGreen">
+                    {form.values.price} TND
                     {form.values.priceType === 'rent' && ' / ' + form.values.rentalPeriod}
                   </Text>
-                  
+
                   <Text>{form.values.description}</Text>
-                  
+
                   {listingType === 'land' && (
                     <Text>Size: {form.values.landSize} {form.values.landUnit}</Text>
                   )}
-                  
+
                   {listingType === 'equipment' && (
-                    <Stack spacing={0}>
+                    <Stack gap={0}>
                       <Text>Category: {form.values.equipmentCategory}</Text>
                       {form.values.brand && <Text>Brand: {form.values.brand}</Text>}
                       {form.values.model && <Text>Model: {form.values.model}</Text>}
                       <Text>Condition: {form.values.condition}</Text>
                     </Stack>
                   )}
-                  
+
                   {listingType === 'resource' && (
                     <Text>Quantity: {form.values.quantityValue} {form.values.quantityUnit}</Text>
                   )}
                 </Stack>
               </Card>
-              
+
               <Group justify="space-between" mt="md">
-                <Button variant="outline" onClick={prevStep}>Back</Button>
-                <Button 
-                  onClick={() => form.onSubmit(handleSubmit)()} 
+                <Button variant="outline" onClick={prevStep} color="farmGreen">Back</Button>
+                <Button
+                  onClick={() => form.onSubmit(handleSubmit)()}
                   loading={loading}
-                  color="green"
+                  color="farmGreen"
                 >
                   {editId ? 'Update Listing' : 'Create Listing'}
                 </Button>
@@ -652,4 +682,4 @@ export default function CreateListingPage() {
       </Stepper>
     </Container>
   );
-} 
+}

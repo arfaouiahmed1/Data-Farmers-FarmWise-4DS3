@@ -137,5 +137,40 @@ export const theme = createTheme({
         },
       },
     },
+    Tabs: {
+      defaultProps: {
+        color: 'farmGreen',
+      },
+    },
+    Badge: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
+    FileInput: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
+    TextInput: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
+    Textarea: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
+    NumberInput: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
+    Select: {
+      defaultProps: {
+        radius: 'md',
+      },
+    },
   },
 });

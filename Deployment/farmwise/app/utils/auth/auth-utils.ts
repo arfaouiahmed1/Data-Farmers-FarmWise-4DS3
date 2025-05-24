@@ -126,8 +126,27 @@ export async function setSession(session: Session): Promise<void> {
 
 // Function to check if the user is authenticated
 export async function isAuthenticated(): Promise<boolean> {
-  const session = await getSession();
-  return !!session?.accessToken;
+  try {
+    const session = await getSession();
+
+    if (!session?.accessToken) {
+      return false;
+    }
+
+    // Optionally validate the token with the backend
+    try {
+      const isValid = await validateToken(session.accessToken);
+      return isValid;
+    } catch (e) {
+      // If validation fails, still return true if we have a token
+      // This prevents unnecessary logouts if the validation endpoint is temporarily unavailable
+      console.warn('Token validation failed, but token exists:', e);
+      return true;
+    }
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return false;
+  }
 }
 
 // Function to get the current user ID

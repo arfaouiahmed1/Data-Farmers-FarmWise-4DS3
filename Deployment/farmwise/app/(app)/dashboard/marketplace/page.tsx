@@ -160,10 +160,23 @@ export default function MarketplacePage() {
   const handleCreateSampleData = async () => {
     try {
       setLoading(true);
-      await createSampleMarketplaceData();
-      // Refresh the listings after creating sample data
-      const data = await fetchProducts();
-      setListings(data);
+      const result = await createSampleMarketplaceData();
+
+      // Only refresh if at least one product was created successfully
+      if (result.success) {
+        // Refresh the listings after creating sample data
+        const data = await fetchProducts();
+        setListings(data);
+
+        if (result.count > 0) {
+          // Show success message with count
+          notifications.show({
+            title: 'Success',
+            message: `Created ${result.count} sample listings. Refreshed marketplace data.`,
+            color: 'green',
+          });
+        }
+      }
     } catch (err: any) {
       console.error('Failed to create sample data:', err);
       notifications.show({

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/app/utils/auth/auth-utils';
+
+// Placeholder for session management
+async function getSession(): Promise<{ accessToken: string | null } | null> {
+    console.warn('Using placeholder getSession in deactivate/route.ts. Implement actual session handling.');
+    return { accessToken: null }; // Requires a real token
+}
 
 const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000';
 
@@ -37,4 +42,4 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
     }
-}
+} 
