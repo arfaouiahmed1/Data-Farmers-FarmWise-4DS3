@@ -3,6 +3,16 @@
 ## Overview
 FarmWise is a comprehensive agricultural recommendation system powered by machine learning and deep learning technologies. Built with a modern tech stack featuring a Next.js frontend and Django backend, FarmWise provides data-driven insights to help farmers optimize their agricultural practices, increase productivity, and manage resources efficiently.
 
+## Demo and Commercial Videos
+
+### Commercial Video
+[![FarmWise Commercial](https://img.youtube.com/vi/Dbv44AOnYsQ/0.jpg)](https://youtu.be/Dbv44AOnYsQ)
+Watch our commercial video to learn about FarmWise's vision and capabilities.
+
+### Demo Video
+[![FarmWise Demo](https://img.youtube.com/vi/bAqBds2t3mg/0.jpg)](https://youtu.be/bAqBds2t3mg)
+Watch our detailed demo to see FarmWise in action and explore its features.
+
 ## Features
 
 ### 1. Recommendation System
