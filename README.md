@@ -6,12 +6,16 @@ FarmWise is a comprehensive agricultural recommendation system powered by machin
 ## Demo and Commercial Videos
 
 ### Commercial Video
-[![FarmWise Commercial](https://img.youtube.com/vi/Dbv44AOnYsQ/0.jpg)](https://youtu.be/Dbv44AOnYsQ)
+<a href="https://youtu.be/Dbv44AOnYsQ" target="_blank">
+  <img src="https://img.youtube.com/vi/Dbv44AOnYsQ/0.jpg" alt="FarmWise Commercial">
+</a>
 
 Watch our commercial video to learn about FarmWise's vision and capabilities.
 
 ### Demo Video
-[![FarmWise Demo](https://img.youtube.com/vi/bAqBds2t3mg/0.jpg)](https://youtu.be/bAqBds2t3mg)
+<a href="https://youtu.be/bAqBds2t3mg" target="_blank">
+  <img src="https://img.youtube.com/vi/bAqBds2t3mg/0.jpg" alt="FarmWise Demo">
+</a>
 
 Watch our detailed demo to see FarmWise in action and explore its features.
 
